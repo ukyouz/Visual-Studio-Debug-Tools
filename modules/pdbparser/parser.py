@@ -1,5 +1,5 @@
-import struct
 import io
+import struct
 from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import field
@@ -441,15 +441,17 @@ class PDB7:
         self.streams = _streams
 
 
-def parse(filename):
+def parse(filename) -> PDB7:
     "Open a PDB file and autodetect its version"
-    f = open(filename, 'rb')
-    sig = f.read(len(_PDB7_SIGNATURE))
-    f.seek(0)
-    if sig == _PDB7_SIGNATURE:
-        return PDB7(f)
-    else:
-       raise NotImplementedError(sig)
+    with open(filename, 'rb') as f:
+        sig = f.read(len(_PDB7_SIGNATURE))
+        f.seek(0)
+        if sig == _PDB7_SIGNATURE:
+            pdb = PDB7(f)
+            pdb.name = filename
+            return pdb
+        else:
+           raise NotImplementedError(sig)
 
 
 def _save_pdb(tpi, filename):
