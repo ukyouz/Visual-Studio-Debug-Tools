@@ -189,6 +189,7 @@
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -206,16 +207,8 @@
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuPDB">
-    <property name="title">
-     <string>PDB</string>
-    </property>
-    <addaction name="actionLoad_PDB_file"/>
-   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuPDB"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_File">
    <property name="text">
     <string>Open File...</string>

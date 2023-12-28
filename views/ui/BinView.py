@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\view\ui\BinView.ui'
+# Form implementation generated from reading ui file '.\views\ui\BinView.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -88,17 +88,15 @@ class Ui_MainWindow(object):
         self.tableView.verticalHeader().setDefaultSectionSize(24)
         self.verticalLayout_2.addWidget(self.splitter_2)
         MainWindow.setCentralWidget(self.centralwidget)
+        self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 511, 22))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(parent=self.menubar)
         self.menuFile.setObjectName("menuFile")
-        self.menuPDB = QtWidgets.QMenu(parent=self.menubar)
-        self.menuPDB.setObjectName("menuPDB")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
         self.actionOpen_File = QtGui.QAction(parent=MainWindow)
         self.actionOpen_File.setObjectName("actionOpen_File")
         self.actionQuit = QtGui.QAction(parent=MainWindow)
@@ -108,9 +106,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionOpen_File)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
-        self.menuPDB.addAction(self.actionLoad_PDB_file)
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuPDB.menuAction())
 
         self.retranslateUi(MainWindow)
         self.actionQuit.triggered.connect(MainWindow.close) # type: ignore
@@ -130,7 +126,6 @@ class Ui_MainWindow(object):
         self.label_3.setText(_translate("MainWindow", "Options:"))
         self.toolButton.setText(_translate("MainWindow", "0x"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
-        self.menuPDB.setTitle(_translate("MainWindow", "PDB"))
         self.actionOpen_File.setText(_translate("MainWindow", "Open File..."))
         self.actionOpen_File.setShortcut(_translate("MainWindow", "Ctrl+O"))
         self.actionQuit.setText(_translate("MainWindow", "Quit"))
