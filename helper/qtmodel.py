@@ -1,7 +1,9 @@
-import os
-import math
 import io
-from PyQt6 import QtCore, QtGui
+import math
+import os
+
+from PyQt6 import QtCore
+from PyQt6 import QtGui
 
 
 class HexTable(QtCore.QAbstractTableModel):

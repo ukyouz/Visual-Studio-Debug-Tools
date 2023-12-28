@@ -11,7 +11,7 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-from views import MyQt
+from views import qtmodel
 from views.ui import BinView
 
 
@@ -80,7 +80,7 @@ class BinViewer(QtWidgets.QMainWindow):
 
     def _loadFile(self, fileio: io.IOBase):
         set_app_title(self, getattr(fileio, "name", "noname"))
-        model = MyQt.HexTable(self.ui.tableView, fileio)
+        model = qtmodel.HexTable(self.ui.tableView, fileio)
         self.ui.tableView.setModel(model)
 
     def _onBtnParseClicked(self):
