@@ -31,4 +31,14 @@ class LoadPdb(Plugin):
             filter="Any (*.*)"
         )
         if filename:
-            self.pdb = pdbparser.parse(filename)
+            def _cb(_pdb):
+                self.pdb = _pdb
+                print(123)
+                self.menu("PDB").setEnabled(True)
+
+            self.menu("PDB").setEnabled(False)
+            self.ctrl.exec_async(
+                pdbparser.parse,
+                filename,
+                finished_cb=_cb,
+            )

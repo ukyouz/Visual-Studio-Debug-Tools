@@ -9,6 +9,8 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
+from helper.qtthread import Runnable
+
 
 def set_app_title(app: QtWidgets.QMainWindow, title: str):
     clsname = app.__class__.__name__
@@ -34,9 +36,19 @@ class AppCtrl:
 
     def __init__(self) -> None:
         self.cmd = CommandManager()
+        self.threadpool = QtCore.QThreadPool()
 
     def run_cmd(self, cmdname):
         self.cmd.trigger(cmdname)
+
+    def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, **kwargs):
+        worker = Runnable(fn, *args, **kwargs)
+        if finished_cb:
+            worker.finished.connect(finished_cb)
+        if errored_cb:
+            worker.errored.connect(errored_cb)
+        self.threadpool.start(worker)
+
 
 class MenuAction(TypedDict):
     name: str
