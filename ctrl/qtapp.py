@@ -1,9 +1,11 @@
+import abc
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
 from typing import Callable
 from typing import NotRequired
 from typing import TypedDict
+from typing import TypeVar
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -31,7 +33,11 @@ class CommandManager:
         self.cmds[cmdname]()
 
 
-class AppCtrl:
+
+ClsType = TypeVar("ClsType")
+
+
+class AppCtrl(abc.ABC):
     view: QtWidgets.QMainWindow
 
     def __init__(self) -> None:
@@ -48,6 +54,19 @@ class AppCtrl:
         if errored_cb:
             worker.errored.connect(errored_cb)
         self.threadpool.start(worker)
+
+    @abc.abstractmethod
+    def plugin(self, plugin_cls: ClsType) -> ClsType:
+        """
+        return the corresonding plugin instance
+
+        Note:
+            Why we leave implamatation to controller is
+            because we need to construct plugins with parent set to ctrl itself.
+            Ctrl can be anything, also we can NOT import any ctrl here
+            or it will cause circular import error.
+            You may want to raise some error when plugin is not loaded.
+        """
 
 
 class MenuAction(TypedDict):
