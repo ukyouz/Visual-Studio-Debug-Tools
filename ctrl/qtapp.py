@@ -29,8 +29,8 @@ class CommandManager:
     def register(self, cmdname: str, fn: Callable):
         self.cmds[cmdname] = fn
 
-    def trigger(self, cmdname: str):
-        self.cmds[cmdname]()
+    def trigger(self, cmdname: str, **kwargs):
+        self.cmds[cmdname](**kwargs)
 
 
 
@@ -44,13 +44,17 @@ class AppCtrl(abc.ABC):
         self.cmd = CommandManager()
         self.threadpool = QtCore.QThreadPool()
 
-    def run_cmd(self, cmdname):
-        self.cmd.trigger(cmdname)
+    def run_cmd(self, cmdname, /, **kwargs):
+        self.cmd.trigger(cmdname, **kwargs)
+
+    def _print_error_thread(self, expt, tb):
+        print(expt, tb)
 
     def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, **kwargs):
         worker = Runnable(fn, *args, **kwargs)
         if finished_cb:
             worker.finished.connect(finished_cb)
+        worker.errored.connect(self._print_error_thread)
         if errored_cb:
             worker.errored.connect(errored_cb)
         self.threadpool.start(worker)

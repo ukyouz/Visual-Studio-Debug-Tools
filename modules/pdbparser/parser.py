@@ -100,7 +100,7 @@ class StructRecord(TypedDict):
 def new_struct(**kwargs):
     s = StructRecord(
         levelname="",
-        val=0,
+        value=0,
         type="",
         base=0,
         size=0,
@@ -264,20 +264,6 @@ class TpiStream(Stream):
                 # print(lf_idx, lf.name)
                 structs[lf.name] = lf
         self.structs = structs
-
-    def _make_struct(self, **kwarg):
-        s = StructRecord(
-            levelname="",
-            val=0,
-            type="",
-            base=0,
-            size=0,
-            bitoff=None,
-            bitsize=None,
-            fields={},
-        )
-        s.update(**kwarg)
-        return s
 
     def form_structs(self, lf, base=0) -> StructRecord:
         if isinstance(lf, tpi.BasicType):
@@ -477,8 +463,8 @@ if __name__ == "__main__":
     a = time.time()
 
     pdb = parse(args.pdb_file)
-    TPI = pdb.streams[2]
+    # TPI = pdb.streams[2]
 
     print(time.time() - a)
 
-    _save_pdb(TPI, args.out)
+    _save_pdb(pdb, args.out)

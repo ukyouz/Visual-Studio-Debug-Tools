@@ -9,8 +9,19 @@ from ctrl.qtapp import ClsType
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+# for pickle to work
+from modules.pdbparser.parser import PDB7
+from modules.pdbparser.parser import DbiStream
+from modules.pdbparser.parser import OldDirectory
+from modules.pdbparser.parser import PdbStream
+from modules.pdbparser.parser import Stream
+from modules.pdbparser.parser import TpiStream
 from plugins import loadpdb
 from view import BinView
+
+
+class PluginNotLoaded(Exception):
+    """plugin not loaded"""
 
 
 class BinViewer(AppCtrl, BinView.Ui_MainWindow):
@@ -43,8 +54,11 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
             for cmdname, fn in p.registerCommands():
                 self.cmd.register(cmdname, fn)
 
-    def plugin(self, name: Type[ClsType]) -> ClsType:
-        return self._plugins[name.__name__]
+    def plugin(self, plg_cls: Type[ClsType]) -> ClsType:
+        try:
+            return self._plugins[plg_cls.__name__]
+        except KeyError:
+            raise PluginNotLoaded(plg_cls)
 
     def _onFileOpened(self, filename=False):
         if not filename:
@@ -63,10 +77,44 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         set_app_title(self.view, getattr(fileio, "name", "noname"))
         model = qtmodel.HexTable(self.tableView, fileio)
         self.tableView.setModel(model)
+        if self.treeView.model():
+            model: qtmodel.StructTreeModel = self.treeView.model()
+            model.loadRaw(self.fileio.getvalue())
 
     def _onBtnParseClicked(self):
-        print(self.lineStruct.text())
-        print(self.lineOffset.text())
+        structname = self.lineStruct.text()
+        offset = self.lineOffset.text()
+        pdb = self.plugin(loadpdb.LoadPdb)
+
+        def _cb(res):
+            self._load_tree(res)
+
+        def _err(*args):
+            QtWidgets.QMessageBox.warning(
+                self.view,
+                "PDB Error!",
+                "Please load pdbin first!",
+            )
+
+        self.exec_async(
+            pdb.parse_struct,
+            structname,
+            add_dummy_root=True,
+            finished_cb=_cb,
+            errored_cb=_err,
+        )
+
+    def _load_tree(self, data: dict):
+        headers = [
+            "Levelname",
+            "Value",
+            "Type",
+            "Base",
+        ]
+        model = qtmodel.StructTreeModel(data, headers)
+        if self.fileio:
+            model.loadRaw(self.fileio.getvalue())
+        self.treeView.setModel(model)
 
 
 if __name__ == '__main__':
