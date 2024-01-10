@@ -1,11 +1,15 @@
 import io
 import sys
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Type
 
+from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
+from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
@@ -24,6 +28,18 @@ class PluginNotLoaded(Exception):
     """plugin not loaded"""
 
 
+@dataclass
+class ParseRecord:
+    struct: str
+    offset: str
+    model: QtCore.QAbstractItemModel = field(default=None)
+
+
+class ParseHistoryMenu(HistoryMenu):
+    def stringify(self, data: ParseRecord) -> str:
+        return "%s; %s" % (data.struct, data.offset)
+
+
 class BinViewer(AppCtrl, BinView.Ui_MainWindow):
     def __init__(self, fileio=None):
         super().__init__()
@@ -32,6 +48,8 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         set_app_title(self.view, "")
 
         # properties
+        self.parse_hist = ParseHistoryMenu(self.btnHistory)
+        self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
         self.fileio = fileio
         if fileio:
             self._loadFile(fileio)
@@ -41,11 +59,20 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         self.btnParse.clicked.connect(self._onBtnParseClicked)
         self.lineStruct.returnPressed.connect(self._onBtnParseClicked)
         self.lineOffset.returnPressed.connect(self._onBtnParseClicked)
+        self.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
+        self.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
 
         self._plugins = {}
         self.loadPlugins([
             loadpdb.LoadPdb(self),
         ])
+
+    @property
+    def parse_offset(self):
+        try:
+            return eval(self.lineOffset.text())
+        except:
+            return 0
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
@@ -75,19 +102,33 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
 
     def _loadFile(self, fileio: io.IOBase):
         set_app_title(self.view, getattr(fileio, "name", "noname"))
-        model = qtmodel.HexTable(self.tableView, fileio)
-        self.tableView.setModel(model)
-        if self.treeView.model():
-            model: qtmodel.StructTreeModel = self.treeView.model()
-            model.loadRaw(self.fileio.getvalue())
+        tblmodel = qtmodel.HexTable(self.tableView, fileio)
+        self.tableView.setModel(tblmodel)
+        if self.treeView.model() and self.fileio:
+            treemodel: qtmodel.StructTreeModel = self.treeView.model()
+            treemodel.toggleHexMode(self.btnToggleHex.isChecked())
+            treemodel.loadRaw(self.fileio.getvalue())
+
+    def _onLineOffsetChanged(self):
+        model: qtmodel.HexTable = self.tableView.model()
+        if model:
+            model.shiftOffset(self.parse_offset)
+
+    def _onBtnToggleHexClicked(self):
+        model: qtmodel.StructTreeModel = self.treeView.model()
+        if model:
+            checked = self.btnToggleHex.isChecked()
+            model.toggleHexMode(checked)
 
     def _onBtnParseClicked(self):
         structname = self.lineStruct.text()
-        offset = self.lineOffset.text()
         pdb = self.plugin(loadpdb.LoadPdb)
 
         def _cb(res):
-            self._load_tree(res)
+            model = self._load_tree(res)
+            if model.rowCount():
+                p = ParseRecord(structname, self.lineOffset.text(), model)
+                self.parse_hist.add_data(p)
 
         def _err(*args):
             QtWidgets.QMessageBox.warning(
@@ -104,17 +145,30 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
             errored_cb=_err,
         )
 
+    def _onParseHistoryClicked(self, data: ParseRecord):
+        self.lineStruct.setText(data.struct)
+        self.lineOffset.setText(data.offset)
+        self._onLineOffsetChanged()
+        if data.model:
+            self.treeView.setModel(data.model)
+
     def _load_tree(self, data: dict):
         headers = [
             "Levelname",
             "Value",
             "Type",
             "Base",
+            "Size",
+            "Address",
         ]
         model = qtmodel.StructTreeModel(data, headers)
         if self.fileio:
-            model.loadRaw(self.fileio.getvalue())
+            model.setAddress(self.parse_offset)
+            model.loadRaw(self.fileio.getvalue()[self.parse_offset:])
         self.treeView.setModel(model)
+        # expand the first item
+        self.treeView.setExpanded(model.index(0, 0), True)
+        return model
 
 
 if __name__ == '__main__':

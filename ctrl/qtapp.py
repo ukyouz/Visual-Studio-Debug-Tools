@@ -12,6 +12,7 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from helper.qtthread import Runnable
+from modules.utils.typ import DequeList
 
 
 def set_app_title(app: QtWidgets.QMainWindow, title: str):
@@ -148,3 +149,40 @@ class Plugin:
         return []
 
 
+class HistoryMenu(QtCore.QObject):
+    actionTriggered = QtCore.pyqtSignal(object)
+
+    def __init__(self, btn: QtWidgets.QToolButton) -> None:
+        super().__init__()
+        self.btn = btn
+        self.data_list = DequeList()
+
+    def _update_menu(self):
+        menu = QtWidgets.QMenu()
+        actgroup = QtGui.QActionGroup(menu)
+        actgroup.setExclusive(True)
+        def _add_action(menu, data):
+            action = menu.addAction(title)
+            action.setCheckable(True)
+            action.triggered.connect(lambda: self.actionTriggered.emit(data))
+            actgroup.addAction(action)
+
+        for data in self.data_list:
+            title = self.stringify(data)
+            _add_action(menu, data)
+        self.btn.setMenu(menu)
+
+    def stringify(self, data) -> str:
+        return ""
+
+    def add_data(self, data):
+        data_str = self.stringify(data)
+        found_pos = -1
+        for i, d in enumerate(self.data_list):
+            if self.stringify(d) == data_str:
+                found_pos = i
+                break
+        if found_pos >= 0:
+            data = self.data_list.pop(found_pos)
+        self.data_list.insert(0, data)
+        self._update_menu()

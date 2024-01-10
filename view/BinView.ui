@@ -124,6 +124,19 @@
             <number>0</number>
            </property>
            <item>
+            <widget class="QToolButton" name="btnHistory">
+             <property name="text">
+              <string>History</string>
+             </property>
+             <property name="popupMode">
+              <enum>QToolButton::InstantPopup</enum>
+             </property>
+             <property name="toolButtonStyle">
+              <enum>Qt::ToolButtonTextOnly</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -144,7 +157,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton">
+            <widget class="QToolButton" name="btnToggleHex">
              <property name="text">
               <string>0x</string>
              </property>
@@ -166,6 +179,9 @@
          <widget class="QTreeView" name="treeView">
           <property name="frameShape">
            <enum>QFrame::Panel</enum>
+          </property>
+          <property name="indentation">
+           <number>16</number>
           </property>
          </widget>
         </item>
@@ -237,7 +253,7 @@
   <tabstop>btnParse</tabstop>
   <tabstop>treeView</tabstop>
   <tabstop>tableView</tabstop>
-  <tabstop>toolButton</tabstop>
+  <tabstop>btnToggleHex</tabstop>
  </tabstops>
  <resources/>
  <connections>
