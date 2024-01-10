@@ -40,6 +40,7 @@ ClsType = TypeVar("ClsType")
 
 class AppCtrl(abc.ABC):
     view: QtWidgets.QMainWindow
+    app_setting: QtCore.QSettings
 
     def __init__(self) -> None:
         self.cmd = CommandManager()

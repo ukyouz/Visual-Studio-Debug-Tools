@@ -62,6 +62,8 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         self.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
         self.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
 
+        self.app_setting = QtCore.QSettings("app.ini", QtCore.QSettings.Format.IniFormat)
+
         self._plugins = {}
         self.loadPlugins([
             loadpdb.LoadPdb(self),

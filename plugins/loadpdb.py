@@ -23,6 +23,8 @@ class LoadPdb(Plugin):
         }
 
     def registerCommands(self):
+        if val := self.ctrl.app_setting.value("LoadPdb/pdbin", ""):
+            self.load_pdbin(val)
         return [
             ("LoadPdbin", self.load_pdbin),
         ]
@@ -36,6 +38,7 @@ class LoadPdb(Plugin):
             )
         if filename:
             def _cb(_pdb):
+                self.ctrl.app_setting.setValue("LoadPdb/pdbin", filename)
                 self.pdb = _pdb
                 print(_pdb)
                 self.menu("PDB").setEnabled(True)
