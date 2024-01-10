@@ -10,9 +10,12 @@ from typing import TypedDict
 
 from construct import Array
 from construct import Bytes
+from construct import Const
 from construct import Container
 from construct import CString
+from construct import Enum
 from construct import GreedyRange
+from construct import Int16sl
 from construct import Int16ul
 from construct import Int32ul
 from construct import Padding
@@ -362,7 +365,123 @@ class TpiStream(Stream):
 
 
 class DbiStream(Stream):
-    ...
+    _sHeader = Struct(
+        "magic" / Const(b"\xFF\xFF\xFF\xFF", Bytes(4)),  # 0
+        "version" / Int32ul,  # 4
+        "age" / Int32ul,  # 8
+        "gssymStream" / Int16sl,  # 12
+        "vers" / Int16ul,  # 14
+        "pssymStream" / Int16sl,  # 16
+        "pdbver" / Int16ul,  # 18
+        "symrecStream" / Int16sl,  # stream containing global symbols   # 20
+        "pdbver2" / Int16ul,  # 22
+        "module_size" / Int32ul,  # total size of DBIExHeaders            # 24
+        "secconSize" / Int32ul,  # 28
+        "secmapSize" / Int32ul,  # 32
+        "filinfSize" / Int32ul,  # 36
+        "tsmapSize" / Int32ul,  # 40
+        "mfcIndex" / Int32ul,  # 44
+        "dbghdrSize" / Int32ul,  # 48
+        "ecinfoSize" / Int32ul,  # 52
+        "flags" / Int16ul,  # 56
+        "Machine" / Enum(
+            Int16ul,  # 58
+            IMAGE_FILE_MACHINE_UNKNOWN = 0x0000,
+            IMAGE_FILE_MACHINE_I386 = 0x014c,
+            IMAGE_FILE_MACHINE_R3000 = 0x0162,
+            IMAGE_FILE_MACHINE_R4000 = 0x0166,
+            IMAGE_FILE_MACHINE_R10000 = 0x0168,
+            IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x0169,
+            IMAGE_FILE_MACHINE_ALPHA = 0x0184,
+            IMAGE_FILE_MACHINE_SH3 = 0x01a2,
+            IMAGE_FILE_MACHINE_SH3DSP = 0x01a3,
+            IMAGE_FILE_MACHINE_SH3E = 0x01a4,
+            IMAGE_FILE_MACHINE_SH4 = 0x01a6,
+            IMAGE_FILE_MACHINE_SH5 = 0x01a8,
+            IMAGE_FILE_MACHINE_ARM = 0x01c0,
+            IMAGE_FILE_MACHINE_THUMB = 0x01c2,
+            IMAGE_FILE_MACHINE_ARMNT = 0x01c4,
+            IMAGE_FILE_MACHINE_AM33 = 0x01d3,
+            IMAGE_FILE_MACHINE_POWERPC = 0x01f0,
+            IMAGE_FILE_MACHINE_POWERPCFP = 0x01f1,
+            IMAGE_FILE_MACHINE_IA64 = 0x0200,
+            IMAGE_FILE_MACHINE_MIPS16 = 0x0266,
+            IMAGE_FILE_MACHINE_ALPHA64 = 0x0284,
+            IMAGE_FILE_MACHINE_AXP64 = 0x0284,
+            IMAGE_FILE_MACHINE_MIPSFPU = 0x0366,
+            IMAGE_FILE_MACHINE_MIPSFPU16 = 0x0466,
+            IMAGE_FILE_MACHINE_TRICORE = 0x0520,
+            IMAGE_FILE_MACHINE_CEF = 0x0cef,
+            IMAGE_FILE_MACHINE_EBC = 0x0ebc,
+            IMAGE_FILE_MACHINE_AMD64 = 0x8664,
+            IMAGE_FILE_MACHINE_M32R = 0x9041,
+            IMAGE_FILE_MACHINE_CEE = 0xc0ee,
+        ),
+        "resvd" / Int32ul,  # 60
+    )
+
+    _DbiDbgHeader = Struct(
+        "snFPO" / Int16sl,
+        "snException" / Int16sl,
+        "snFixup" / Int16sl,
+        "snOmapToSrc" / Int16sl,
+        "snOmapFromSrc" / Int16sl,
+        "snSectionHdr" / Int16sl,
+        "snTokenRidMap" / Int16sl,
+        "snXdata" / Int16sl,
+        "snPdata" / Int16sl,
+        "snNewFPO" / Int16sl,
+        "snSectionHdrOrig" / Int16sl,
+    )
+
+    def load_header(self, fp):
+        super().load_header(fp)
+        pos = (
+            + self.header.module_size
+            + self.header.secconSize
+            + self.header.secmapSize
+            + self.header.filinfSize
+            + self.header.tsmapSize
+            + self.header.ecinfoSize
+        )
+        data = self.getbodydata(fp)
+        self.dbgheader = self._DbiDbgHeader.parse(data[pos:])
+
+
+class GlobalSymbolStream(Stream):
+    def load_body(self, fp):
+        data = self.getbodydata(fp)
+        from . import gdata
+        self.globalsymbols = gdata.parse(data)
+        self.gvars = {}
+        self.funcs = {}
+        for g in self.globalsymbols:
+            if not hasattr(g, 'symtype'):
+                continue
+            if g.symtype == 0:
+                if g.name.startswith("_"):
+                    self.gvars[g.name[1:]] = g
+                else:
+                    self.gvars[g.name] = g
+            elif g.symtype == 2:
+                self.funcs[g.name] = g
+
+
+class SectionStream(Stream):
+    def load_body(self, fp):
+        data = self.getbodydata(fp)
+        from . import pe
+        self.sections = pe.Sections.parse(data)
+
+
+class OmapStream(Stream):
+
+    def load(self):
+        from . import omap
+        self.omap_data = omap.Omap(self.data)
+
+    def remap(self, addr):
+        return self.omap_data.remap(addr)
 
 
 STREAM_CLASSES = {
@@ -371,6 +490,7 @@ STREAM_CLASSES = {
     1: PdbStream,
     2: TpiStream,
     3: DbiStream,
+    # additional streams will be added dynamically
 }
 
 U32_SZ = 4
@@ -428,10 +548,23 @@ class PDB7:
                 page_sz=pdb_hdr.blockSize,
                 pages=stream_pages
             )
+            s.load_header(fp)
             _streams.append(s)
 
+            if id == 3:
+                # dbistream contains supported info for other debug streams
+                if s.header.symrecStream != -1:
+                    STREAM_CLASSES[s.header.symrecStream] = GlobalSymbolStream
+                if s.dbgheader.snSectionHdr != -1:
+                    STREAM_CLASSES[s.dbgheader.snSectionHdr] = SectionStream
+                if s.dbgheader.snSectionHdrOrig != -1:
+                    STREAM_CLASSES[s.dbgheader.snSectionHdrOrig] = SectionStream
+                if s.dbgheader.snOmapToSrc != -1:
+                    STREAM_CLASSES[s.dbgheader.snOmapToSrc] = OmapStream
+                if s.dbgheader.snOmapFromSrc != -1:
+                    STREAM_CLASSES[s.dbgheader.snOmapFromSrc] = OmapStream
+
         for s in _streams:
-            s.load_header(fp)
             s.load_body(fp)
 
         self.streams = _streams
