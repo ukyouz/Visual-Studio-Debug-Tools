@@ -144,6 +144,8 @@ class TpiStream(Stream):
             if t.leafKind in {
                 tpi.eLeafKind.LF_STRUCTURE,
                 tpi.eLeafKind.LF_STRUCTURE_ST,
+                tpi.eLeafKind.LF_UNION,
+                tpi.eLeafKind.LF_UNION_ST,
             }
         }
 
@@ -258,7 +260,12 @@ class TpiStream(Stream):
         # test
         structs = {}
         for lf_idx, lf in type_dict.items():
-            if lf.leafKind in {tpi.eLeafKind.LF_STRUCTURE, tpi.eLeafKind.LF_STRUCTURE_ST}:
+            if lf.leafKind in {
+                tpi.eLeafKind.LF_STRUCTURE,
+                tpi.eLeafKind.LF_STRUCTURE_ST,
+                tpi.eLeafKind.LF_UNION,
+                tpi.eLeafKind.LF_UNION_ST,
+            }:
                 if lf.name.startswith("_") or lf.size == 0:
                     continue
                 # print(lf_idx, lf.name)
@@ -274,7 +281,10 @@ class TpiStream(Stream):
                 size = lf.size,
             )
         elif lf.leafKind in {
-            tpi.eLeafKind.LF_STRUCTURE, tpi.eLeafKind.LF_STRUCTURE_ST
+            tpi.eLeafKind.LF_STRUCTURE,
+            tpi.eLeafKind.LF_STRUCTURE_ST,
+            tpi.eLeafKind.LF_UNION,
+            tpi.eLeafKind.LF_UNION_ST,
         }:
             struct = new_struct(
                 levelname="",

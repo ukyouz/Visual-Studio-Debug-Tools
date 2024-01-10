@@ -45,8 +45,8 @@ TypRefAttrs = {
     # "LF_PROCEDURE": ["return_type", "arglist"],
     "LF_STRUCTURE": ["fields", "derived", "vshape"],
     "LF_STRUCTURE_ST": ["fields", "derived", "vshape"],
-    # "LF_UNION": ["fields"],
-    # "LF_UNION_ST": ["fields"],
+    "LF_UNION": ["fields"],
+    "LF_UNION_ST": ["fields"],
     # "LF_VTSHAPE": [],
 
     # TODO: Unparsed
@@ -546,6 +546,20 @@ lfStructureST = Struct(
     "name" / PascalString(Int8ub, "utf8"),
 )
 
+lfUnion = Struct(
+    "count" / Int16ul,
+    "property" / sCvProperty,
+    "fields" / Int32ul,
+    "_raw" / sRaw("size"),
+)
+
+lfUnionST = Struct(
+    "count" / Int16ul,
+    "property" / sCvProperty,
+    "fields" / Int32ul,
+    "size" / Int16ul,
+    "name" / PascalString(Int8ub, "utf8"),
+)
 
 sTypType = Struct(
     "length" / Int16ul,
@@ -562,6 +576,8 @@ sTypType = Struct(
                 "LF_FIELDLIST": lfFieldList,
                 "LF_STRUCTURE": lfStructure,
                 "LF_STRUCTURE_ST": lfStructureST,
+                "LF_UNION": lfUnion,
+                "LF_UNION_ST": lfUnionST,
             },
             default = Pass,
         ),
