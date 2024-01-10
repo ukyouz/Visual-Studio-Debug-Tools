@@ -13,13 +13,6 @@ from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
-# for pickle to work
-from modules.pdbparser.parser import PDB7
-from modules.pdbparser.parser import DbiStream
-from modules.pdbparser.parser import OldDirectory
-from modules.pdbparser.parser import PdbStream
-from modules.pdbparser.parser import Stream
-from modules.pdbparser.parser import TpiStream
 from plugins import loadpdb
 from view import BinView
 

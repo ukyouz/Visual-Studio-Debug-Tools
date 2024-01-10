@@ -4,14 +4,6 @@ import sys
 from PyQt6 import QtWidgets
 
 from ctrl.BinView import BinViewer
-# for pickle to work
-from modules.pdbparser.parser import PDB7
-from modules.pdbparser.parser import DbiStream
-from modules.pdbparser.parser import OldDirectory
-from modules.pdbparser.parser import PdbStream
-from modules.pdbparser.parser import Stream
-from modules.pdbparser.parser import TpiStream
-from plugins.loadpdb import LoadPdb
 
 
 class BinViewerApp(BinViewer):

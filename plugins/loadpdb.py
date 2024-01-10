@@ -5,11 +5,12 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
-from modules.pdbparser import parser as pdbparser
+from modules.pdbparser import pdb
+from modules.pdbparser import picklepdb
 
 
 class LoadPdb(Plugin):
-    pdb: pdbparser.PDB7
+    pdb: pdb.PDB7
 
     def registerMenues(self) -> dict[str, list[MenuAction]]:
         return {
@@ -48,13 +49,13 @@ class LoadPdb(Plugin):
             path = Path(filename)
             if path.suffix == ".pdbin":
                 self.ctrl.exec_async(
-                    pdbparser.load_pdbin,
+                    picklepdb.load_pdbin,
                     filename,
                     finished_cb=_cb,
                 )
             elif path.suffix == ".pdb":
                 self.ctrl.exec_async(
-                    pdbparser.parse,
+                    pdb.parse,
                     filename,
                     finished_cb=_cb,
                 )
@@ -64,12 +65,12 @@ class LoadPdb(Plugin):
         try:
             lf = tpi.structs[structname]
         except KeyError:
-            return pdbparser.new_struct()
+            return pdb.new_struct()
 
         s = tpi.form_structs(lf)
         s["levelname"] = structname
         if add_dummy_root:
-            s = pdbparser.new_struct(
+            s = pdb.new_struct(
                 fields=[s],
             )
         return s
