@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>images/treeview/border-collapse.png</file>
+    <file>images/treeview/border-collapse-more.png</file>
+    <file>images/treeview/border-end.png</file>
+    <file>images/treeview/border-line.png</file>
+    <file>images/treeview/border-expand.png</file>
+    <file>images/treeview/border-expand-more.png</file>
+    <file>images/treeview/border-more.png</file>
+  </qresource>
+</RCC>

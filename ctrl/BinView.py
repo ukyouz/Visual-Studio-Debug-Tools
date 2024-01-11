@@ -15,6 +15,7 @@ from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import loadpdb
 from view import BinView
+from view import resource
 
 
 class PluginNotLoaded(Exception):
