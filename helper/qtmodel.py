@@ -233,14 +233,16 @@ class StructTreeModel(AbstractTreeModel):
                         return f"0x%0{size * 2}x" % val
                     else:
                         return str(val)
-                elif item["size"] == len(item["fields"]):
+                elif item["fields"] and item["size"] == len(item["fields"]):
                     # try display c-string
-                    data = bytes((self._calc_val(x) for x in item["fields"]))
-                    if is_cstring(data):
-                        end = data.index(0) if 0 in data else len(data)
-                        cstr = bytes_to_ascii(data[:end])
-                        if len(cstr) <= 64:
-                            return repr(cstr)
+                    values = (self._calc_val(x) for x in item["fields"])
+                    if not any(x is None for x in values):
+                        data = bytes(values)
+                        if is_cstring(data):
+                            end = data.index(0) if 0 in data else len(data)
+                            cstr = bytes_to_ascii(data[:end])
+                            if len(cstr) <= 64:
+                                return repr(cstr)
                 else:
                     return ""
             case QtCore.Qt.ItemDataRole.FontRole:
