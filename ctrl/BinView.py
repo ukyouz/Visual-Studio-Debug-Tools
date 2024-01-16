@@ -103,7 +103,7 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         if self.treeView.model() and self.fileio:
             treemodel: qtmodel.StructTreeModel = self.treeView.model()
             treemodel.toggleHexMode(self.btnToggleHex.isChecked())
-            treemodel.loadRaw(self.fileio.getvalue())
+            treemodel.loadStream(io.BytesIO(self.fileio.getvalue()[self.parse_offset:]))
 
     def _onLineOffsetChanged(self):
         model: qtmodel.HexTable = self.tableView.model()
@@ -121,6 +121,7 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         pdb = self.plugin(loadpdb.LoadPdb)
 
         def _cb(res):
+            self.btnParse.setEnabled(True)
             model = self._load_tree(res)
             if model.rowCount():
                 p = ParseRecord(structname, self.lineOffset.text(), model)
@@ -133,9 +134,12 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
                 "Please load pdbin first!",
             )
 
+        self.btnParse.setEnabled(False)
         self.exec_async(
             pdb.parse_struct,
             structname,
+            addr=self.parse_offset,
+            count=self.spinParseCount.value(),
             add_dummy_root=True,
             finished_cb=_cb,
             errored_cb=_err,
@@ -153,14 +157,13 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
             "Levelname",
             "Value",
             "Type",
-            "Base",
             "Size",
             "Address",
         ]
         model = qtmodel.StructTreeModel(data, headers)
         if self.fileio:
-            model.setAddress(self.parse_offset)
-            model.loadRaw(self.fileio.getvalue()[self.parse_offset:])
+            # TODO: global address fileio reader
+            model.loadStream(io.BytesIO(self.fileio.getvalue()[self.parse_offset:]))
         self.treeView.setModel(model)
         # expand the first item
         self.treeView.setExpanded(model.index(0, 0), True)

@@ -171,8 +171,7 @@ def bitmask(bitcnt):
 
 
 class StructTreeModel(AbstractTreeModel):
-    raw = b""
-    addr = 0
+    fileio = io.BytesIO()
     hex_mode = True
 
     def child(self, row, parent):
@@ -196,8 +195,6 @@ class StructTreeModel(AbstractTreeModel):
         tag = self.headers[index.column()].lower()
         data_funcs = {
             "value": self._data_value,
-            "address": self._data_addr,
-            "addr": self._data_addr,
             "default": self._data_default,
         }
         func = data_funcs.get(tag, data_funcs["default"])
@@ -213,14 +210,6 @@ class StructTreeModel(AbstractTreeModel):
                     return hex(val)
                 else:
                     return str(val)
-
-    def _data_addr(self, tag, item, role) -> Any:
-        match role:
-            case QtCore.Qt.ItemDataRole.DisplayRole:
-                if self.hex_mode:
-                    return hex(item["base"] + self.addr)
-                else:
-                    return str(item["base"] + self.addr)
 
     def _data_value(self, tag, item, role) -> Any:
         match role:
@@ -251,22 +240,20 @@ class StructTreeModel(AbstractTreeModel):
                 return QtGui.QColor("blue")
 
     def _calc_val(self, item: StructRecord) -> Any:
-        base = item["base"]
+        base = item["address"]
         size = item["size"]
         if size > 8:
             return None
         boff = item["bitoff"]
         bsize = item["bitsize"]
-        raw_len = len(self.raw)
-        if base > raw_len or base + size > raw_len:
-            return None
-        val = int.from_bytes(self.raw[base: base + size], "little")
+        self.fileio.seek(base)
+        val = int.from_bytes(self.fileio.read(size), "little")
         if boff and bsize:
             val = (val >> boff) & bitmask(bsize)
         return val
 
-    def loadRaw(self, raw: bytes):
-        self.raw = raw
+    def loadStream(self, fileio: io.IOBase):
+        self.fileio = fileio
         tl = self.index(0, 0)
         br = self.index(self.rowCount(), self.columnCount())
         self.dataChanged.emit(tl, br)
@@ -276,6 +263,3 @@ class StructTreeModel(AbstractTreeModel):
         tl = self.index(0, 0)
         br = self.index(self.rowCount(), self.columnCount())
         self.dataChanged.emit(tl, br)
-
-    def setAddress(self, addr):
-        self.addr = addr

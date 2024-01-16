@@ -93,7 +93,7 @@ class StructRecord(TypedDict):
     levelname: str
     val: int
     type: str
-    base: int
+    address: int
     size: int
     bitoff: int
     bitsize: int
@@ -105,7 +105,7 @@ def new_struct(**kwargs):
         levelname="",
         value=0,
         type="",
-        base=0,
+        address=0,
         size=0,
         bitoff=None,
         bitsize=None,
@@ -138,12 +138,13 @@ class TpiStream(Stream):
         "hashAdjBufferLength" / Int32ul,
     )
 
-    def structs(self) -> dict[str, int]:
+    @property
+    def structs(self) -> dict[str, StructRecord]:
         """ return dict of {structname: idx} """
         types = getattr(self, "types", {})
         return {
-            t.data.name: idx
-            for idx, t in types.items()
+            t.name: t
+            for t in types.values()
             if t.leafKind in {
                 tpi.eLeafKind.LF_STRUCTURE,
                 tpi.eLeafKind.LF_STRUCTURE_ST,
@@ -260,27 +261,12 @@ class TpiStream(Stream):
             else:
                 self._resolve_refs(t, inside_fields=False)
 
-        # test
-        structs = {}
-        for lf_idx, lf in type_dict.items():
-            if lf.leafKind in {
-                tpi.eLeafKind.LF_STRUCTURE,
-                tpi.eLeafKind.LF_STRUCTURE_ST,
-                tpi.eLeafKind.LF_UNION,
-                tpi.eLeafKind.LF_UNION_ST,
-            }:
-                if lf.name.startswith("_") or lf.size == 0:
-                    continue
-                # print(lf_idx, lf.name)
-                structs[lf.name] = lf
-        self.structs = structs
-
-    def form_structs(self, lf, base=0) -> StructRecord:
+    def form_structs(self, lf, addr=0) -> StructRecord:
         if isinstance(lf, tpi.BasicType):
             return new_struct(
                 levelname=lf.name,
                 type = str(lf),
-                base = base,
+                address = addr,
                 size = lf.size,
             )
         elif lf.leafKind in {
@@ -292,12 +278,12 @@ class TpiStream(Stream):
             struct = new_struct(
                 levelname="",
                 type=lf.name,
-                base = base,
+                address = addr,
                 size = lf.size,
                 fields={},
             )
             for member in lf.fieldsRef.fields:
-                mem_struct = self.form_structs(member, base)
+                mem_struct = self.form_structs(member, addr)
                 if mem_struct is None:
                     continue
                 mem_struct["levelname"] = member.name
@@ -308,26 +294,26 @@ class TpiStream(Stream):
             struct = new_struct(
                 levelname = lf.name,
                 type = str(lf.leafKind),
-                base = base,
+                address = addr,
                 size = lf.size,
                 fields = [],
             )
             count = lf.size // lf.elemTypeRef.size
             for i in range(count):
                 off = i * lf.elemTypeRef.size
-                elem_s = self.form_structs(lf.elemTypeRef, base=base + off)
+                elem_s = self.form_structs(lf.elemTypeRef, addr=addr + off)
                 elem_s["levelname"] = "[%d]" % i
                 struct["fields"].append(elem_s)
             return struct
 
         elif lf.leafKind == tpi.eLeafKind.LF_MEMBER:
-            struct = self.form_structs(lf.typeRef, base=base+lf.offset)
-            struct["name"] = lf.name
+            struct = self.form_structs(lf.typeRef, addr=addr+lf.offset)
+            struct["levelname"] = lf.name
             return struct
 
         elif lf.leafKind == tpi.eLeafKind.LF_NESTTYPE:
             # # anonymous?
-            # struct = self.form_structs(lf.typeRef, base=base)
+            # struct = self.form_structs(lf.typeRef, address=addr)
             # struct["name"] = lf.name
             # return struct
             return None
@@ -336,7 +322,7 @@ class TpiStream(Stream):
             return new_struct(
                 levelname = "",
                 type = str(lf.leafKind),
-                base=base,
+                address=addr,
                 size=lf.baseTypeRef.size,
                 bitoff=lf.position,
                 bitsize=lf.length,
@@ -346,7 +332,7 @@ class TpiStream(Stream):
             return new_struct(
                 levelname = lf.name,
                 type = str(lf.leafKind),
-                base = base,
+                address = addr,
                 size = 4, #?
                 fields = [], #?
             )
@@ -355,7 +341,7 @@ class TpiStream(Stream):
             return new_struct(
                 levelname = "",
                 type = str(lf.leafKind),
-                base = base,
+                address = addr,
                 size = 4, #?
                 fields = None,
             )

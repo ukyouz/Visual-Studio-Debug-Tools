@@ -1,4 +1,5 @@
 import io
+import pickle
 from pathlib import Path
 
 from PyQt6 import QtWidgets
@@ -10,7 +11,7 @@ from modules.pdbparser import picklepdb
 
 
 class LoadPdb(Plugin):
-    pdb: pdb.PDB7
+    _pdb: pdb.PDB7
 
     def registerMenues(self) -> dict[str, list[MenuAction]]:
         return {
@@ -40,7 +41,7 @@ class LoadPdb(Plugin):
         if filename:
             def _cb(_pdb):
                 self.ctrl.app_setting.setValue("LoadPdb/pdbin", filename)
-                self.pdb = _pdb
+                self._pdb = _pdb
                 print(_pdb)
                 self.menu("PDB").setEnabled(True)
 
@@ -60,15 +61,41 @@ class LoadPdb(Plugin):
                     finished_cb=_cb,
                 )
 
-    def parse_struct(self, structname: str, add_dummy_root=False):
-        tpi = self.pdb.streams[2]
+    def _shift_addr(self, s: pdb.StructRecord, shift: int=0):
+        s["address"] = s["address"] + shift
+        if isinstance(s["fields"], dict):
+            for c in s["fields"].values():
+                self._shift_addr(c, shift)
+        elif isinstance(s["fields"], list):
+            for c in s["fields"]:
+                self._shift_addr(c, shift)
+
+    def parse_struct(self, structname: str, addr=0, count=1, add_dummy_root=False):
+        tpi = self._pdb.streams[2]
         try:
             lf = tpi.structs[structname]
         except KeyError:
             return pdb.new_struct()
 
-        s = tpi.form_structs(lf)
-        s["levelname"] = structname
+        s = tpi.form_structs(lf, addr)
+        if count > 1:
+            s["levelname"] = "[0]"
+            childs = [s]
+            backup = pickle.dumps(s)
+            for n in range(1, count):
+                copied = pickle.loads(backup)
+                copied["levelname"] = "[%d]" % n
+                self._shift_addr(copied, n * s["size"])
+                childs.append(copied)
+            s = pdb.new_struct(
+                levelname="%s[%d]" % (structname, count),
+                type="LF_ARRAY",
+                address=addr,
+                size=count * s["size"],
+                fields=childs,
+            )
+        else:
+            s["levelname"] = structname
         if add_dummy_root:
             s = pdb.new_struct(
                 fields=[s],
@@ -85,6 +112,6 @@ class Test(Plugin):
 
     def _test(self):
         pdb = self.ctrl.plugin(LoadPdb)
-        print(pdb.pdb)
+        print(pdb._pdb)
 
 
