@@ -2,6 +2,7 @@ import io
 import sys
 from dataclasses import dataclass
 from dataclasses import field
+from typing import Optional
 from typing import Type
 
 from PyQt6 import QtCore
@@ -26,7 +27,7 @@ class PluginNotLoaded(Exception):
 class ParseRecord:
     struct: str
     offset: str
-    model: QtCore.QAbstractItemModel = field(default=None)
+    model: Optional[QtCore.QAbstractItemModel] = field(default=None)
 
 
 class ParseHistoryMenu(HistoryMenu):
@@ -96,23 +97,25 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
                 self.fileio.name = filename
                 self._loadFile(self.fileio)
 
-    def _loadFile(self, fileio: io.IOBase):
+    def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self.view, getattr(fileio, "name", "noname"))
         tblmodel = qtmodel.HexTable(self.tableView, fileio)
         self.tableView.setModel(tblmodel)
-        if self.treeView.model() and self.fileio:
-            treemodel: qtmodel.StructTreeModel = self.treeView.model()
+
+        treemodel = self.treeView.model()
+        if isinstance(treemodel, qtmodel.StructTreeModel):
             treemodel.toggleHexMode(self.btnToggleHex.isChecked())
-            treemodel.loadStream(io.BytesIO(self.fileio.getvalue()[self.parse_offset:]))
+            fileio.seek(self.parse_offset)
+            treemodel.loadStream(io.BytesIO(fileio.read()))
 
     def _onLineOffsetChanged(self):
-        model: qtmodel.HexTable = self.tableView.model()
-        if model:
+        model = self.tableView.model()
+        if isinstance(model, qtmodel.HexTable):
             model.shiftOffset(self.parse_offset)
 
     def _onBtnToggleHexClicked(self):
-        model: qtmodel.StructTreeModel = self.treeView.model()
-        if model:
+        model = self.treeView.model()
+        if isinstance(model, qtmodel.StructTreeModel):
             checked = self.btnToggleHex.isChecked()
             model.toggleHexMode(checked)
 
@@ -164,7 +167,8 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         model = qtmodel.StructTreeModel(data, headers)
         if self.fileio:
             # TODO: global address fileio reader
-            model.loadStream(io.BytesIO(self.fileio.getvalue()[self.parse_offset:]))
+            self.fileio.seek(self.parse_offset)
+            model.loadStream(io.BytesIO(self.fileio.read()))
         self.treeView.setModel(model)
         # expand the first item
         self.treeView.setExpanded(model.index(0, 0), True)
