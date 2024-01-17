@@ -37,11 +37,11 @@ TypRefAttrs = {
     "LF_ARRAY_ST": ["elemType", "idxType"],
     "LF_BITFIELD": ["baseType"],
     # "LF_CLASS": ["fields", "derived", "vshape"],
-    # "LF_ENUM": ["utype", "fields"],
+    "LF_ENUM": ["utype", "fields"],
     "LF_FIELDLIST": [],
     # "LF_MFUNCTION": ["return_type", "class_type", "this_type", "arglist"],
     # "LF_MODIFIER": ["modified_type"],
-    # "LF_POINTER": ["utype"],
+    "LF_POINTER": ["utype"],
     # "LF_PROCEDURE": ["return_type", "arglist"],
     "LF_STRUCTURE": ["fields", "derived", "vshape"],
     "LF_STRUCTURE_ST": ["fields", "derived", "vshape"],
@@ -522,7 +522,7 @@ lfEnum = "lfEnum" / Struct(
     "count" / Int16ul,
     "property" / sCvProperty,
     "utype" / Int32ul,
-    "fieldlist" / Int32ul,
+    "fields" / Int32ul,
     "name" / CString(encoding = "utf8"),
 )
 
@@ -561,6 +561,44 @@ lfUnionST = Struct(
     "name" / PascalString(Int8ub, "utf8"),
 )
 
+lfPointer = Struct(
+    "utype" / Int32ul,
+    "ptr_attr" / BitStruct(
+        "mode" / Enum(
+            BitsInteger(3),
+            PTR_MODE_PTR = 0x00000000,
+            PTR_MODE_REF = 0x00000001,
+            PTR_MODE_PMEM = 0x00000002,
+            PTR_MODE_PMFUNC = 0x00000003,
+            PTR_MODE_RESERVED = 0x00000004,
+        ),
+        "type" / Enum(
+            BitsInteger(5),
+            PTR_NEAR = 0x00000000,
+            PTR_FAR = 0x00000001,
+            PTR_HUGE = 0x00000002,
+            PTR_BASE_SEG = 0x00000003,
+            PTR_BASE_VAL = 0x00000004,
+            PTR_BASE_SEGVAL = 0x00000005,
+            PTR_BASE_ADDR = 0x00000006,
+            PTR_BASE_SEGADDR = 0x00000007,
+            PTR_BASE_TYPE = 0x00000008,
+            PTR_BASE_SELF = 0x00000009,
+            PTR_NEAR32 = 0x0000000A,
+            PTR_FAR32 = 0x0000000B,
+            PTR_64 = 0x0000000C,
+            PTR_UNUSEDPTR = 0x0000000D,
+        ),
+        Padding(3),
+        "restrict" / Flag,
+        "unaligned" / Flag,
+        "const" / Flag,
+        "volatile" / Flag,
+        "flat32" / Flag,
+        Padding(16),
+    ),
+)
+
 sTypType = Struct(
     "length" / Int16ul,
     "leafKind" / eLeafKind,
@@ -578,6 +616,7 @@ sTypType = Struct(
                 "LF_STRUCTURE_ST": lfStructureST,
                 "LF_UNION": lfUnion,
                 "LF_UNION_ST": lfUnionST,
+                "LF_POINTER": lfPointer,
             },
             default = Pass,
         ),

@@ -110,6 +110,7 @@ def new_struct(**kwargs):
         bitoff=None,
         bitsize=None,
         fields=None,
+        is_pointer=False,
     )
     s.update(**kwargs)
     return s
@@ -291,15 +292,20 @@ class TpiStream(Stream):
             return struct
 
         elif lf.leafKind == tpi.eLeafKind.LF_ARRAY:
+            dims = []
+            item_lf = lf
+            while getattr(item_lf, "leafKind", None) == tpi.eLeafKind.LF_ARRAY:
+                dims.append(item_lf.size // item_lf.elemTypeRef.size)
+                item_lf = item_lf.elemTypeRef
+
             struct = new_struct(
                 levelname = lf.name,
-                type = str(lf.leafKind),
+                type = "%s%s" % (item_lf.name, "".join(["[%d]" % d for d in dims])),
                 address = addr,
                 size = lf.size,
                 fields = [],
             )
-            count = lf.size // lf.elemTypeRef.size
-            for i in range(count):
+            for i in range(dims[0]):
                 off = i * lf.elemTypeRef.size
                 elem_s = self.form_structs(lf.elemTypeRef, addr=addr + off)
                 elem_s["levelname"] = "[%d]" % i
@@ -340,10 +346,11 @@ class TpiStream(Stream):
         elif lf.leafKind == tpi.eLeafKind.LF_POINTER:
             return new_struct(
                 levelname = "",
-                type = str(lf.leafKind),
+                type = "%s *" % (lf.utypeRef.name),
                 address = addr,
                 size = 4, #?
                 fields = None,
+                is_pointer=True,
             )
 
         else:
