@@ -100,8 +100,8 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
     def __init__(self, root, headers=None, parent=None):
         super().__init__(parent)
         self.headers = headers or []
-        self.rootItem = root
-        self.parents = {}
+        self._rootItem = root
+        self._parents = {}
 
     def child(self, row: int, parent: QtCore.QModelIndex) -> Any:
         ...
@@ -113,19 +113,19 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
         # if row >= self.rowCount(parent):
         #     return QtCore.QModelIndex()
         index = self.createIndex(row, column, child_item)
-        self.parents[index] = parent
+        self._parents[index] = parent
         return index
 
     def itemFromIndex(self, index) -> Any:
         if not index.isValid():
-            return self.rootItem
+            return self._rootItem
         return index.internalPointer()
 
     def columnCount(self, index=None) -> int:
         return len(self.headers)
 
     def parent(self, index) -> QtCore.QModelIndex:
-        return self.parents[index]
+        return self._parents[index]
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
         """
@@ -142,6 +142,11 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
         match role:
             case QtCore.Qt.ItemDataRole.DisplayRole:
                 return self.headers[section]
+
+    def refresh(self):
+        tl = self.index(0, 0)
+        br = self.index(self.rowCount(), self.columnCount())
+        self.dataChanged.emit(tl, br)
 
     # You should implant/modify the following method for lazylod model
 
@@ -189,55 +194,64 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(index)
         return len(item["fields"]) if item["fields"] is not None else 0
 
+    def flags(self, index: QtCore.QModelIndex):
+        flags = super().flags(index)
+
+        tag = self.headers[index.column()].lower()
+        item = self.itemFromIndex(index)
+        if tag == "value":
+            flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        elif tag == "count":
+            if item["is_pointer"]:
+                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        return flags
+
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid():
             return None
         tag = self.headers[index.column()].lower()
-        data_funcs = {
-            "value": self._data_value,
-            "default": self._data_default,
-        }
-        func = data_funcs.get(tag, data_funcs["default"])
-        if func:
-            item = self.itemFromIndex(index)
-            return func(tag, item, role)
-
-    def _data_default(self, tag, item, role) -> Any:
+        item = self.itemFromIndex(index)
         match role:
             case QtCore.Qt.ItemDataRole.DisplayRole:
-                val = item.get(tag, "")
-                if isinstance(val, int) and self.hex_mode:
-                    return hex(val)
-                else:
-                    return str(val)
-
-    def _data_value(self, tag, item, role) -> Any:
-        match role:
-            case QtCore.Qt.ItemDataRole.DisplayRole:
-                val = self._calc_val(item)
-                if val is not None:
-                    if self.hex_mode:
-                        bitsz = item.get("bitsize", 99999) or item["size"] * 8
-                        size = min(item["size"], math.ceil(bitsz / 8))
-                        return f"0x%0{size * 2}x" % val
-                    else:
-                        return str(val)
-                elif item["fields"] and item["size"] == len(item["fields"]):
-                    # try display c-string
-                    values = (self._calc_val(x) for x in item["fields"])
-                    if not any(x is None for x in values):
-                        data = bytes(values)
-                        if is_cstring(data):
-                            end = data.index(0) if 0 in data else len(data)
-                            cstr = bytes_to_ascii(data[:end])
-                            if len(cstr) <= 64:
-                                return repr(cstr)
-                else:
-                    return ""
+                match tag:
+                    case "value":
+                        val = self._calc_val(item)
+                        if val is not None:
+                            if self.hex_mode:
+                                bitsz = item.get("bitsize", 99999) or item["size"] * 8
+                                size = min(item["size"], math.ceil(bitsz / 8))
+                                return f"0x%0{size * 2}x" % val
+                            else:
+                                return str(val)
+                        elif item["fields"] and item["size"] == len(item["fields"]):
+                            # try display c-string
+                            values = [self._calc_val(x) for x in item["fields"]]
+                            if all(x is not None for x in values):
+                                data = bytes(values)
+                                if is_cstring(data):
+                                    end = data.index(0) if 0 in data else len(data)
+                                    cstr = bytes_to_ascii(data[:end])
+                                    if len(cstr) <= 64:
+                                        return repr(cstr)
+                        else:
+                            return ""
+                    case "count":
+                        if isinstance(item["fields"], list):
+                            return str(len(item["fields"]))
+                        if item["is_pointer"]:
+                            return 1
+                    case _:
+                        val = item.get(tag, "")
+                        if isinstance(val, int) and self.hex_mode:
+                            return hex(val)
+                        else:
+                            return str(val)
             case QtCore.Qt.ItemDataRole.FontRole:
-                return QtGui.QFont("Consolas")
+                if tag in {"value", "count"}:
+                    return QtGui.QFont("Consolas")
             case QtCore.Qt.ItemDataRole.ForegroundRole:
-                return QtGui.QColor("blue")
+                if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
+                    return QtGui.QColor("blue")
 
     def _calc_val(self, item: StructRecord) -> Any:
         base = item["address"]
@@ -254,12 +268,8 @@ class StructTreeModel(AbstractTreeModel):
 
     def loadStream(self, fileio: io.IOBase):
         self.fileio = fileio
-        tl = self.index(0, 0)
-        br = self.index(self.rowCount(), self.columnCount())
-        self.dataChanged.emit(tl, br)
+        self.refresh()
 
     def toggleHexMode(self, hexmode: bool):
         self.hex_mode = hexmode
-        tl = self.index(0, 0)
-        br = self.index(self.rowCount(), self.columnCount())
-        self.dataChanged.emit(tl, br)
+        self.refresh()

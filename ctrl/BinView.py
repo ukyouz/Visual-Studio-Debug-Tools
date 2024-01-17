@@ -158,6 +158,7 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
             "Value",
             "Type",
             "Size",
+            "Count",
             "Address",
         ]
         model = qtmodel.StructTreeModel(data, headers)
@@ -167,6 +168,8 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
         self.treeView.setModel(model)
         # expand the first item
         self.treeView.setExpanded(model.index(0, 0), True)
+        for c in range(model.columnCount()):
+            self.treeView.resizeColumnToContents(c)
         return model
 
 
