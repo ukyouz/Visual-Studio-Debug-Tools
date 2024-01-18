@@ -6,8 +6,8 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
-from modules.pdbparser import pdb
-from modules.pdbparser import picklepdb
+from modules.pdbparser.pdbparser import pdb
+from modules.pdbparser.pdbparser import picklepdb
 
 
 class LoadPdb(Plugin):

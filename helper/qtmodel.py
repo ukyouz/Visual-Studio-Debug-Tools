@@ -14,7 +14,7 @@ from typing import TypeVar
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 
-from modules.pdbparser.pdb import StructRecord
+from modules.pdbparser.pdbparser.pdb import StructRecord
 
 
 def bytes_to_ascii(data: bytes):
