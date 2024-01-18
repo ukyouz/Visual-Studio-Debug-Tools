@@ -424,19 +424,27 @@ class GlobalSymbolStream(Stream):
     def load_body(self, fp):
         data = self.getbodydata(fp)
         from . import gdata
-        self.globalsymbols = gdata.parse(data)
-        self.gvars = {}
-        self.funcs = {}
-        for g in self.globalsymbols:
-            if not hasattr(g, 'symtype'):
-                continue
-            if g.symtype == 0:
-                if g.name.startswith("_"):
-                    self.gvars[g.name[1:]] = g
-                else:
-                    self.gvars[g.name] = g
-            elif g.symtype == 2:
-                self.funcs[g.name] = g
+        globalsymbols = gdata.parse(data)
+        for g in globalsymbols:
+            if isinstance(g.leafKind, int):
+                kind = "s_unknown"
+                try:
+                    d = getattr(self, kind)
+                except AttributeError:
+                    setattr(self, kind, [])
+                    d = getattr(self, kind)
+                d.append(g)
+            else:
+                kind = str(g.leafKind)
+                try:
+                    d = getattr(self, kind.lower())
+                except AttributeError:
+                    setattr(self, kind.lower(), {})
+                    d = getattr(self, kind.lower())
+                try:
+                    d[g.name] = g
+                except AttributeError:
+                    breakpoint()
 
 
 class SectionStream(Stream):
