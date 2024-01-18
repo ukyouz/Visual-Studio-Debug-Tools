@@ -186,23 +186,6 @@ class TpiStream(Stream):
             elif isinstance(ref, list):
                 raise NotImplemented(ref)
 
-    def _insert_field_of_raw(self, t_data):
-        if not hasattr(t_data, "_raw"):
-            return
-        if t_data._raw._data0 < int(tpi.eLeafKind.LF_CHAR):
-            t_data[t_data._raw._raw_attr] = t_data._raw._data0
-            t_data["name"] = t_data._raw._data1
-        else:
-            t_data[t_data._raw._raw_attr] = t_data._raw._data1.value
-            t_data["name"] = t_data._raw._data1.name
-
-    def _flatten_leaf(self, lf):
-        """ insert leafKind to data attribute, and return attribute as a new leaf """
-        if lf.data is None:
-            lf.data = Container()
-        lf.data.leafKind = lf.leafKind
-        return lf.data
-
     def load_body(self, fp):
         data = self.getbodydata(fp)
         arr = Array(
@@ -215,19 +198,19 @@ class TpiStream(Stream):
             range(self.header.typeIndexBegin, self.header.typeIndexEnd),
             types,
         ):
-            new_t = self._flatten_leaf(t)
+            new_t = tpi.flatten_leaf_data(t)
             if new_t.leafKind is tpi.eLeafKind.LF_FIELDLIST:
                 for i, f in enumerate(new_t.fields):
-                    new_t.fields[i] = self._flatten_leaf(f)
+                    new_t.fields[i] = tpi.flatten_leaf_data(f)
             type_dict[idx] = new_t
 
         # fix values
         for t in type_dict.values():
             if t.leafKind is tpi.eLeafKind.LF_FIELDLIST:
                 for f in t.fields:
-                    self._insert_field_of_raw(f)
+                    tpi.insert_field_of_raw(f)
             else:
-                self._insert_field_of_raw(t)
+                tpi.insert_field_of_raw(t)
         self.types = type_dict
 
         ## eliminate fwdrefs

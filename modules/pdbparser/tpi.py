@@ -4,6 +4,7 @@ from construct import BitsInteger
 from construct import BitStruct
 from construct import Bytes
 from construct import Computed
+from construct import Container
 from construct import CString
 from construct import Debugger
 from construct import Enum
@@ -40,7 +41,7 @@ TypRefAttrs = {
     "LF_ENUM": ["utype", "fields"],
     "LF_FIELDLIST": [],
     # "LF_MFUNCTION": ["return_type", "class_type", "this_type", "arglist"],
-    # "LF_MODIFIER": ["modified_type"],
+    "LF_MODIFIER": ["modifiedType"],
     "LF_POINTER": ["utype"],
     # "LF_PROCEDURE": ["return_type", "arglist"],
     "LF_STRUCTURE": ["fields", "derived", "vshape"],
@@ -371,6 +372,17 @@ def sRaw(name):
     )
 
 
+def insert_field_of_raw(t_data):
+    if not hasattr(t_data, "_raw"):
+        return
+    if t_data._raw._data0 < int(eLeafKind.LF_CHAR):
+        t_data[t_data._raw._raw_attr] = t_data._raw._data0
+        t_data["name"] = t_data._raw._data1
+    else:
+        t_data[t_data._raw._raw_attr] = t_data._raw._data1.value
+        t_data["name"] = t_data._raw._data1.name
+
+
 PadAlign = If(
     lambda ctx: ctx._pad != None and ctx._pad > 0xF0,
     Optional(Padding(lambda ctx: ctx._pad & 0x0F))
@@ -501,6 +513,17 @@ lfArrayST = "lfArray" / Struct(
     "name" / PascalString(Int8ub, "utf8"),
 )
 
+lfModifier = "lfModifier" / Struct(
+    "modifiedType" / Int32ul,
+    "modifier" / BitStruct(
+        Padding(5),
+        "unaligned" / Flag,
+        "volatile" / Flag,
+        "const" / Flag,
+        Padding(8),
+    ),
+)
+
 lfBitfield = "lfBitfield" / Struct(
     "baseType" / IntIndex,
     "length" / Int8ul,
@@ -611,6 +634,7 @@ sTypType = Struct(
             {
                 "LF_ARRAY": lfArray,
                 "LF_ARRAY_ST": lfArrayST,
+                "LF_MODIFIER": lfModifier,
                 "LF_BITFIELD": lfBitfield,
                 "LF_ENUM": lfEnum,
                 "LF_FIELDLIST": lfFieldList,
@@ -624,6 +648,14 @@ sTypType = Struct(
         ),
     ),
 )
+
+
+def flatten_leaf_data(lf):
+    """ insert leafKind to data attribute, and return attribute as a new leaf """
+    if lf.data is None:
+        lf.data = Container()
+    lf.data.leafKind = lf.leafKind
+    return lf.data
 
 
 """
