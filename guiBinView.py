@@ -14,7 +14,7 @@ class BinViewerApp(BinViewer):
 if __name__ == '__main__':
     from argparse import ArgumentParser
     p = ArgumentParser()
-    p.add_argument("--file", default="")
+    p.add_argument("file", nargs="?", default="")
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
