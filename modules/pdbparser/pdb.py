@@ -164,7 +164,7 @@ class TpiStream(Stream):
                     try:
                         setattr(lf, attr + "Ref", tpi.eBaseTypes[ref])
                     except KeyError:
-                        print(hex(ref))
+                        print("Unknown Base Type %s" % hex(ref))
                 elif ref >= self.header.typeIndexBegin:
                     with suppress(KeyError):
                         setattr(lf, attr + "Ref", self.types[ref])
@@ -268,7 +268,7 @@ class TpiStream(Stream):
                 levelname=lf.name,
                 type = str(lf),
                 address = addr,
-                size = lf.size,
+                size = tpi.get_size(lf),
             )
         elif lf.leafKind in {
             tpi.eLeafKind.LF_STRUCTURE,
@@ -280,7 +280,7 @@ class TpiStream(Stream):
                 levelname="",
                 type=lf.name,
                 address = addr,
-                size = lf.size,
+                size = tpi.get_size(lf),
                 fields={},
             )
             for member in lf.fieldsRef.fields:
@@ -292,21 +292,17 @@ class TpiStream(Stream):
             return struct
 
         elif lf.leafKind == tpi.eLeafKind.LF_ARRAY:
-            dims = []
-            item_lf = lf
-            while getattr(item_lf, "leafKind", None) == tpi.eLeafKind.LF_ARRAY:
-                dims.append(item_lf.size // item_lf.elemTypeRef.size)
-                item_lf = item_lf.elemTypeRef
+            count = tpi.get_size(lf) // tpi.get_size(lf.elemTypeRef)
 
             struct = new_struct(
                 levelname = lf.name,
-                type = "%s%s" % (item_lf.name, "".join(["[%d]" % d for d in dims])),
+                type = tpi.get_tpname(lf),
                 address = addr,
-                size = lf.size,
+                size = tpi.get_size(lf),
                 fields = [],
             )
-            for i in range(dims[0]):
-                off = i * lf.elemTypeRef.size
+            for i in range(count):
+                off = i * tpi.get_size(lf.elemTypeRef)
                 elem_s = self.form_structs(lf.elemTypeRef, addr=addr + off)
                 elem_s["levelname"] = "[%d]" % i
                 struct["fields"].append(elem_s)
@@ -329,7 +325,7 @@ class TpiStream(Stream):
                 levelname = "",
                 type = str(lf.leafKind),
                 address=addr,
-                size=lf.baseTypeRef.size,
+                size=tpi.get_size(lf),
                 bitoff=lf.position,
                 bitsize=lf.length,
             )
@@ -339,7 +335,7 @@ class TpiStream(Stream):
                 levelname = lf.name,
                 type = str(lf.leafKind),
                 address = addr,
-                size = 4, #?
+                size = tpi.get_size(lf), #?
                 fields = [], #?
             )
 
@@ -348,7 +344,7 @@ class TpiStream(Stream):
                 levelname = "",
                 type = "%s *" % (lf.utypeRef.name),
                 address = addr,
-                size = 4, #?
+                size = tpi.get_size(lf),
                 fields = None,
                 is_pointer=True,
             )

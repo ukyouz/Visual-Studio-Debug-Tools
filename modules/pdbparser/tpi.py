@@ -107,6 +107,8 @@ eBaseTypes = {
     0x007A: BasicType("T_CHAR16", 2),
     0x007B: BasicType("T_CHAR32", 4),
 
+    0x0103: BasicType("T_PVOID", 4, is_ptr=True),
+
     0x0403: BasicType("T_32PVOID", 4, is_ptr=True),
     0x0411: BasicType("T_32PSHORT", 4, is_ptr=True),
     0x0412: BasicType("T_32PLONG", 4, is_ptr=True),
@@ -622,3 +624,64 @@ sTypType = Struct(
         ),
     ),
 )
+
+
+"""
+helper functions
+"""
+ARCH_PTR_SIZE = 4
+
+def get_size(lf):
+    if isinstance(lf, BasicType):
+        return lf.size
+    elif lf.leafKind in {
+        eLeafKind.LF_STRUCTURE,
+        eLeafKind.LF_STRUCTURE_ST,
+        eLeafKind.LF_UNION,
+        eLeafKind.LF_UNION_ST,
+        eLeafKind.LF_ARRAY,
+    }:
+        return lf.size
+    elif lf.leafKind == eLeafKind.LF_POINTER:
+        return ARCH_PTR_SIZE
+    elif lf.leafKind == eLeafKind.LF_ENUM:
+        return 4  # FIXME not sure ??
+    elif lf.leafKind == eLeafKind.LF_BITFIELD:
+        return lf.baseTypeRef.size
+    # elif lf.leafKind == eLeafKind.LF_MODIFIER:
+    #     return get_size(lf.modified_type)
+    else:
+        return -1
+
+def arr_dims(lf):
+    assert lf.leafKind == eLeafKind.LF_ARRAY
+
+
+def get_tpname(lf):
+    if isinstance(lf, BasicType):
+        return str(lf)
+    elif lf.leafKind in {
+        eLeafKind.LF_STRUCTURE,
+        eLeafKind.LF_STRUCTURE_ST,
+        eLeafKind.LF_UNION,
+        eLeafKind.LF_UNION_ST,
+        eLeafKind.LF_ENUM,
+    }:
+        return lf.name
+    elif lf.leafKind == eLeafKind.LF_POINTER:
+        return "(%s *)" % get_tpname(lf.utypeRef)
+    # elif lf.leafKind == eLeafKind.LF_PROCEDURE:
+    #     return proc_str(lf)
+    # elif lf.leafKind == eLeafKind.LF_MODIFIER:
+    #     return mod_str(lf)
+    elif lf.leafKind == eLeafKind.LF_ARRAY:
+        dims = []
+        item_lf = lf
+        while getattr(item_lf, "leafKind", None) == eLeafKind.LF_ARRAY:
+            dims.append(get_size(item_lf) // get_size(item_lf.elemTypeRef))
+            item_lf = item_lf.elemTypeRef
+        return "%s%s" % (get_tpname(item_lf), "".join(["[%d]" % d for d in dims]))
+    elif lf.leafKind == eLeafKind.LF_BITFIELD:
+        return str(lf.leafKind)
+    else:
+        return str(lf.leafKind)
