@@ -106,6 +106,7 @@ class Ui_MainWindow(object):
 "QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png);}")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.treeView.setAutoScroll(False)
+        self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
         self.treeView.setIndentation(16)
         self.treeView.setObjectName("treeView")
         self.verticalLayout.addWidget(self.treeView)
