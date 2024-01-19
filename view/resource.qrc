@@ -8,4 +8,13 @@
     <file>images/treeview/border-expand-more.png</file>
     <file>images/treeview/border-more.png</file>
   </qresource>
+  <qresource prefix="action">
+    <file>images/vscode/pause.svg</file>
+    <file>images/vscode/resume.svg</file>
+    <file>images/vscode/stop.svg</file>
+    <file>images/vscode/new-file.svg</file>
+    <file>images/vscode/new-folder.svg</file>
+    <file>images/vscode/history.svg</file>
+    <file>images/vscode/three-bars.svg</file>
+  </qresource>
 </RCC>

@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Type
 
 from PyQt6 import QtCore
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -14,7 +15,9 @@ from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
+from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
+from ctrl.WidgetMemory import Memory
 from ctrl.WidgetProcessSelector import ProcessSelector
 from helper import qtmodel
 from plugins import loadpdb
@@ -27,25 +30,23 @@ class VisualStudioDebugger(AppCtrl):
         super().__init__()
         self.ui = VSdebugger.Ui_MainWindow()
         self.ui.setupUi(self)
-        set_app_title(self, "")
+        self.setWindowTitle("VS Debugger")
+        self.setWindowIcon(QtGui.QIcon("view/images/AnalysisServerConnection_16x.svg"))
 
-        self.app_setting = QtCore.QSettings("app.ini", QtCore.QSettings.Format.IniFormat)
+        editToolBar = QtWidgets.QToolBar("Process", self)
+        editToolBar.setMovable(False)
+        self.addToolBar(editToolBar)
+        editToolBar.addWidget(ProcessSelector(self))
 
         self.dockWidget = self.generate_dockwidget()
         self.dockWidget.setWidget(Expression(self))
-        self.dockWidget.resize(self.size())
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget)
+        self.dockWidget.setWindowTitle("Expression")
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget)
 
         self.dockWidget2 = self.generate_dockwidget()
-        self.dockWidget2.setWidget(Expression(self))
-        self.dockWidget2.resize(self.size())
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget2)
-
-        editToolBar = QtWidgets.QToolBar("Edit", self)
-        editToolBar.setMovable(False)
-        self.addToolBar(editToolBar)
-        # self.process_ctrl = ProcessSelector(self)
-        editToolBar.addWidget(ProcessSelector(self))
+        self.dockWidget2.setWidget(Memory(self))
+        self.dockWidget2.setWindowTitle("Memory")
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget2)
 
         self._plugins = {}
         self.loadPlugins([
@@ -59,6 +60,8 @@ class VisualStudioDebugger(AppCtrl):
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
             |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
         )
+        dockWidget.setTitleBarWidget(DockTitleBar(dockWidget))
+        dockWidget.setContentsMargins(0, 0, 0, 0)
         return dockWidget
 
     def loadPlugins(self, plugins: list[Plugin]):

@@ -14,6 +14,18 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="leftMargin">
+    <number>6</number>
+   </property>
+   <property name="topMargin">
+    <number>6</number>
+   </property>
+   <property name="rightMargin">
+    <number>6</number>
+   </property>
+   <property name="bottomMargin">
+    <number>6</number>
+   </property>
    <item>
     <widget class="QFrame" name="frame_2">
      <property name="frameShape">
@@ -45,11 +57,15 @@
           <property name="text">
            <string>History</string>
           </property>
+          <property name="icon">
+           <iconset resource="resource.qrc">
+            <normaloff>:/action/images/vscode/history.svg</normaloff>:/action/images/vscode/history.svg</iconset>
+          </property>
           <property name="popupMode">
            <enum>QToolButton::InstantPopup</enum>
           </property>
           <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextOnly</enum>
+           <enum>Qt::ToolButtonIconOnly</enum>
           </property>
          </widget>
         </item>
@@ -83,13 +99,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QToolButton" name="btnMore">
-        <property name="text">
-         <string>...</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
@@ -139,6 +148,18 @@
         <property name="frameShape">
          <enum>QFrame::Panel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Sunken</enum>
+        </property>
+        <property name="showGrid">
+         <bool>false</bool>
+        </property>
+        <attribute name="verticalHeaderMinimumSectionSize">
+         <number>18</number>
+        </attribute>
+        <attribute name="verticalHeaderDefaultSectionSize">
+         <number>18</number>
+        </attribute>
        </widget>
       </item>
      </layout>
@@ -202,6 +223,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

@@ -102,6 +102,22 @@
           <property name="text">
            <string>Open File</string>
           </property>
+          <property name="icon">
+           <iconset resource="resource.qrc">
+            <normaloff>:/action/images/vscode/new-file.svg</normaloff>:/action/images/vscode/new-file.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>14</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="shortcut">
+           <string>Ctrl+S, Ctrl+R</string>
+          </property>
+          <property name="autoRaise">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
         <item>
@@ -181,7 +197,9 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>actionQuit</sender>

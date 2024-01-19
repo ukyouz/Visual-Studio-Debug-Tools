@@ -60,11 +60,21 @@
           <property name="text">
            <string>History</string>
           </property>
+          <property name="icon">
+           <iconset resource="resource.qrc">
+            <normaloff>:/action/images/vscode/history.svg</normaloff>:/action/images/vscode/history.svg</iconset>
+          </property>
+          <property name="shortcut">
+           <string>Ctrl+S, Ctrl+R, Ctrl+R</string>
+          </property>
           <property name="popupMode">
            <enum>QToolButton::InstantPopup</enum>
           </property>
           <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextOnly</enum>
+           <enum>Qt::ToolButtonIconOnly</enum>
+          </property>
+          <property name="autoRaise">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -75,14 +85,14 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QToolButton" name="btnParse">
+          <property name="text">
+           <string>Parse</string>
+          </property>
+         </widget>
+        </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QToolButton" name="btnMore">
-        <property name="text">
-         <string>...</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
@@ -159,6 +169,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

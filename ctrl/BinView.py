@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Type
 
 from PyQt6 import QtCore
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -33,7 +34,8 @@ class BinViewer(AppCtrl):
         super().__init__()
         self.ui = BinView.Ui_MainWindow()
         self.ui.setupUi(self)
-        set_app_title(self, "")
+        self.setWindowTitle("Bin Viewer")
+        self.setWindowIcon(QtGui.QIcon("view/images/BrowseData_16x.svg"))
 
         # properties
         if fileio:
