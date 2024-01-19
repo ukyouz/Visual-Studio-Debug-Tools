@@ -178,6 +178,8 @@ def bitmask(bitcnt):
 
 
 class StructTreeModel(AbstractTreeModel):
+    subfieldsAsked = QtCore.pyqtSignal(QtCore.QModelIndex, dict)
+
     fileio = io.BytesIO()
     hex_mode = True
     headers = [
@@ -200,6 +202,8 @@ class StructTreeModel(AbstractTreeModel):
         if index.column() > 0:
             return 0
         item = self.itemFromIndex(index)
+        if self.canFetchMore(index):
+            return 1
         return len(item["fields"]) if item["fields"] is not None else 0
 
     def flags(self, index: QtCore.QModelIndex):
@@ -260,6 +264,8 @@ class StructTreeModel(AbstractTreeModel):
             case QtCore.Qt.ItemDataRole.ForegroundRole:
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
                     return QtGui.QColor("blue")
+            case QtCore.Qt.ItemDataRole.UserRole:
+                return self._calc_val(item)
 
     def _calc_val(self, item: StructRecord) -> Any:
         base = item["address"]
@@ -273,6 +279,52 @@ class StructTreeModel(AbstractTreeModel):
         if boff and bsize:
             val = (val >> boff) & bitmask(bsize)
         return val
+
+    def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
+        item = self.itemFromIndex(parent)
+
+        self.beginInsertRows(parent, row, row + count)
+        if "fields" not in item or item["fields"] is None:
+            item["fields"] = []
+        for _ in range(count):
+            item["fields"].insert(row, {})
+        self.endInsertRows()
+
+        return True
+
+    def canFetchMore(self, parent: QtCore.QModelIndex) -> bool:
+        item = self.itemFromIndex(parent)
+        return (
+            item.get("is_pointer", False)
+            and (item["fields"] is None or item["fields"] == "")
+        )
+
+    def fetchMore(self, parent: QtCore.QModelIndex) -> None:
+        self.insertRow(0, parent)
+        index = self.index(0, 0, parent)
+        item = self.itemFromIndex(index)
+        item.update(self.itemFromIndex(parent))
+        item["levelname"] = "loading..."
+        item["is_pointer"] = False
+        item["fields"] = None
+        self.dataChanged.emit(index, index)
+        self.subfieldsAsked.emit(parent, self.itemFromIndex(parent))
+
+    def appendItem(self, record: dict, parent=QtCore.QModelIndex()):
+        last_row = self.rowCount()
+        self.insertRow(last_row, parent)
+        item = self.itemFromIndex(self.index(last_row, 0, parent))
+        item.update(record)
+
+    def setItem(self, record: dict, index=QtCore.QModelIndex()):
+        item = self.itemFromIndex(index)
+        rc = len(item["fields"]) if item["fields"] is not None else 0
+        new_count = len(record["fields"]) if record["fields"] else 0
+        if new_count < rc:
+            return
+        self.insertRows(rc, new_count - rc, index)
+        item.update(record)
+        self.dataChanged.emit(index, index)
 
     def loadStream(self, fileio: io.IOBase):
         self.fileio = fileio

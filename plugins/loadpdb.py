@@ -10,6 +10,12 @@ from modules.pdbparser.pdbparser import pdb
 from modules.pdbparser.pdbparser import picklepdb
 
 
+class DummyOmap:
+
+    def remap(self, addr):
+        return addr
+
+
 class LoadPdb(Plugin):
     _pdb: pdb.PDB7
 
@@ -97,7 +103,11 @@ class LoadPdb(Plugin):
             for c in s["fields"]:
                 self._shift_addr(c, shift)
 
-    def parse_struct(self, structname: str, addr=0, count=1, add_dummy_root=False):
+    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, add_dummy_root=False):
+        if expr == "":
+            return pdb.new_struct()
+
+        expr = expr or structname
         tpi = self._pdb.streams[2]
         try:
             lf = tpi.structs[structname]
@@ -115,19 +125,41 @@ class LoadPdb(Plugin):
                 self._shift_addr(copied, n * s["size"])
                 childs.append(copied)
             s = pdb.new_struct(
-                levelname="%s[%d]" % (structname, count),
+                levelname="%s[%d]" % (expr, count),
                 type="LF_ARRAY",
                 address=addr,
                 size=count * s["size"],
                 fields=childs,
             )
         else:
-            s["levelname"] = structname
+            s["levelname"] = expr
         if add_dummy_root:
             s = pdb.new_struct(
                 fields=[s],
             )
         return s
+
+    def query_expression(self, expr: str, virtual_base: int=0):
+        tpi = self._pdb.streams[2]
+        dbi = self._pdb.streams[3]
+        glb = self._pdb.streams[dbi.header.symrecStream]
+
+        if expr not in glb.s_gdata32:
+            return None
+
+        # remap global address
+        try:
+            sects = self._pdb.streams[dbi.dbgheader.snSectionHdrOrig].sections
+            omap = self._pdb.streams[dbi.dbgheader.snOmapFromSrc]
+        except AttributeError:
+            sects = self._pdb.streams[dbi.dbgheader.snSectionHdr].sections
+            omap = DummyOmap()
+        glb_info = glb.s_gdata32[expr]
+        section_offset = sects[glb_info.section - 1].VirtualAddress
+        glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
+
+        struct = tpi.types[glb_info.typind].name
+        return self.parse_struct(struct, expr, addr=glb_addr)
 
 
 class Test(Plugin):
