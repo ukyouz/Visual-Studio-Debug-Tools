@@ -44,12 +44,14 @@ class VisualStudioDebugger(AppCtrl):
         editToolBar.addWidget(ProcessSelector(self))
 
         self.dockWidget = self.generate_dockwidget()
-        self.dockWidget.setWidget(Expression(self))
+        self.expr = Expression(self)
+        self.dockWidget.setWidget(self.expr)
         self.dockWidget.setWindowTitle("Expression")
         self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget)
 
         self.dockWidget2 = self.generate_dockwidget()
-        self.dockWidget2.setWidget(Memory(self))
+        self.mem = Memory(self)
+        self.dockWidget2.setWidget(self.mem)
         self.dockWidget2.setWindowTitle("Memory")
         self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget2)
 
