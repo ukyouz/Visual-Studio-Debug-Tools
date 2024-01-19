@@ -88,6 +88,55 @@ class AppCtrl(QtWidgets.QMainWindow):
             You may want to raise some error when plugin is not loaded.
         """
 
+    def menu(self, name) -> QtWidgets.QMenu:
+        norm_name = "menu" + normalized(name)
+        return getattr(self.ui, norm_name)
+
+    def setupMenues(self, parent, menues):
+        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu):
+            for act in actions:
+                if act["name"] == "---":
+                    menu.addSeparator()
+                    continue
+                if submenus := act.get("submenus", []):
+                    submenu = self._addMenu(menu, act["name"])
+                    _make_menu(submenus, submenu)
+                    menu.addAction(submenu.menuAction())
+                else:
+                    action = self._makeAction(
+                        self,
+                        act["name"],
+                        act.get("shortcut", None),
+                        act.get("command", None),
+                    )
+                    if icon := act.get("icon", None):
+                        action.setIcon(QtGui.QIcon(icon))
+                    menu.addAction(action)
+
+        _make_menu(menues, parent)
+
+    def _addMenu(self, parent, name) -> QtWidgets.QMenu:
+        norm_name = "menu" + normalized(name)
+        menu = getattr(self.ui, norm_name, None)
+        if menu is not None:
+            menu.addSeparator()
+        else:
+            menu = QtWidgets.QMenu(parent=parent)
+            menu.setObjectName(norm_name)
+            menu.setTitle(_translate("MainWindow", name))
+            setattr(self.ui, norm_name, menu)
+        return menu
+
+    def _makeAction(self, parent, name, shortcut=None, cmd=None):
+        action = QtGui.QAction(parent=parent)
+        norm_actname = "action" + normalized(name)
+        action.setObjectName(norm_actname)
+        action.setText(_translate("MainWindow", name))
+        if shortcut:
+            action.setShortcut(_translate("MainWindow", shortcut))
+        if cmd:
+            action.triggered.connect(partial(self.run_cmd, cmd))
+        return action
 
 class MenuAction(TypedDict):
     name: str
@@ -113,62 +162,6 @@ class PluginNotLoaded(Exception):
 @dataclass
 class Plugin:
     app: AppCtrl
-
-    """ app usages """
-
-    def setupMenues(self, parent):
-        menues = self.registerMenues()
-
-        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu):
-            for act in actions:
-                if act["name"] == "---":
-                    menu.addSeparator()
-                    continue
-                if submenus := act.get("submenus", []):
-                    submenu = self._addMenu(menu, act["name"])
-                    _make_menu(submenus, submenu)
-                    menu.addAction(submenu.menuAction())
-                else:
-                    action = self._makeAction(
-                        self.app,
-                        act["name"],
-                        act.get("shortcut", None),
-                        act.get("command", None),
-                    )
-                    if icon := act.get("icon", None):
-                        action.setIcon(QtGui.QIcon(icon))
-                    menu.addAction(action)
-
-        _make_menu(menues, parent)
-
-    def _addMenu(self, parent, name) -> QtWidgets.QMenu:
-        norm_name = "menu" + normalized(name)
-        menu = getattr(self.app.ui, norm_name, None)
-        if menu is not None:
-            menu.addSeparator()
-        else:
-            menu = QtWidgets.QMenu(parent=parent)
-            menu.setObjectName(norm_name)
-            menu.setTitle(_translate("MainWindow", name))
-            setattr(self.app.ui, norm_name, menu)
-        return menu
-
-    def _makeAction(self, parent, name, shortcut=None, cmd=None):
-        action = QtGui.QAction(parent=parent)
-        norm_actname = "action" + normalized(name)
-        action.setObjectName(norm_actname)
-        action.setText(_translate("MainWindow", name))
-        if shortcut:
-            action.setShortcut(_translate("MainWindow", shortcut))
-        if cmd:
-            action.triggered.connect(partial(self.app.run_cmd, cmd))
-        return action
-
-    """ plugin usages """
-
-    def menu(self, name) -> QtWidgets.QMenu:
-        norm_name = "menu" + normalized(name)
-        return getattr(self.app.ui, norm_name)
 
     def registerMenues(self) -> list[MenuAction]:
         return []

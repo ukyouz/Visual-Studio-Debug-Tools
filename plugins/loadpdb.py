@@ -62,9 +62,9 @@ class LoadPdb(Plugin):
                 self._pdb_fname = filename
                 self._pdb = _pdb
                 print(_pdb)
-                self.menu("PDB").setEnabled(True)
+                self.app.menu("PDB").setEnabled(True)
 
-            self.menu("PDB").setEnabled(False)
+            self.app.menu("PDB").setEnabled(False)
 
             path = Path(filename)
             if path.suffix == ".pdbin":
@@ -104,7 +104,7 @@ class LoadPdb(Plugin):
                 self._shift_addr(c, shift)
 
     def parse_struct(self, structname: str, expr: str="", addr=0, count=1, add_dummy_root=False):
-        if expr == "":
+        if structname == "":
             return pdb.new_struct()
 
         expr = expr or structname

@@ -145,7 +145,7 @@ class VisualStudioDebugger(AppCtrl):
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
             self._plugins[p.__class__.__name__] = p
-            p.setupMenues(self.ui.menubar)
+            self.setupMenues(self.ui.menubar, p.registerMenues())
             for cmdname, fn in p.registerCommands():
                 self.cmd.register(cmdname, fn)
             p.post_init()
