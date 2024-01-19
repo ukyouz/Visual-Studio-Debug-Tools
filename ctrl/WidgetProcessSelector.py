@@ -43,6 +43,16 @@ class ProcessSelector(QtWidgets.QWidget):
             debugger.Debugger(self.app),
         ])
 
+        self.app.cmd.register("RefreshProcesses", self.load_ui)
+        self.app.setupMenues(self.app.menu("Tool"), [
+            { "name": "---", },
+            {
+                "name": "Refresh processes",
+                "command": "RefreshProcesses",
+                "shortcut": "F5",
+            }
+        ])
+
     def load_ui(self):
         def _cb_load_processes(unique_processes):
             if not unique_processes:
