@@ -13,32 +13,35 @@ from modules.pdbparser.pdbparser import picklepdb
 class LoadPdb(Plugin):
     _pdb: pdb.PDB7
 
-    def __post_init__(self):
-        self._pdb_fname = ""
-
-    def registerMenues(self) -> dict[str, list[MenuAction]]:
-        return {
-            "PDB": [
-                {
-                    "name": "Load PDB file...",
-                    "command": "LoadPdbin",
-                    # "shortcut": "",
-                },
-                {"name": "---",},
-                {
-                    "name": "Show PDB status...",
-                    "command": "ShowPdbStatus",
-                },
-            ]
-        }
+    def registerMenues(self) -> list[MenuAction]:
+        return [
+            {
+                "name": "PDB",
+                "submenus": [
+                    {
+                        "name": "Load PDB file...",
+                        "command": "LoadPdbin",
+                        # "shortcut": "",
+                    },
+                    {"name": "---",},
+                    {
+                        "name": "Show PDB status...",
+                        "command": "ShowPdbStatus",
+                    },
+                ]
+            },
+        ]
 
     def registerCommands(self):
-        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
-            self.load_pdbin(val)
         return [
             ("LoadPdbin", self.load_pdbin),
             ("ShowPdbStatus", self.show_status),
         ]
+
+    def post_init(self):
+        self._pdb_fname = ""
+        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
+            self.load_pdbin(val)
 
     def load_pdbin(self, filename=""):
         if not filename:

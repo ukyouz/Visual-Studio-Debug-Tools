@@ -33,6 +33,11 @@ class VisualStudioDebugger(AppCtrl):
         self.setWindowTitle("VS Debugger")
         self.setWindowIcon(QtGui.QIcon("view/images/AnalysisServerConnection_16x.svg"))
 
+        self._plugins = {}
+        self.loadPlugins([
+            loadpdb.LoadPdb(self),
+        ])
+
         editToolBar = QtWidgets.QToolBar("Process", self)
         editToolBar.setMovable(False)
         self.addToolBar(editToolBar)
@@ -47,11 +52,6 @@ class VisualStudioDebugger(AppCtrl):
         self.dockWidget2.setWidget(Memory(self))
         self.dockWidget2.setWindowTitle("Memory")
         self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget2)
-
-        self._plugins = {}
-        self.loadPlugins([
-            loadpdb.LoadPdb(self),
-        ])
 
     def generate_dockwidget(self):
         dockWidget = QtWidgets.QDockWidget(parent=self)
@@ -70,6 +70,7 @@ class VisualStudioDebugger(AppCtrl):
             p.setupMenues(self.ui.menubar)
             for cmdname, fn in p.registerCommands():
                 self.cmd.register(cmdname, fn)
+            p.post_init()
 
     def plugin(self, plg_cls: Type[ClsType]) -> ClsType:
         try:

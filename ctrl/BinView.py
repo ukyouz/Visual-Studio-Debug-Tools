@@ -57,6 +57,7 @@ class BinViewer(AppCtrl):
             p.setupMenues(self.ui.menubar)
             for cmdname, fn in p.registerCommands():
                 self.cmd.register(cmdname, fn)
+            p.post_init()
 
     def plugin(self, plg_cls: Type[ClsType]) -> ClsType:
         try:

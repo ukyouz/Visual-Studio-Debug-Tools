@@ -71,6 +71,9 @@ class AppCtrl(QtWidgets.QMainWindow):
             worker.errored.connect(errored_cb)
         self.threadpool.start(worker)
 
+    def loadPlugins(self, plugins: list):
+        ...
+
     @abc.abstractmethod
     def plugin(self, plugin_cls: ClsType) -> ClsType:
         """
@@ -89,6 +92,8 @@ class MenuAction(TypedDict):
     name: str
     command: NotRequired[str]
     shortcut: NotRequired[str]
+    icon: NotRequired[str]
+    submenus: NotRequired[list]
 
 
 def normalized(name: str) -> str:
@@ -113,21 +118,27 @@ class Plugin:
     def setupMenues(self, parent):
         menues = self.registerMenues()
 
-        for name, actions in menues.items():
-            menu = self._addMenu(parent, name)
-
+        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu):
             for act in actions:
                 if act["name"] == "---":
                     menu.addSeparator()
                     continue
-                action = self._makeAction(
-                    self.app,
-                    act["name"],
-                    act.get("shortcut", None),
-                    act.get("command", None),
-                )
-                menu.addAction(action)
-            parent.addAction(menu.menuAction())
+                if submenus := act.get("submenus", []):
+                    submenu = self._addMenu(menu, act["name"])
+                    _make_menu(submenus, submenu)
+                    menu.addAction(submenu.menuAction())
+                else:
+                    action = self._makeAction(
+                        self.app,
+                        act["name"],
+                        act.get("shortcut", None),
+                        act.get("command", None),
+                    )
+                    if icon := act.get("icon", None):
+                        action.setIcon(QtGui.QIcon(icon))
+                    menu.addAction(action)
+
+        _make_menu(menues, parent)
 
     def _addMenu(self, parent, name) -> QtWidgets.QMenu:
         norm_name = "menu" + normalized(name)
@@ -158,11 +169,14 @@ class Plugin:
         norm_name = "menu" + normalized(name)
         return getattr(self.app.ui, norm_name)
 
-    def registerMenues(self) -> dict[str, list[MenuAction]]:
-        return {}
+    def registerMenues(self) -> list[MenuAction]:
+        return []
 
     def registerCommands(self) -> list[tuple]:
         return []
+
+    def post_init(self):
+        ...
 
 
 class HistoryMenu(QtCore.QObject):
