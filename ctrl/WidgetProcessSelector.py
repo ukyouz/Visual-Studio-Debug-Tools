@@ -19,14 +19,14 @@ from view import WidgetProcessSelector
 from view import resource
 
 
-class CtrlProcessSelector(WidgetProcessSelector.Ui_Form):
-    def __init__(self, ctrl: AppCtrl):
+class ProcessSelector(QtWidgets.QWidget):
+    def __init__(self, app: AppCtrl):
         super().__init__()
-        self.view = QtWidgets.QWidget(ctrl.view)
-        self.setupUi(self.view)
-        set_app_title(self.view, "")
+        self.ui = WidgetProcessSelector.Ui_Form()
+        self.ui.setupUi(self)
+        set_app_title(self, "")
 
-        self.ctrl = ctrl
+        self.app = app
 
 
 if __name__ == '__main__':
@@ -36,6 +36,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = CtrlProcessSelector(None)
-    window.view.show()
+    window = ProcessSelector(None)
+    window.show()
     sys.exit(app.exec())

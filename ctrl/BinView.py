@@ -14,7 +14,7 @@ from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
-from ctrl.WidgetBinParser import CtrlBinParser
+from ctrl.WidgetBinParser import BinParser
 from helper import qtmodel
 from plugins import loadpdb
 from view import BinView
@@ -28,21 +28,19 @@ class ParseRecord:
     model: Optional[QtCore.QAbstractItemModel] = field(default=None)
 
 
-class BinViewer(AppCtrl, BinView.Ui_MainWindow):
+class BinViewer(AppCtrl):
     def __init__(self, fileio=None):
         super().__init__()
-        self.view = QtWidgets.QMainWindow()
-        self.setupUi(self.view)
-        set_app_title(self.view, "")
+        self.ui = BinView.Ui_MainWindow()
+        self.ui.setupUi(self)
+        set_app_title(self, "")
 
         # properties
         if fileio:
             self._loadFile(fileio)
 
         # events
-        self.actionOpen_File.triggered.connect(self._onFileOpened)
-
-        self.app_setting = QtCore.QSettings("app.ini", QtCore.QSettings.Format.IniFormat)
+        self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
 
         self._plugins = {}
         self.subwidgets = []
@@ -54,7 +52,7 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
             self._plugins[p.__class__.__name__] = p
-            p.setupMenues(self.menubar)
+            p.setupMenues(self.ui.menubar)
             for cmdname, fn in p.registerCommands():
                 self.cmd.register(cmdname, fn)
 
@@ -67,7 +65,7 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
     def _onFileOpened(self, filename=False):
         if not filename:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self.view,
+                self,
                 caption="Open File",
                 filter="Any (*.*)"
             )
@@ -78,8 +76,8 @@ class BinViewer(AppCtrl, BinView.Ui_MainWindow):
                 self._loadFile(fileio)
 
     def _loadFile(self, fileio: io.BytesIO):
-        widget = CtrlBinParser(self, fileio)
-        window = self.mdiArea.addSubWindow(widget)
+        widget = BinParser(self, fileio)
+        window = self.ui.mdiArea.addSubWindow(widget)
         widget.show()
         self.subwidgets.append(window)
 
@@ -97,5 +95,5 @@ if __name__ == '__main__':
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())
     window = BinViewer(fileio)
-    window.view.show()
+    window.show()
     sys.exit(app.exec())

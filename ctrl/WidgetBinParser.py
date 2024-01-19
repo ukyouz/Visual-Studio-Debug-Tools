@@ -31,31 +31,32 @@ class ParseHistoryMenu(HistoryMenu):
         return "%s; %s" % (data.struct, data.offset)
 
 
-class CtrlBinParser(QtWidgets.QWidget, WidgetBinParser.Ui_Form):
-    def __init__(self, ctrl: AppCtrl, fileio=None):
-        super().__init__()
-        self.ctrl = ctrl
-        self.setupUi(self)
+class BinParser(QtWidgets.QWidget):
+    def __init__(self, app: AppCtrl, fileio=None):
+        super().__init__(app)
+        self.ui = WidgetBinParser.Ui_Form()
+        self.ui.setupUi(self)
+        self.app = app
         set_app_title(self, "")
 
         # properties
-        self.parse_hist = ParseHistoryMenu(self.btnHistory)
+        self.parse_hist = ParseHistoryMenu(self.ui.btnHistory)
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
         self.fileio = fileio
         if fileio:
             self._loadFile(fileio)
 
         # events
-        self.btnParse.clicked.connect(self._onBtnParseClicked)
-        self.lineStruct.returnPressed.connect(self._onBtnParseClicked)
-        self.lineOffset.returnPressed.connect(self._onBtnParseClicked)
-        self.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
-        self.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
+        self.ui.btnParse.clicked.connect(self._onBtnParseClicked)
+        self.ui.lineStruct.returnPressed.connect(self._onBtnParseClicked)
+        self.ui.lineOffset.returnPressed.connect(self._onBtnParseClicked)
+        self.ui.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
+        self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
 
     @property
     def parse_offset(self):
         try:
-            return eval(self.lineOffset.text())
+            return eval(self.ui.lineOffset.text())
         except:
             return 0
 
@@ -74,36 +75,36 @@ class CtrlBinParser(QtWidgets.QWidget, WidgetBinParser.Ui_Form):
 
     def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self, getattr(fileio, "name", "noname"))
-        tblmodel = qtmodel.HexTable(self.tableView, fileio)
-        self.tableView.setModel(tblmodel)
+        tblmodel = qtmodel.HexTable(self.ui.tableView, fileio)
+        self.ui.tableView.setModel(tblmodel)
 
-        treemodel = self.treeView.model()
+        treemodel = self.ui.treeView.model()
         if isinstance(treemodel, qtmodel.StructTreeModel):
-            treemodel.toggleHexMode(self.btnToggleHex.isChecked())
+            treemodel.toggleHexMode(self.ui.btnToggleHex.isChecked())
             fileio.seek(self.parse_offset)
             treemodel.loadStream(io.BytesIO(fileio.read()))
 
     def _onLineOffsetChanged(self):
-        model = self.tableView.model()
+        model = self.ui.tableView.model()
         if isinstance(model, qtmodel.HexTable):
             model.shiftOffset(self.parse_offset)
 
     def _onBtnToggleHexClicked(self):
-        model = self.treeView.model()
+        model = self.ui.treeView.model()
         if isinstance(model, qtmodel.StructTreeModel):
-            checked = self.btnToggleHex.isChecked()
+            checked = self.ui.btnToggleHex.isChecked()
             model.toggleHexMode(checked)
 
     def _onBtnParseClicked(self):
-        structname = self.lineStruct.text()
-        pdb = self.ctrl.plugin(loadpdb.LoadPdb)
+        structname = self.ui.lineStruct.text()
+        pdb = self.app.plugin(loadpdb.LoadPdb)
         print(structname, pdb)
 
         def _cb(res):
-            self.btnParse.setEnabled(True)
+            self.ui.btnParse.setEnabled(True)
             model = self._load_tree(res)
             if model.rowCount():
-                p = ParseRecord(structname, self.lineOffset.text(), model)
+                p = ParseRecord(structname, self.ui.lineOffset.text(), model)
                 self.parse_hist.add_data(p)
 
         def _err(*args):
@@ -113,23 +114,23 @@ class CtrlBinParser(QtWidgets.QWidget, WidgetBinParser.Ui_Form):
                 "Please load pdbin first!",
             )
 
-        self.btnParse.setEnabled(False)
-        self.ctrl.exec_async(
+        self.ui.btnParse.setEnabled(False)
+        self.app.exec_async(
             pdb.parse_struct,
             structname,
             addr=self.parse_offset,
-            count=self.spinParseCount.value(),
+            count=self.ui.spinParseCount.value(),
             add_dummy_root=True,
             finished_cb=_cb,
             errored_cb=_err,
         )
 
     def _onParseHistoryClicked(self, data: ParseRecord):
-        self.lineStruct.setText(data.struct)
-        self.lineOffset.setText(data.offset)
+        self.ui.lineStruct.setText(data.struct)
+        self.ui.lineOffset.setText(data.offset)
         self._onLineOffsetChanged()
         if data.model:
-            self.treeView.setModel(data.model)
+            self.ui.treeView.setModel(data.model)
 
     def _load_tree(self, data: dict):
         model = qtmodel.StructTreeModel(data)
@@ -137,11 +138,11 @@ class CtrlBinParser(QtWidgets.QWidget, WidgetBinParser.Ui_Form):
             # TODO: global address fileio reader
             self.fileio.seek(self.parse_offset)
             model.loadStream(io.BytesIO(self.fileio.read()))
-        self.treeView.setModel(model)
+        self.ui.treeView.setModel(model)
         # expand the first item
-        self.treeView.setExpanded(model.index(0, 0), True)
+        self.ui.treeView.setExpanded(model.index(0, 0), True)
         for c in range(model.columnCount()):
-            self.treeView.resizeColumnToContents(c)
+            self.ui.treeView.resizeColumnToContents(c)
         return model
 
 
@@ -157,6 +158,6 @@ if __name__ == '__main__':
     if args.file:
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())
-    window = CtrlBinParser(None, fileio)
+    window = BinParser(None, fileio)
     window.show()
     sys.exit(app.exec())

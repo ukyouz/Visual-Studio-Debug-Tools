@@ -24,5 +24,5 @@ if __name__ == '__main__':
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())
     window = BinViewerApp(fileio)
-    window.view.show()
+    window.show()
     sys.exit(app.exec())

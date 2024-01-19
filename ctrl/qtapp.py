@@ -4,6 +4,7 @@ from dataclasses import field
 from functools import partial
 from typing import Callable
 from typing import NotRequired
+from typing import Protocol
 from typing import TypedDict
 from typing import TypeVar
 
@@ -38,13 +39,22 @@ class CommandManager:
 ClsType = TypeVar("ClsType")
 
 
-class AppCtrl(abc.ABC):
-    view: QtWidgets.QMainWindow
-    app_setting: QtCore.QSettings
+class UiForm(Protocol):
+    def setupUi(self, MainWindow):
+        ...
 
-    def __init__(self) -> None:
+    def retranslateUi(self, MainWindow):
+        ...
+
+
+class AppCtrl(QtWidgets.QMainWindow):
+    ui: UiForm
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
         self.cmd = CommandManager()
         self.threadpool = QtCore.QThreadPool()
+        self.app_setting = QtCore.QSettings("app.ini", QtCore.QSettings.Format.IniFormat)
 
     def run_cmd(self, cmdname, /, **kwargs):
         self.cmd.trigger(cmdname, **kwargs)
@@ -96,9 +106,9 @@ class PluginNotLoaded(Exception):
 
 @dataclass
 class Plugin:
-    ctrl: AppCtrl
+    app: AppCtrl
 
-    """ ctrl usages """
+    """ app usages """
 
     def setupMenues(self, parent):
         menues = self.registerMenues()
@@ -111,7 +121,7 @@ class Plugin:
                     menu.addSeparator()
                     continue
                 action = self._makeAction(
-                    self.ctrl.view,
+                    self.app,
                     act["name"],
                     act.get("shortcut", None),
                     act.get("command", None),
@@ -121,14 +131,14 @@ class Plugin:
 
     def _addMenu(self, parent, name) -> QtWidgets.QMenu:
         norm_name = "menu" + normalized(name)
-        menu = getattr(self.ctrl, norm_name, None)
+        menu = getattr(self.app.ui, norm_name, None)
         if menu is not None:
             menu.addSeparator()
         else:
             menu = QtWidgets.QMenu(parent=parent)
             menu.setObjectName(norm_name)
             menu.setTitle(_translate("MainWindow", name))
-            setattr(self.ctrl, norm_name, menu)
+            setattr(self.app.ui, norm_name, menu)
         return menu
 
     def _makeAction(self, parent, name, shortcut=None, cmd=None):
@@ -139,14 +149,14 @@ class Plugin:
         if shortcut:
             action.setShortcut(_translate("MainWindow", shortcut))
         if cmd:
-            action.triggered.connect(partial(self.ctrl.run_cmd, cmd))
+            action.triggered.connect(partial(self.app.run_cmd, cmd))
         return action
 
     """ plugin usages """
 
     def menu(self, name) -> QtWidgets.QMenu:
         norm_name = "menu" + normalized(name)
-        return getattr(self.ctrl, norm_name)
+        return getattr(self.app.ui, norm_name)
 
     def registerMenues(self) -> dict[str, list[MenuAction]]:
         return {}

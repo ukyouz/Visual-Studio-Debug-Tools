@@ -18,14 +18,14 @@ from view import WidgetMemory
 from view import resource
 
 
-class CtrlMemory(WidgetMemory.Ui_Form):
-    def __init__(self, ctrl: AppCtrl):
-        super().__init__()
-        self.view = QtWidgets.QWidget(ctrl.view)
-        self.setupUi(self.view)
-        set_app_title(self.view, "")
+class Memory(QtWidgets.QWidget):
+    def __init__(self, app: AppCtrl):
+        super().__init__(app)
+        self.ui = WidgetMemory.Ui_Form()
+        self.ui.setupUi(self)
+        set_app_title(self, "")
 
-        self.ctrl = ctrl
+        self.app = app
 
 
 if __name__ == '__main__':
@@ -35,6 +35,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = CtrlMemory(None)
-    window.view.show()
+    window = Memory(None)
+    window.show()
     sys.exit(app.exec())

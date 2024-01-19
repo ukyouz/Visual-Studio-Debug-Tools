@@ -25,7 +25,7 @@ class LoadPdb(Plugin):
         }
 
     def registerCommands(self):
-        if val := self.ctrl.app_setting.value("LoadPdb/pdbin", ""):
+        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
             self.load_pdbin(val)
         return [
             ("LoadPdbin", self.load_pdbin),
@@ -34,13 +34,13 @@ class LoadPdb(Plugin):
     def load_pdbin(self, filename=""):
         if not filename:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self.ctrl.view,
+                self.app,
                 caption="Open File",
                 filter="Any (*.*)"
             )
         if filename:
             def _cb(_pdb):
-                self.ctrl.app_setting.setValue("LoadPdb/pdbin", filename)
+                self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb = _pdb
                 print(_pdb)
                 self.menu("PDB").setEnabled(True)
@@ -49,13 +49,13 @@ class LoadPdb(Plugin):
 
             path = Path(filename)
             if path.suffix == ".pdbin":
-                self.ctrl.exec_async(
+                self.app.exec_async(
                     picklepdb.load_pdbin,
                     filename,
                     finished_cb=_cb,
                 )
             elif path.suffix == ".pdb":
-                self.ctrl.exec_async(
+                self.app.exec_async(
                     pdb.parse,
                     filename,
                     finished_cb=_cb,
@@ -111,7 +111,7 @@ class Test(Plugin):
         ]
 
     def _test(self):
-        pdb = self.ctrl.plugin(LoadPdb)
+        pdb = self.app.plugin(LoadPdb)
         print(pdb._pdb)
 
 

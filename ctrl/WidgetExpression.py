@@ -19,14 +19,14 @@ from view import WidgetExpression
 from view import resource
 
 
-class CtrlExpression(WidgetExpression.Ui_Form):
-    def __init__(self, ctrl: AppCtrl):
-        super().__init__()
-        self.view = QtWidgets.QWidget(ctrl.view)
-        self.setupUi(self.view)
-        set_app_title(self.view, "")
+class Expression(QtWidgets.QWidget):
+    def __init__(self, app: AppCtrl):
+        super().__init__(app)
+        self.ui = WidgetExpression.Ui_Form()
+        self.ui.setupUi(self)
+        set_app_title(self, "")
 
-        self.ctrl = ctrl
+        self.app = app
 
 
 if __name__ == '__main__':
@@ -36,6 +36,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = CtrlExpression(None)
-    window.view.show()
+    window = Expression(None)
+    window.show()
     sys.exit(app.exec())
