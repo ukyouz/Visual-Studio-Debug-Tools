@@ -255,7 +255,7 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
           <bool>false</bool>
          </property>
          <property name="selectionMode">
-          <enum>QAbstractItemView::MultiSelection</enum>
+          <enum>QAbstractItemView::ExtendedSelection</enum>
          </property>
          <property name="indentation">
           <number>16</number>
