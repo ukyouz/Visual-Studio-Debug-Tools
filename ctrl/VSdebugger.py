@@ -12,6 +12,7 @@ from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
+from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
 from ctrl.WidgetExpression import CtrlExpression
 from ctrl.WidgetProcessSelector import CtrlProcessSelector
@@ -19,10 +20,6 @@ from helper import qtmodel
 from plugins import loadpdb
 from view import VSdebugger
 from view import resource
-
-
-class PluginNotLoaded(Exception):
-    """plugin not loaded"""
 
 
 class VisualStudioDebugger(AppCtrl, VSdebugger.Ui_MainWindow):

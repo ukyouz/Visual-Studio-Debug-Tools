@@ -97,9 +97,10 @@ class HexTable(QtCore.QAbstractTableModel):
 
 
 class AbstractTreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, root, headers=None, parent=None):
+    headers = []
+
+    def __init__(self, root, parent=None):
         super().__init__(parent)
-        self.headers = headers or []
         self._rootItem = root
         self._parents = {}
 
@@ -107,9 +108,9 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
         ...
 
     def index(self, row, column, parent=QtCore.QModelIndex()) -> QtCore.QModelIndex:
+        # if not parent.isValid():
+        #     return QtCore.QModelIndex()
         child_item = self.child(row, parent)
-        if child_item is None:
-            return QtCore.QModelIndex()
         # if row >= self.rowCount(parent):
         #     return QtCore.QModelIndex()
         index = self.createIndex(row, column, child_item)
@@ -178,11 +179,17 @@ def bitmask(bitcnt):
 class StructTreeModel(AbstractTreeModel):
     fileio = io.BytesIO()
     hex_mode = True
+    headers = [
+        "Levelname",
+        "Value",
+        "Type",
+        "Size",
+        "Count",
+        "Address",
+    ]
 
     def child(self, row, parent):
         item = self.itemFromIndex(parent)
-        if item is None:
-            return None
         for r, (_, x) in enumerate(iter_children(item["fields"])):
             if row == r:
                 return x

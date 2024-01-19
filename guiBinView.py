@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
 
-    fileio = io.BytesIO()
+    fileio = None
     if args.file:
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())

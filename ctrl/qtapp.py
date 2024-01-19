@@ -15,7 +15,7 @@ from helper.qtthread import Runnable
 from modules.utils.typ import DequeList
 
 
-def set_app_title(app: QtWidgets.QMainWindow, title: str):
+def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
     clsname = app.__class__.__name__
     if title:
         app.setWindowTitle("%s - %s" % (title, clsname))
@@ -88,6 +88,11 @@ def normalized(name: str) -> str:
 
 
 _translate = QtCore.QCoreApplication.translate
+
+
+class PluginNotLoaded(Exception):
+    """plugin not loaded"""
+
 
 @dataclass
 class Plugin:

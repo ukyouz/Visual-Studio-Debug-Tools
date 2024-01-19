@@ -19,12 +19,8 @@ from view import WidgetProcessSelector
 from view import resource
 
 
-class PluginNotLoaded(Exception):
-    """plugin not loaded"""
-
-
 class CtrlProcessSelector(WidgetProcessSelector.Ui_Form):
-    def __init__(self, ctrl):
+    def __init__(self, ctrl: AppCtrl):
         super().__init__()
         self.view = QtWidgets.QWidget(ctrl.view)
         self.setupUi(self.view)
