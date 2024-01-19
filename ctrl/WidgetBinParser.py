@@ -98,7 +98,6 @@ class BinParser(QtWidgets.QWidget):
     def _onBtnParseClicked(self):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
-        print(structname, pdb)
 
         def _cb(res):
             self.ui.btnParse.setEnabled(True)
