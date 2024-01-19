@@ -5,6 +5,7 @@ from functools import partial
 from typing import Callable
 from typing import NotRequired
 from typing import Protocol
+from typing import Type
 from typing import TypedDict
 from typing import TypeVar
 
@@ -75,7 +76,7 @@ class AppCtrl(QtWidgets.QMainWindow):
         ...
 
     @abc.abstractmethod
-    def plugin(self, plugin_cls: ClsType) -> ClsType:
+    def plugin(self, plugin_cls: Type[ClsType]) -> ClsType:
         """
         return the corresonding plugin instance
 
@@ -203,7 +204,7 @@ class HistoryMenu(QtCore.QObject):
         self.btn.setMenu(menu)
 
     def stringify(self, data) -> str:
-        return ""
+        return str(data)
 
     def add_data(self, data):
         data_str = self.stringify(data)

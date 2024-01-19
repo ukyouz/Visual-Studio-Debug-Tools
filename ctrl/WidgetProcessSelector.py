@@ -35,7 +35,7 @@ class ProcessSelector(QtWidgets.QWidget):
         self.app = app
 
         # ui events
-        self.ui.btnAttach.clicked.connect(self._onBtnAttachClicked)
+        self.ui.btnAttach.clicked.connect(self.attach_current_selected_process)
 
         self.load_ui()
 
@@ -69,19 +69,19 @@ class ProcessSelector(QtWidgets.QWidget):
         unique_processes = [x for x in pnames if pcounter[x] == 1]
         return sorted(unique_processes)
 
-    def _onBtnAttachClicked(self):
+    def attach_current_selected_process(self, callback=None):
         pname = self.ui.comboProcess.currentText()
         dbg = self.app.plugin(debugger.Debugger)
-        if dbg is None:
-            raise PluginNotLoaded()
         def _cb():
             self.ui.frameDebugger.setEnabled(True)
             self.app.app_setting.setValue("Process/filename", pname)
+            if callback:
+                callback()
 
         self.app.exec_async(
             dbg.attach_process,
             name=pname,
-            finished_cb=_cb
+            finished_cb=_cb,
         )
 
 

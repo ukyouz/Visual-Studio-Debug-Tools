@@ -20,7 +20,7 @@ from plugins import loadpdb
 
 
 class DebuggerStream:
-    def __init__(self, proc: ProcessDebugger) -> None:
+    def __init__(self, proc: ProcessDebugger | None) -> None:
         self._proc = proc
         self._offset = 0
 
@@ -35,19 +35,31 @@ class DebuggerStream:
             raise NotImplementedError()
 
     def read(self, size: int) -> bytes:
+        if self._proc is None:
+            return bytes()
         return self._proc.read_memory(self._offset, size)
+
+    def tell(self) -> int:
+        return self._offset
 
 
 class Debugger(Plugin):
 
+    def post_init(self):
+        self.pd = None
+
     def attach_process(self, name):
-        self.proc = ProcessDebugger.from_process_name(name)
-        # self.menu("Debugger").setEnabled(True)
+        self.pd = ProcessDebugger.from_process_name(name)
 
     def pause_process(self):
-        if self.proc is None:
+        if self.pd is None:
             return
 
     def get_memory_stream(self):
-        return DebuggerStream(self.proc)
+        return DebuggerStream(self.pd)
+
+    def get_virtual_base(self):
+        if self.pd is None:
+            return None
+        return self.pd.proc.get_main_module().get_base()
 

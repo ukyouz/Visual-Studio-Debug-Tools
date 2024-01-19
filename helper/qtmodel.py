@@ -34,8 +34,8 @@ class HexTable(QtCore.QAbstractTableModel):
         self._stream = stream
         self.column = 4
         self.itembyte = 4
-        self.viewOffset = 0
-        self.viewMaxLength = 0
+        self.viewOffset = 0  # offset of current buffer
+        self.viewAddress = 0  # virtual address
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         row = index.row()
@@ -58,9 +58,6 @@ class HexTable(QtCore.QAbstractTableModel):
             return QtGui.QFont("Consolas")
 
     def rowCount(self, _=None):
-        if self.viewMaxLength > 0:
-            return math.ceil(self.viewMaxLength / self._bytesPerRow)
-
         self._stream.seek(0, os.SEEK_END)
         return math.ceil((self._stream.tell() - self.viewOffset) / self._bytesPerRow)
 
@@ -80,7 +77,7 @@ class HexTable(QtCore.QAbstractTableModel):
         elif orientation == QtCore.Qt.Orientation.Vertical:
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
-                    return hex(section * self._bytesPerRow + self.viewOffset)
+                    return hex(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
                 case QtCore.Qt.ItemDataRole.FontRole:
                     return QtGui.QFont("Consolas")
 

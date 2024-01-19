@@ -1,5 +1,6 @@
 import io
 import sys
+from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Optional
@@ -12,6 +13,7 @@ from PyQt6 import QtWidgets
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
 from ctrl.qtapp import HistoryMenu
+from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
@@ -25,6 +27,99 @@ from view import VSdebugger
 from view import resource
 
 
+class Dock(Plugin):
+    def registerMenues(self) -> list[MenuAction]:
+        return [
+            {
+                "name": "Debugger",
+                "submenus": [
+                    {
+                        "name": "Add Memory View",
+                        "command": "AddMemoryView",
+                    },
+                    {
+                        "name": "Add Expression View",
+                        "command": "AddExpressionView",
+                    },
+                ],
+            },
+        ]
+
+    def registerCommands(self) -> list[tuple]:
+        return [
+            ("AddMemoryView", self.addMemoryView),
+            ("AddExpressionView", self.addExpressionView),
+        ]
+
+    def post_init(self):
+        self.docks = defaultdict(dict)
+
+        # initialize dock widgets
+        de = self.addExpressionView()
+        dm = self.addMemoryView()
+
+        width = self.app.size().width()
+        self.app.resizeDocks([dm], [width * 2 // 3], QtCore.Qt.Orientation.Horizontal)
+        self.app.tabifyDockWidget(de, dm)
+
+    def generate_dockwidget(self):
+        dockWidget = QtWidgets.QDockWidget(parent=self.app)
+        dockWidget.setObjectName("dockWidget")
+        dockWidget.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
+            |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
+        )
+        titelbar = DockTitleBar(dockWidget)
+        dockWidget.setTitleBarWidget(titelbar)
+        dockWidget.setContentsMargins(0, 0, 0, 0)
+        menu = QtWidgets.QMenu()
+        titelbar.ui.btnMore.setMenu(menu)
+        return dockWidget
+
+    def _addAction(self, menu, title, cb):
+        action = menu.addAction(title)
+        action.triggered.connect(cb)
+
+    def _close_dock(self, dockWidget, widget_dict: dict):
+        self.app.removeDockWidget(dockWidget)
+        del widget_dict[dockWidget]
+
+    def addExpressionView(self):
+        dockWidget = self.generate_dockwidget()
+        expr = Expression(self.app)
+        self.docks["expression"][dockWidget] = expr
+        dockWidget.setWidget(expr)
+        dockWidget.setWindowTitle("Expression-%d" % len(self.docks["expression"]))
+        self.app.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, dockWidget)
+
+        titlebar = dockWidget.titleBarWidget()
+        if isinstance(titlebar, DockTitleBar):
+            menu = titlebar.ui.btnMore.menu()
+            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
+            menu.addSeparator()
+            self._addAction(menu, "Add Expression View", self.addExpressionView)
+
+        return dockWidget
+
+    def addMemoryView(self):
+        dockWidget = self.generate_dockwidget()
+        mem = Memory(self.app)
+        self.docks["memory"][dockWidget] = mem
+        dockWidget.setWidget(mem)
+        dockWidget.setWindowTitle("Memory-%d" % len(self.docks["memory"]))
+        self.app.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, dockWidget)
+
+        titlebar = dockWidget.titleBarWidget()
+        if isinstance(titlebar, DockTitleBar):
+            menu = titlebar.ui.btnMore.menu()
+            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["memory"]))
+            menu.addSeparator()
+            self._addAction(menu, "Dump Memory...", mem.dumpBuffer)
+            self._addAction(menu, "Add Memory View", self.addMemoryView)
+
+        return dockWidget
+
+
 class VisualStudioDebugger(AppCtrl):
     def __init__(self):
         super().__init__()
@@ -36,35 +131,16 @@ class VisualStudioDebugger(AppCtrl):
         self._plugins = {}
         self.loadPlugins([
             loadpdb.LoadPdb(self),
+            Dock(self),
         ])
 
         editToolBar = QtWidgets.QToolBar("Process", self)
         editToolBar.setMovable(False)
+        processSelector = ProcessSelector(self)
         self.addToolBar(editToolBar)
-        editToolBar.addWidget(ProcessSelector(self))
+        editToolBar.addWidget(processSelector)
 
-        self.dockWidget = self.generate_dockwidget()
-        self.expr = Expression(self)
-        self.dockWidget.setWidget(self.expr)
-        self.dockWidget.setWindowTitle("Expression")
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget)
-
-        self.dockWidget2 = self.generate_dockwidget()
-        self.mem = Memory(self)
-        self.dockWidget2.setWidget(self.mem)
-        self.dockWidget2.setWindowTitle("Memory")
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget2)
-
-    def generate_dockwidget(self):
-        dockWidget = QtWidgets.QDockWidget(parent=self)
-        dockWidget.setObjectName("dockWidget")
-        dockWidget.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
-            |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
-        )
-        dockWidget.setTitleBarWidget(DockTitleBar(dockWidget))
-        dockWidget.setContentsMargins(0, 0, 0, 0)
-        return dockWidget
+        self.cmd.register("AttachCurrentProcess", processSelector.attach_current_selected_process)
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
