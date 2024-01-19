@@ -13,6 +13,9 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(563, 570)
+        font = QtGui.QFont()
+        font.setFamily("Calibri")
+        Form.setFont(font)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_2.setContentsMargins(6, 6, 6, 6)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
@@ -105,6 +108,9 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(3)
         sizePolicy.setHeightForWidth(self.treeView.sizePolicy().hasHeightForWidth())
         self.treeView.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setFamily("Calibri")
+        self.treeView.setFont(font)
         self.treeView.setStyleSheet("QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}\n"
 "QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png);}\n"
 "QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png);}\n"

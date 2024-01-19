@@ -10,6 +10,11 @@
     <height>285</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Calibri</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -99,6 +104,22 @@
    </item>
    <item>
     <widget class="QTreeView" name="treeView">
+     <property name="font">
+      <font>
+       <family>Calibri</family>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}
+QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png);}
+QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png);}
+QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png);}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png);}
+QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png);}
+QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png);}
+QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png);}
+QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png);}</string>
+     </property>
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
      </property>

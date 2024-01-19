@@ -56,6 +56,11 @@
     </disabled>
    </palette>
   </property>
+  <property name="font">
+   <font>
+    <family>Calibri</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>

@@ -10,6 +10,11 @@
     <height>570</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Calibri</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -236,6 +241,11 @@
            <horstretch>0</horstretch>
            <verstretch>3</verstretch>
           </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <family>Calibri</family>
+          </font>
          </property>
          <property name="styleSheet">
           <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}

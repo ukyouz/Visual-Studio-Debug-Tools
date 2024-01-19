@@ -13,6 +13,9 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(340, 285)
+        font = QtGui.QFont()
+        font.setFamily("Calibri")
+        Form.setFont(font)
         self.verticalLayout = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout.setContentsMargins(6, 6, 6, 6)
         self.verticalLayout.setSpacing(6)
@@ -45,6 +48,18 @@ class Ui_Form(object):
         self.horizontalLayout_3.addLayout(self.horizontalLayout)
         self.verticalLayout.addWidget(self.frame_2)
         self.treeView = QtWidgets.QTreeView(parent=Form)
+        font = QtGui.QFont()
+        font.setFamily("Calibri")
+        self.treeView.setFont(font)
+        self.treeView.setStyleSheet("QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}\n"
+"QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png);}\n"
+"QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png);}\n"
+"QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png);}\n"
+"QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png);}\n"
+"QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png);}\n"
+"QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png);}\n"
+"QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png);}\n"
+"QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png);}")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.treeView.setObjectName("treeView")
         self.verticalLayout.addWidget(self.treeView)

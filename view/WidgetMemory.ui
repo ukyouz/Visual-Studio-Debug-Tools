@@ -10,6 +10,11 @@
     <height>297</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Calibri</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -129,6 +134,11 @@
       </property>
       <item>
        <widget class="QLabel" name="labelAddress">
+        <property name="font">
+         <font>
+          <family>Consolas</family>
+         </font>
+        </property>
         <property name="frameShape">
          <enum>QFrame::Panel</enum>
         </property>
