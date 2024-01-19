@@ -75,7 +75,7 @@ class BinParser(QtWidgets.QWidget):
 
     def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self, getattr(fileio, "name", "noname"))
-        tblmodel = qtmodel.HexTable(self.ui.tableView, fileio)
+        tblmodel = qtmodel.HexTable(fileio, self.ui.tableView)
         self.ui.tableView.setModel(tblmodel)
 
         treemodel = self.ui.treeView.model()

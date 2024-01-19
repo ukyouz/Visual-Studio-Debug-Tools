@@ -29,12 +29,13 @@ def is_cstring(data: bytes):
 class HexTable(QtCore.QAbstractTableModel):
     show_preview = True
 
-    def __init__(self, parent=None, stream: io.IOBase=None):
+    def __init__(self, stream: io.IOBase, parent=None):
         super().__init__(parent)
         self._stream = stream
         self.column = 4
         self.itembyte = 4
         self.viewOffset = 0
+        self.viewMaxLength = 0
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         row = index.row()
@@ -57,6 +58,9 @@ class HexTable(QtCore.QAbstractTableModel):
             return QtGui.QFont("Consolas")
 
     def rowCount(self, _=None):
+        if self.viewMaxLength > 0:
+            return math.ceil(self.viewMaxLength / self._bytesPerRow)
+
         self._stream.seek(0, os.SEEK_END)
         return math.ceil((self._stream.tell() - self.viewOffset) / self._bytesPerRow)
 
