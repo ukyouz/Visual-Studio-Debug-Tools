@@ -37,10 +37,6 @@ class BinViewer(AppCtrl):
         self.setWindowTitle("Bin Viewer")
         self.setWindowIcon(QtGui.QIcon("view/images/BrowseData_16x.svg"))
 
-        # properties
-        if fileio:
-            self._loadFile(fileio)
-
         # events
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
 
@@ -50,6 +46,9 @@ class BinViewer(AppCtrl):
             loadpdb.LoadPdb(self),
         ])
 
+        # properties
+        if fileio:
+            self._loadFile(fileio)
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
