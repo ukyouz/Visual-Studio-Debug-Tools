@@ -13,6 +13,9 @@ from modules.pdbparser.pdbparser import picklepdb
 class LoadPdb(Plugin):
     _pdb: pdb.PDB7
 
+    def __post_init__(self):
+        self._pdb_fname = ""
+
     def registerMenues(self) -> dict[str, list[MenuAction]]:
         return {
             "PDB": [
@@ -20,6 +23,11 @@ class LoadPdb(Plugin):
                     "name": "Load PDB file...",
                     "command": "LoadPdbin",
                     # "shortcut": "",
+                },
+                {"name": "---",},
+                {
+                    "name": "Show PDB status...",
+                    "command": "ShowPdbStatus",
                 },
             ]
         }
@@ -29,6 +37,7 @@ class LoadPdb(Plugin):
             self.load_pdbin(val)
         return [
             ("LoadPdbin", self.load_pdbin),
+            ("ShowPdbStatus", self.show_status),
         ]
 
     def load_pdbin(self, filename=""):
@@ -41,6 +50,7 @@ class LoadPdb(Plugin):
         if filename:
             def _cb(_pdb):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
+                self._pdb_fname = filename
                 self._pdb = _pdb
                 print(_pdb)
                 self.menu("PDB").setEnabled(True)
@@ -60,6 +70,20 @@ class LoadPdb(Plugin):
                     filename,
                     finished_cb=_cb,
                 )
+
+    def show_status(self):
+        if self._pdb_fname:
+            QtWidgets.QMessageBox.information(
+                self.app,
+                "PDB Status",
+                "Loaded File: %r" % self._pdb_fname,
+            )
+        else:
+            QtWidgets.QMessageBox.warning(
+                self.app,
+                "PDB Status",
+                "Not loaded",
+            )
 
     def _shift_addr(self, s: pdb.StructRecord, shift: int=0):
         s["address"] = s["address"] + shift
