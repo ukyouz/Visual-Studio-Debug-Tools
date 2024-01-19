@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Any
 from typing import Generic
 from typing import Optional
+from typing import Protocol
 from typing import Self
 from typing import TypeVar
 
@@ -26,10 +27,21 @@ def is_cstring(data: bytes):
     return all(32 <= x <= 126 or x == 0 for x in data)
 
 
+class Stream(Protocol):
+    def seek(self, offset: int, pos: int=os.SEEK_SET):
+        ...
+
+    def read(self, size: int) -> bytes:
+        ...
+
+    def tell(self) -> int:
+        ...
+
+
 class HexTable(QtCore.QAbstractTableModel):
     show_preview = True
 
-    def __init__(self, stream: io.IOBase, parent=None):
+    def __init__(self, stream: Stream, parent=None):
         super().__init__(parent)
         self._stream = stream
         self.column = 4
@@ -326,7 +338,7 @@ class StructTreeModel(AbstractTreeModel):
         item.update(record)
         self.dataChanged.emit(index, index)
 
-    def loadStream(self, fileio: io.IOBase):
+    def loadStream(self, fileio: Stream):
         self.fileio = fileio
         self.refresh()
 
