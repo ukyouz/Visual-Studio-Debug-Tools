@@ -36,6 +36,7 @@ class ProcessSelector(QtWidgets.QWidget):
 
         # ui events
         self.ui.btnAttach.clicked.connect(self.attach_current_selected_process)
+        self.ui.btnDetach.clicked.connect(self.detach_current_selected_process)
 
         self.load_ui()
 
@@ -65,11 +66,17 @@ class ProcessSelector(QtWidgets.QWidget):
                 if val in unique_processes:
                     self.ui.comboProcess.setCurrentText(val)
 
-        self.ui.frameDebugger.setEnabled(False)
+        self.update_ui_states(False)
         self.app.exec_async(
             self._get_processes,
             finished_cb=_cb_load_processes,
         )
+
+    def update_ui_states(self, process_attached: bool):
+        self.ui.comboProcess.setEnabled(not process_attached)
+        self.ui.frameDebugger.setEnabled(process_attached)
+        self.ui.btnAttach.setVisible(not process_attached)
+        self.ui.btnDetach.setVisible(process_attached)
 
     def _get_processes(self):
         processes = ProcessDebugger.list_processes()
@@ -82,16 +89,32 @@ class ProcessSelector(QtWidgets.QWidget):
     def attach_current_selected_process(self, callback=None):
         pname = self.ui.comboProcess.currentText()
         dbg = self.app.plugin(debugger.Debugger)
-        def _cb():
-            self.ui.frameDebugger.setEnabled(True)
-            self.app.app_setting.setValue("Process/filename", pname)
-            if callback:
-                callback()
+        def _cb(error):
+            process_attached = error is None
+            if not process_attached:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    str(error),
+                )
+            else:
+                self.app.app_setting.setValue("Process/filename", pname)
+                if callback:
+                    callback()
+            self.update_ui_states(process_attached)
 
         self.app.exec_async(
             dbg.attach_process,
             name=pname,
             finished_cb=_cb,
+        )
+
+    def detach_current_selected_process(self):
+        dbg = self.app.plugin(debugger.Debugger)
+
+        self.app.exec_async(
+            dbg.detach_process,
+            finished_cb=lambda: self.update_ui_states(False),
         )
 
 

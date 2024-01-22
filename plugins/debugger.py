@@ -49,7 +49,16 @@ class Debugger(Plugin):
         self.pd = None
 
     def attach_process(self, name):
-        self.pd = ProcessDebugger.from_process_name(name)
+        try:
+            self.pd = ProcessDebugger.from_process_name(name)
+            return None
+        except Exception as e:
+            return e
+
+    def detach_process(self):
+        if self.pd is None:
+            return
+        self.pd.proc.close_handle()
 
     def pause_process(self):
         if self.pd is None:

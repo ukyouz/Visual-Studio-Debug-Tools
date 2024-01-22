@@ -14,7 +14,6 @@ class UsageError(Exception):
 class ProcessDebugger:
     def __init__(self, pid: int):
         self.proc = Process(pid)
-        self.handle = self.proc.get_handle(win32.PROCESS_VM_READ | win32.PROCESS_QUERY_INFORMATION)
         self._pdb_loaded = False
 
     @classmethod
@@ -37,14 +36,17 @@ class ProcessDebugger:
 
     def load_pdb(self, pdb: str, load_addr: int):
         self._pdb_loaded = True
-        dbghelp.SymInitialize(self.handle)
+        handle = self.proc.get_handle(win32.PROCESS_VM_READ | win32.PROCESS_QUERY_INFORMATION)
+        dbghelp.SymInitialize(handle)
         sz = os.path.getsize(pdb)
-        dbghelp.SymLoadModule64(self.handle, 0, pdb.encode(), None, load_addr, sz)
+        dbghelp.SymLoadModule64(handle, 0, pdb.encode(), None, load_addr, sz)
 
     def get_symbol(self, name: str):
         if not self._pdb_loaded:
             raise UsageError("You shall load a pdb file first using load_pdb(fname, addr) method.")
-        return dbghelp.SymFromName(self.handle, name.encode())
+        handle = self.proc.get_handle(win32.PROCESS_VM_READ | win32.PROCESS_QUERY_INFORMATION)
+        return dbghelp.SymFromName(handle, name.encode())
 
-    def read_memory(self, addr: int, size: int) -> bytes:
-        return kernel32.ReadProcessMemory(self.handle, addr, size)
+    def read_memory(self, addr: int, size: int):
+        dat = self.proc.read(addr, size)
+        return dat
