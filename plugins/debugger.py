@@ -24,7 +24,7 @@ class DebuggerStream:
         self._proc = proc
         self._offset = 0
 
-    def seek(self, offset, pos=os.SEEK_SET):
+    def seek(self, offset, pos=os.SEEK_SET) -> int:
         if pos == os.SEEK_END:
             raise NotImplementedError()
         if pos == os.SEEK_SET:
@@ -33,6 +33,7 @@ class DebuggerStream:
             self._offset += offset
         else:
             raise NotImplementedError()
+        return self._offset
 
     def read(self, size: int) -> bytes:
         if self._proc is None:

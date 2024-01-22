@@ -28,7 +28,7 @@ def is_cstring(data: bytes):
 
 
 class Stream(Protocol):
-    def seek(self, offset: int, pos: int=os.SEEK_SET):
+    def seek(self, offset: int, pos: int=os.SEEK_SET, /) -> int:
         ...
 
     def read(self, size: int) -> bytes:
