@@ -47,33 +47,60 @@ class HexTable(QtCore.QAbstractTableModel):
         self.column = 4
         self.itembyte = 4
         self.viewOffset = 0  # offset of current buffer
-        self.viewAddress = 0  # virtual address
+        self.viewAddress = 0  # request address
+        self.viewSize = -1  # request size
+
+        self.invalids = set()
+
+    @property
+    def streamSize(self):
+        if self.viewSize > 0:
+            return self.viewSize
+        else:
+            self._stream.seek(0, os.SEEK_END)
+            return self._stream.tell()
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         row = index.row()
         col = index.column()
         if role in {QtCore.Qt.ItemDataRole.DisplayRole}:
+            if row == self.rowCount() - 1:
+                # last row
+                last_col = math.ceil(self.streamSize / self.itembyte) % self.column
+            else:
+                last_col = -1
             if col < self.column:
-                offset = (row * self.column + col) * self.itembyte
+                if last_col > 0 and col > last_col:
+                    return ""
+                offset = self.viewAddress + self.viewOffset + (row * self.column + col) * self.itembyte
                 length = self.itembyte
-                self._stream.seek(offset + self.viewOffset)
-                value = self._stream.read(length)
-                return f"0x%0{self.itembyte * 2}x" % int.from_bytes(value, "little")
+                self._stream.seek(offset)
+                try:
+                    value = self._stream.read(length)
+                    return f"0x%0{self.itembyte * 2}x" % int.from_bytes(value, "little")
+                except:
+                    self.invalids.add(offset)
+                    return ""
             else:
                 # ascii preview column
-                offset = row * self._bytesPerRow
-                length = self._bytesPerRow
-                self._stream.seek(offset + self.viewOffset)
-                value = self._stream.read(length)
-                return bytes_to_ascii(value)
+                offset = self.viewAddress + self.viewOffset + row * self._bytesPerRow
+                length = self._bytesPerRow if last_col <= 0 else last_col * self.itembyte
+                self._stream.seek(offset)
+                try:
+                    value = self._stream.read(length)
+                    return bytes_to_ascii(value)
+                except:
+                    return ""
         elif role == QtCore.Qt.ItemDataRole.FontRole:
             return QtGui.QFont("Consolas")
+        elif role == QtCore.Qt.ItemDataRole.BackgroundRole:
+            if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                return QtGui.QColor("#f0d6d5")
 
     def rowCount(self, _=None):
-        self._stream.seek(0, os.SEEK_END)
-        return math.ceil((self._stream.tell() - self.viewOffset) / self._bytesPerRow)
+        return math.ceil((self.streamSize - self.viewOffset) / self._bytesPerRow)
 
-    def columnCount(self, _=None):
+    def columnCount(self, index):
         return self.column + self.show_preview
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int) -> Any:
@@ -81,7 +108,7 @@ class HexTable(QtCore.QAbstractTableModel):
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
                     if section < self.column:
-                        return hex(section * self.column + self.viewOffset % self._bytesPerRow)
+                        return hex(section * self.itembyte + self.viewOffset % self._bytesPerRow)
                     else:
                         return "Preview"
                 case QtCore.Qt.ItemDataRole.FontRole:
@@ -92,6 +119,27 @@ class HexTable(QtCore.QAbstractTableModel):
                     return hex(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
                 case QtCore.Qt.ItemDataRole.FontRole:
                     return QtGui.QFont("Consolas")
+
+    def flags(self, index):
+        flags = super().flags(index)
+
+        row = index.row()
+        col = index.column()
+        if col < self.column:
+            offset = self.viewAddress + self.viewOffset + (row * self.column + col) * self.itembyte
+            if offset in self.invalids:
+                flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
+        else:
+            # ascii preview column
+            offset = self.viewAddress + self.viewOffset + row * self._bytesPerRow
+            length = self._bytesPerRow
+            if any(
+                x in self.invalids
+                for x in range(offset, offset + length, self.itembyte)
+            ):
+                flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
+
+        return flags
 
     # extra methods
     @property
@@ -228,6 +276,9 @@ class StructTreeModel(AbstractTreeModel):
         elif tag == "count":
             if item["is_pointer"]:
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        elif tag == "type":
+            if item[tag].lower().endswith("pvoid"):
+                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         return flags
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
@@ -274,10 +325,17 @@ class StructTreeModel(AbstractTreeModel):
                 if tag in {"value", "count"}:
                     return QtGui.QFont("Consolas")
             case QtCore.Qt.ItemDataRole.ForegroundRole:
+                if tag == "value":
+                    old_val = item["value"]
+                    new_val = self._calc_val(item)
+                    if old_val != new_val:
+                        item["value"] = new_val
+                        return QtGui.QColor("red")
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
                     return QtGui.QColor("blue")
-            case QtCore.Qt.ItemDataRole.UserRole:
-                return self._calc_val(item)
+
+    def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
+        ...
 
     def _calc_val(self, item: StructRecord) -> Any:
         base = item["address"]
