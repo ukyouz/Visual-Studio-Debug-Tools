@@ -41,7 +41,7 @@ class Expression(QtWidgets.QWidget):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         empty_struct = pdb.parse_struct("")
         model = qtmodel.StructTreeModel(empty_struct)
-        model.subfieldsAsked.connect(self._lazy_load_item)
+        model.pointerDereferenced.connect(self._lazy_load_pointer)
         self.ui.treeView.setModel(model)
 
     def _onHistoryClicked(self, val):
@@ -72,13 +72,26 @@ class Expression(QtWidgets.QWidget):
 
         def _cb(struct_record):
             self.ui.lineStruct.setEnabled(True)
-            if struct_record is None:
+            if struct_record is None or struct_record["fields"] is None:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    "Expression is invalid",
+                )
                 return
+            self.ui.lineStruct.setText("")
             self.parse_hist.add_data(expr)
             model = self.ui.treeView.model()
             if isinstance(model, qtmodel.StructTreeModel):
                 model.loadStream(dbg.get_memory_stream())
                 model.appendItem(struct_record)
+
+        def _err(*args):
+            QtWidgets.QMessageBox.warning(
+                self,
+                "PDB Error!",
+                "Please load pdbin first!",
+            )
 
         self.ui.lineStruct.setEnabled(False)
         self.app.exec_async(
@@ -86,12 +99,14 @@ class Expression(QtWidgets.QWidget):
             expr=expr,
             virtual_base=virt_base,
             finished_cb=_cb,
+            errored_cb=_err,
         )
 
-    def _lazy_load_item(self, parent, item: dict):
+    def _lazy_load_pointer(self, parent, address):
         dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
+        item = parent.internalPointer()
 
         struct = item["lf"].utypeRef.name
 
@@ -108,7 +123,7 @@ class Expression(QtWidgets.QWidget):
             pdb.parse_struct,
             structname=struct,
             expr=item["levelname"],
-            addr=model.data(parent, QtCore.Qt.ItemDataRole.UserRole),
+            addr=address,
             finished_cb=_cb,
         )
 

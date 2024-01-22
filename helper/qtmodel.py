@@ -190,7 +190,7 @@ def bitmask(bitcnt):
 
 
 class StructTreeModel(AbstractTreeModel):
-    subfieldsAsked = QtCore.pyqtSignal(QtCore.QModelIndex, dict)
+    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int)
 
     fileio = io.BytesIO()
     hex_mode = True
@@ -320,7 +320,7 @@ class StructTreeModel(AbstractTreeModel):
         item["is_pointer"] = False
         item["fields"] = None
         self.dataChanged.emit(index, index)
-        self.subfieldsAsked.emit(parent, self.itemFromIndex(parent))
+        self.pointerDereferenced.emit(parent, self._calc_val(item))
 
     def appendItem(self, record: dict, parent=QtCore.QModelIndex()):
         last_row = self.rowCount()
