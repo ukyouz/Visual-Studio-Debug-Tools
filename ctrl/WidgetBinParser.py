@@ -55,6 +55,7 @@ class BinParser(QtWidgets.QWidget):
         self.ui.lineOffset.returnPressed.connect(self._onBtnParseClicked)
         self.ui.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
+        self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
 
     @property
     def parse_offset(self):

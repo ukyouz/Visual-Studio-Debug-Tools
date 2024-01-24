@@ -34,6 +34,7 @@ class Expression(QtWidgets.QWidget):
         # event bindingd
         self.ui.lineStruct.returnPressed.connect(self._addExpression)
         self.ui.btnParse.clicked.connect(self._addExpression)
+        self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
 
         self._init_ui()
 
