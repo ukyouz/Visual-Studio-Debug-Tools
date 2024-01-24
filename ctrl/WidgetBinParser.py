@@ -28,7 +28,10 @@ class ParseRecord:
 
 class ParseHistoryMenu(HistoryMenu):
     def stringify(self, data: ParseRecord) -> str:
-        return "%s; %s" % (data.struct, data.offset)
+        if data.offset:
+            return "%s; %s" % (data.struct, data.offset)
+        else:
+            return data.struct
 
 
 class BinParser(QtWidgets.QWidget):
@@ -101,6 +104,8 @@ class BinParser(QtWidgets.QWidget):
 
         def _cb(res):
             self.ui.btnParse.setEnabled(True)
+            if res is None:
+                return
             model = self._load_tree(res)
             if model.rowCount():
                 p = ParseRecord(structname, self.ui.lineOffset.text(), model)
