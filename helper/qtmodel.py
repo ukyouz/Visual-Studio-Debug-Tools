@@ -328,6 +328,8 @@ class StructTreeModel(AbstractTreeModel):
                             return hex(val)
                         else:
                             return str(val)
+            case QtCore.Qt.ItemDataRole.ToolTipRole:
+                return item.get("expr", None)
             case QtCore.Qt.ItemDataRole.FontRole:
                 if tag in {"value", "count", "address"}:
                     return QtGui.QFont("Consolas")

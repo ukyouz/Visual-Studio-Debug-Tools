@@ -120,6 +120,7 @@ class BinParser(QtWidgets.QWidget):
             pdb.parse_struct,
             structname,
             addr=self.parse_offset,
+            expr=structname,
             count=self.ui.spinParseCount.value(),
             add_dummy_root=True,
             finished_cb=_cb,

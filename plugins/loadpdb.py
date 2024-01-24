@@ -103,6 +103,19 @@ class LoadPdb(Plugin):
             for c in s["fields"]:
                 self._shift_addr(c, shift)
 
+    def _add_expr(self, s: pdb.StructRecord, expr: str):
+        s["expr"] = expr
+        if isinstance(s["fields"], dict):
+            if expr.endswith("->") or expr.endswith("."):
+                notation = ""
+            else:
+                notation = "->" if s.get("is_pointer", False) else "."
+            for c in s["fields"].values():
+                self._add_expr(c, expr + notation + c["levelname"])
+        elif isinstance(s["fields"], list):
+            for c in s["fields"]:
+                self._add_expr(c, expr + c["levelname"])
+
     def parse_struct(self, structname: str, expr: str="", addr=0, count=1, add_dummy_root=False):
         if structname == "":
             return pdb.new_struct()
@@ -131,8 +144,10 @@ class LoadPdb(Plugin):
                 size=count * s["size"],
                 fields=childs,
             )
+            self._add_expr(s, expr)
         else:
             s["levelname"] = expr
+            self._add_expr(s, expr)
         if add_dummy_root:
             s = pdb.new_struct(
                 fields=[s],
@@ -160,7 +175,6 @@ class LoadPdb(Plugin):
 
         struct = tpi.types[glb_info.typind].name
         return self.parse_struct(struct, expr, addr=glb_addr)
-
 
 class Test(Plugin):
 

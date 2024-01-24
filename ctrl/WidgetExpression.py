@@ -114,10 +114,11 @@ class Expression(QtWidgets.QWidget):
                 item["fields"] = struct_record["fields"]
                 model.setItem(item, parent)
 
+        notation = "->" if count == 1 else ""
         self.app.exec_async(
             pdb.parse_struct,
             structname=struct,
-            expr=item["levelname"],
+            expr=item["expr"] + notation,
             addr=address,
             count=count,
             finished_cb=_cb,
