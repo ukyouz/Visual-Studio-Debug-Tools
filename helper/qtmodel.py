@@ -97,10 +97,10 @@ class HexTable(QtCore.QAbstractTableModel):
             if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
                 return QtGui.QColor("#f0d6d5")
 
-    def rowCount(self, _=None):
+    def rowCount(self, _=QtCore.QModelIndex()):
         return math.ceil((self.streamSize - self.viewOffset) / self._bytesPerRow)
 
-    def columnCount(self, index):
+    def columnCount(self, index=QtCore.QModelIndex()):
         return self.column + self.show_preview
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int) -> Any:
@@ -164,6 +164,8 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
         super().__init__(parent)
         self._rootItem = root
         self._parents = {}
+        if fn := getattr(self, "post_init", None):
+            fn()
 
     def child(self, row: int, parent: QtCore.QModelIndex) -> Any:
         ...
@@ -207,7 +209,7 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
 
     def refresh(self):
         tl = self.index(0, 0)
-        br = self.index(self.rowCount(), self.columnCount())
+        br = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(tl, br)
 
     # You should implant/modify the following method for lazylod model
@@ -240,8 +242,6 @@ def bitmask(bitcnt):
 class StructTreeModel(AbstractTreeModel):
     pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int)
 
-    fileio = io.BytesIO()
-    hex_mode = True
     headers = [
         "Levelname",
         "Value",
@@ -250,6 +250,10 @@ class StructTreeModel(AbstractTreeModel):
         "Count",
         "Address",
     ]
+
+    def post_init(self):
+        self.fileio = io.BytesIO()
+        self.hex_mode = True
 
     def child(self, row, parent):
         item = self.itemFromIndex(parent)
@@ -293,7 +297,7 @@ class StructTreeModel(AbstractTreeModel):
                         val = self._calc_val(item)
                         if val is not None:
                             if self.hex_mode:
-                                bitsz = item.get("bitsize", 99999) or item["size"] * 8
+                                bitsz = item.get("bitsize", None) or item["size"] * 8
                                 size = min(item["size"], math.ceil(bitsz / 8))
                                 return f"0x%0{size * 2}x" % val
                             else:
@@ -345,7 +349,10 @@ class StructTreeModel(AbstractTreeModel):
         boff = item["bitoff"]
         bsize = item["bitsize"]
         self.fileio.seek(base)
-        val = int.from_bytes(self.fileio.read(size), "little")
+        try:
+            val = int.from_bytes(self.fileio.read(size), "little")
+        except:
+            return 0
         if boff and bsize:
             val = (val >> boff) & bitmask(bsize)
         return val
@@ -353,7 +360,7 @@ class StructTreeModel(AbstractTreeModel):
     def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
         item = self.itemFromIndex(parent)
 
-        self.beginInsertRows(parent, row, row + count)
+        self.beginInsertRows(parent, row, row + count - 1)
         if "fields" not in item or item["fields"] is None:
             item["fields"] = []
         for _ in range(count):
