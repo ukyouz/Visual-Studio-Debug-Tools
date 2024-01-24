@@ -51,5 +51,9 @@ class ProcessDebugger:
         dat = self.proc.read(addr, size)
         return dat
 
-    def write_memory(self, addr: int, buf: bytes):
-        return self.proc.write(addr, buf)
+    def write_memory(self, addr: int, buf: bytes) -> int:
+        try:
+            self.proc.write(addr, buf)
+            return len(buf)
+        except:
+            return 0

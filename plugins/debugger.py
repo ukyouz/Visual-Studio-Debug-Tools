@@ -40,7 +40,7 @@ class DebuggerStream:
             return bytes()
         return self._proc.read_memory(self._offset, size)
 
-    def write(self, buf: bytes):
+    def write(self, buf: bytes) -> int:
         if self._proc is None:
             return 0
         addr = self._offset
