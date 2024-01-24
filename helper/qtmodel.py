@@ -1,25 +1,16 @@
-import abc
 import io
 import math
 import os
 from collections import defaultdict
 from contextlib import suppress
-from dataclasses import dataclass
-from dataclasses import field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from typing import Generic
-from typing import Optional
 from typing import Protocol
-from typing import Self
-from typing import TypeVar
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
-
-from modules.pdbparser.pdbparser.pdb import StructRecord
 
 
 def bytes_to_ascii(data: bytes):

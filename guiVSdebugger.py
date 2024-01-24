@@ -1,9 +1,5 @@
-import io
 import sys
 from collections import defaultdict
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Optional
 from typing import Type
 
 from PyQt6 import QtCore
@@ -12,16 +8,13 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
-from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
-from ctrl.qtapp import set_app_title
 from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
 from ctrl.WidgetProcessSelector import ProcessSelector
-from helper import qtmodel
 from plugins import loadpdb
 from view import VSdebugger
 from view import resource

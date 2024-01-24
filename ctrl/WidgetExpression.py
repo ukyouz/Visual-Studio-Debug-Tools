@@ -1,23 +1,14 @@
-import io
 import sys
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Optional
-from typing import Type
 
-from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
-from ctrl.qtapp import ClsType
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import Plugin
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import debugger
 from plugins import loadpdb
 from view import WidgetExpression
-from view import resource
 
 
 class Expression(QtWidgets.QWidget):
