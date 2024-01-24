@@ -2,9 +2,12 @@ import abc
 import io
 import math
 import os
+from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import field
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 from typing import Generic
 from typing import Optional
@@ -14,6 +17,7 @@ from typing import TypeVar
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 from modules.pdbparser.pdbparser.pdb import StructRecord
 
@@ -410,3 +414,120 @@ class StructTreeModel(AbstractTreeModel):
     def toggleHexMode(self, hexmode: bool):
         self.hex_mode = hexmode
         self.refresh()
+
+
+def get_icon(filename):
+    fileInfo = QtCore.QFileInfo(filename)
+    iconProvider = QtWidgets.QFileIconProvider()
+    return iconProvider.icon(fileInfo)
+
+
+class FileExplorerModel(AbstractTreeModel):
+
+    headers = ["File"]
+
+    def post_init(self):
+        self.requestPaths = set()
+        self.pathIndexes = {}
+        self.folders = defaultdict(list)
+
+    def index(self, row, column, parent=QtCore.QModelIndex()) -> QtCore.QModelIndex:
+        ind = super().index(row, column, parent)
+        item = self.itemFromIndex(ind)
+        self.pathIndexes[item] = ind
+        return ind
+
+    def child(self, row: int, parent: QtCore.QModelIndex) -> Any:
+        item = self.itemFromIndex(parent)
+        items = self.folders.get(item, [])
+        return items[row]
+
+    def rowCount(self, index=QtCore.QModelIndex()) -> int:
+        item = self.itemFromIndex(index)
+        items = self.folders.get(item, [])
+        return len(items)
+
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
+        item = self.itemFromIndex(index)
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            folder_index = self.parent(index)
+            folder = self.itemFromIndex(folder_index)
+            try:
+                return str(item.relative_to(folder))
+            except:
+                return str(item)
+        elif role == QtCore.Qt.ItemDataRole.DecorationRole:
+            return get_icon(str(item))
+
+    def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
+        item = self.itemFromIndex(parent)
+
+        folder = self.folders.get(item, None)
+        if folder is None:
+            return False
+
+        self.beginInsertRows(parent, row, row + count - 1)
+        for _ in range(count):
+            folder.insert(row, {})
+        self.endInsertRows()
+
+        return True
+
+    def _insert_folder(self, folder: Path):
+        with suppress(KeyError):
+            return self.pathIndexes[folder]
+
+        root = self.itemFromIndex(QtCore.QModelIndex())
+        most_common_path = Path(".")
+        for f in self.folders.keys():
+            if f == root:
+                continue
+            comm_path = os.path.commonpath((f, folder))
+            if comm_path > str(most_common_path):
+                most_common_path = Path(comm_path)
+
+        # insert new common folder node
+        self.layoutAboutToBeChanged.emit()
+        try:
+            parent = self.pathIndexes[most_common_path]
+            closest_folder = most_common_path
+        except:
+            parent = QtCore.QModelIndex()
+            for f in most_common_path.parents:
+                with suppress(KeyError):
+                    parent = self.pathIndexes[f]
+                    break
+            closest_folder = self.itemFromIndex(parent)
+            r = self.rowCount(parent)
+            for child in self.folders[closest_folder]:
+                self.folders[folder].append(child)
+            self.folders[closest_folder] = []
+
+        r = self.rowCount(parent)
+        self.folders[closest_folder].append(folder)
+        parent = self.index(r, 0, parent)
+        self.layoutChanged.emit()
+
+        return parent
+
+    def _insert_file(self, file: Path):
+        if file in self.requestPaths:
+            return
+        self.requestPaths.add(file)
+        parent = self._insert_folder(file.parent)
+        folder = self.itemFromIndex(parent)
+
+        r = self.rowCount(parent)
+        self.beginInsertRows(parent, r, r)
+        self.folders[folder].append(file)
+        self.endInsertRows()
+
+        return self.index(r, 0, parent)
+
+    def addFiles(self, files: list[str | Path]) -> list[QtCore.QModelIndex]:
+        indexes = []
+        for f in files:
+            index = self._insert_file(Path(f).resolve())
+            indexes.append(index)
+
+        return indexes

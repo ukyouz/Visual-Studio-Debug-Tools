@@ -2,6 +2,7 @@ import io
 import sys
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from typing import Optional
 from typing import Type
 
@@ -39,6 +40,7 @@ class BinViewer(AppCtrl):
 
         # events
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
+        self.ui.treeExplorer.setModel(qtmodel.FileExplorerModel(Path()))
 
         self._plugins = {}
         self.subwidgets = []
@@ -72,6 +74,12 @@ class BinViewer(AppCtrl):
                 filter="Any (*.*)"
             )
         if filename:
+            model = self.ui.treeExplorer.model()
+            if isinstance(model, qtmodel.FileExplorerModel):
+                indexes = model.addFiles([filename])
+                self.ui.treeExplorer.scrollTo(indexes[0], QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible)
+                self.ui.treeExplorer.setCurrentIndex(indexes[0])
+
             with open(filename, "rb") as fs:
                 fileio = io.BytesIO(fs.read())
                 fileio.name = filename
