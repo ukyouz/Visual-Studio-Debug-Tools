@@ -163,6 +163,11 @@ if __name__ == '__main__':
     p.add_argument("file", nargs="?", default="")
     args = p.parse_args()
 
+    # https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7
+    import ctypes
+    myappid = __file__
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
     app = QtWidgets.QApplication(sys.argv)
     window = VisualStudioDebugger()
     window.show()
