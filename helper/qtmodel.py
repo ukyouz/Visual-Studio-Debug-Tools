@@ -207,7 +207,9 @@ class AbstractTreeModel(QtCore.QAbstractItemModel):
 
     def refresh(self, index=QtCore.QModelIndex()):
         tl = self.index(0, 0, index)
-        br = self.index(self.rowCount(index) - 1, self.columnCount(index) - 1)
+        br = self.index(self.rowCount(index) - 1, 0, index)
+        while not self.canFetchMore(br) and (r := self.rowCount(br)):
+            br = self.index(r - 1, 0, br)
         self.dataChanged.emit(tl, br)
 
     # You should implant/modify the following method for lazylod model
