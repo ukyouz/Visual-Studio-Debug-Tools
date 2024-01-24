@@ -72,7 +72,7 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>4</number>
    </property>
    <property name="topMargin">
     <number>0</number>
@@ -83,6 +83,28 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
+   <item>
+    <widget class="QLabel" name="labelIcon">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Icon</string>
+     </property>
+     <property name="indent">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QLabel" name="labelTitle">
      <property name="font">
@@ -98,7 +120,7 @@
       <string>Title</string>
      </property>
      <property name="indent">
-      <number>6</number>
+      <number>2</number>
      </property>
     </widget>
    </item>

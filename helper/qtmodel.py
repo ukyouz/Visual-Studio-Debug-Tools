@@ -332,6 +332,12 @@ class StructTreeModel(AbstractTreeModel):
                         return QtGui.QColor("red")
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
                     return QtGui.QColor("blue")
+            case QtCore.Qt.ItemDataRole.DecorationRole:
+                if index.column() == 0:
+                    if self.rowCount(index):
+                        return QtGui.QIcon(":icon/images/vswin2019/Structure_16x.svg")
+                    else:
+                        return QtGui.QIcon(":icon/images/vswin2019/Field_16x.svg")
 
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         ...
@@ -447,6 +453,8 @@ class FileExplorerModel(AbstractTreeModel):
                 return str(item.relative_to(folder))
             except:
                 return str(item)
+        elif role == QtCore.Qt.ItemDataRole.ToolTipRole:
+            return str(item)
         elif role == QtCore.Qt.ItemDataRole.DecorationRole:
             return get_icon(str(item))
 

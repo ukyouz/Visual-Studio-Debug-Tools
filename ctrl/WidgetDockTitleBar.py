@@ -13,6 +13,7 @@ class DockTitleBar(QtWidgets.QWidget):
         self.ui = WidgetDockTitleBar.Ui_Form()
         self.ui.setupUi(self)
         self.ui.btnMore.setContentsMargins(0, 0, 0, 0)
+        self.ui.labelIcon.setVisible(False)
         set_app_title(self, "")
 
         parent.installEventFilter(self)
@@ -20,8 +21,14 @@ class DockTitleBar(QtWidgets.QWidget):
     def eventFilter(self, obj: QtCore.QObject, e: QtCore.QEvent) -> bool:
         # ref: https://github.com/yjg30737/pyqt-custom-titlebar-window/blob/main/pyqt_custom_titlebar_window/customTitlebarWindow.py
         if isinstance(obj, QtWidgets.QDockWidget):
-            if e.type() == QtCore.QEvent.Type.WindowTitleChange:
-                self.ui.labelTitle.setText(obj.windowTitle())
+            match e.type():
+                case QtCore.QEvent.Type.WindowTitleChange:
+                    self.ui.labelTitle.setText(obj.windowTitle())
+                case QtCore.QEvent.Type.WindowIconChange:
+                    self.ui.labelIcon.setVisible(True)
+                    icon = obj.windowIcon()
+                    pixmap = icon.pixmap(icon.actualSize(self.ui.labelIcon.size()))
+                    self.ui.labelIcon.setPixmap(pixmap)
         return False
 
 

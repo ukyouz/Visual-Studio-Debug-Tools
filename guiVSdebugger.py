@@ -29,10 +29,12 @@ class Dock(Plugin):
                     {
                         "name": "Add Memory View",
                         "command": "AddMemoryView",
+                        "icon": "view/images/ctrl/Memory_16x.svg",
                     },
                     {
                         "name": "Add Expression View",
                         "command": "AddExpressionView",
+                        "icon": "view/images/ctrl/VariableExpression_16x.svg",
                     },
                 ],
             },
@@ -79,6 +81,7 @@ class Dock(Plugin):
 
     def addExpressionView(self):
         dockWidget = self.generate_dockwidget()
+        dockWidget.setWindowIcon(QtGui.QIcon("view/images/ctrl/VariableExpression_16x.svg"))
         expr = Expression(self.app)
         self.docks["expression"][dockWidget] = expr
         dockWidget.setWidget(expr)
@@ -96,6 +99,7 @@ class Dock(Plugin):
 
     def addMemoryView(self):
         dockWidget = self.generate_dockwidget()
+        dockWidget.setWindowIcon(QtGui.QIcon("view/images/ctrl/Memory_16x.svg"))
         mem = Memory(self.app)
         self.docks["memory"][dockWidget] = mem
         dockWidget.setWidget(mem)
