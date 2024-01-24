@@ -93,10 +93,25 @@ class AppCtrl(QtWidgets.QMainWindow):
         return getattr(self.ui, norm_name)
 
     def setupMenues(self, parent, menues):
+
+        def _get_action_at(menu, pos):
+            if pos is None:
+                return None
+            childs = menu.actions()
+            try:
+                return childs[pos]
+            except IndexError:
+                return None
+
         def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu):
+            prev_pos = None
             for act in actions:
                 if act["name"] == "---":
-                    menu.addSeparator()
+                    prev_action = _get_action_at(menu, prev_pos)
+                    if prev_action:
+                        menu.insertSeparator(prev_action)
+                    else:
+                        menu.addSeparator()
                     continue
                 if submenus := act.get("submenus", []):
                     submenu = self._addMenu(menu, act["name"])
@@ -111,7 +126,15 @@ class AppCtrl(QtWidgets.QMainWindow):
                     )
                     if icon := act.get("icon", None):
                         action.setIcon(QtGui.QIcon(icon))
-                    menu.addAction(action)
+                    prev_action = None
+                    pos = act.get("position", prev_pos)
+                    if pos is not None:
+                        prev_pos = pos + 1
+                        prev_action = _get_action_at(menu, pos)
+                    if prev_action:
+                        menu.insertAction(prev_action, action)
+                    else:
+                        menu.addAction(action)
 
         _make_menu(menues, parent)
 
@@ -143,6 +166,7 @@ class MenuAction(TypedDict):
     command: NotRequired[str]
     shortcut: NotRequired[str]
     icon: NotRequired[str]
+    position: NotRequired[int]
     submenus: NotRequired[list]
 
 

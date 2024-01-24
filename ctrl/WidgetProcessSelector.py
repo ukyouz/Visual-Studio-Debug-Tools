@@ -32,12 +32,14 @@ class ProcessSelector(QtWidgets.QWidget):
 
         self.app.cmd.register("RefreshProcesses", self.load_ui)
         self.app.setupMenues(self.app.menu("Tool"), [
-            { "name": "---", },
             {
                 "name": "Refresh processes",
                 "command": "RefreshProcesses",
+                "icon": "view/images/ctrl/VirtualMachineRefresh_16x.svg",
                 "shortcut": "F5",
-            }
+                "position": 0,
+            },
+            { "name": "---", },
         ])
 
     def load_ui(self):
