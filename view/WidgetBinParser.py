@@ -126,6 +126,7 @@ class Ui_Form(object):
         self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView.setIconSize(QtCore.QSize(16, 22))
         self.treeView.setIndentation(16)
+        self.treeView.setUniformRowHeights(True)
         self.treeView.setObjectName("treeView")
         self.verticalLayout.addWidget(self.treeView)
         self.tableView = QtWidgets.QTableView(parent=self.splitter)
