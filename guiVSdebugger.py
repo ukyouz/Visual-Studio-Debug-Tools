@@ -74,6 +74,7 @@ class Dock(Plugin):
     def _addAction(self, menu, title, cb):
         action = menu.addAction(title)
         action.triggered.connect(cb)
+        return action
 
     def _close_dock(self, dockWidget, widget_dict: dict):
         self.app.removeDockWidget(dockWidget)
@@ -93,7 +94,10 @@ class Dock(Plugin):
             menu = titlebar.ui.btnMore.menu()
             self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
             menu.addSeparator()
+            action = self._addAction(menu, "Refresh", expr.refreshTree)
+            action.setIcon(QtGui.QIcon("view/images/ctrl/Refresh_16x.svg"))
             self._addAction(menu, "Add Expression View", self.addExpressionView)
+            action.setIcon(QtGui.QIcon("view/images/ctrl/VariableExpression_16x.svg"))
 
         return dockWidget
 
@@ -112,7 +116,8 @@ class Dock(Plugin):
             self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["memory"]))
             menu.addSeparator()
             self._addAction(menu, "Dump Memory...", mem.dumpBuffer)
-            self._addAction(menu, "Add Memory View", self.addMemoryView)
+            action = self._addAction(menu, "Add Memory View", self.addMemoryView)
+            action.setIcon(QtGui.QIcon("view/images/ctrl/Memory_16x.svg"))
 
         return dockWidget
 
