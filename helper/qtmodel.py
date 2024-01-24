@@ -338,6 +338,7 @@ class StructTreeModel(AbstractTreeModel):
 
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         ...
+        return False
 
     def _calc_val(self, item: StructRecord) -> Any:
         base = item["address"]
