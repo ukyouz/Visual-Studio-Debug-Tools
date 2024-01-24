@@ -50,3 +50,6 @@ class ProcessDebugger:
     def read_memory(self, addr: int, size: int):
         dat = self.proc.read(addr, size)
         return dat
+
+    def write_memory(self, addr: int, buf: bytes):
+        return self.proc.write(addr, buf)

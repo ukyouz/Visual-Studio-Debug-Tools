@@ -1,5 +1,6 @@
 import sys
 
+from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -26,6 +27,7 @@ class Expression(QtWidgets.QWidget):
         self.ui.lineStruct.returnPressed.connect(self._addExpression)
         self.ui.btnParse.clicked.connect(self._addExpression)
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
+        self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
 
         self._init_ui()
 
@@ -33,6 +35,7 @@ class Expression(QtWidgets.QWidget):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         empty_struct = pdb.parse_struct("")
         model = qtmodel.StructTreeModel(empty_struct)
+        model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
         self.ui.treeView.setModel(model)
 
@@ -94,11 +97,11 @@ class Expression(QtWidgets.QWidget):
             errored_cb=_err,
         )
 
-    def _lazy_load_pointer(self, parent, address):
+    def _lazy_load_pointer(self, parent, address, count):
         dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
-        item = parent.internalPointer()
+        item = parent.internalPointer().copy()
 
         struct = item["lf"].utypeRef.name
 
@@ -116,8 +119,23 @@ class Expression(QtWidgets.QWidget):
             structname=struct,
             expr=item["levelname"],
             addr=address,
+            count=count,
             finished_cb=_cb,
         )
+
+    def _onBtnToggleHexClicked(self):
+        model = self.ui.treeView.model()
+        if isinstance(model, qtmodel.StructTreeModel):
+            checked = self.ui.btnToggleHex.isChecked()
+            model.toggleHexMode(checked)
+
+    def refreshTree(self, index: QtCore.QModelIndex):
+        index = index or QtCore.QModelIndex()
+        model = self.ui.treeView.model()
+
+        if isinstance(model, qtmodel.StructTreeModel):
+            model.refreshIndex(index)
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
