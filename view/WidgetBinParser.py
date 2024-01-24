@@ -111,18 +111,20 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setFamily("Calibri")
         self.treeView.setFont(font)
-        self.treeView.setStyleSheet("QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}\n"
-"QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png);}\n"
-"QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png);}\n"
-"QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png);}\n"
-"QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png);}\n"
-"QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png);}\n"
-"QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png);}\n"
-"QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png);}\n"
-"QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png);}")
+        self.treeView.setStyleSheet("QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
+"QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}\n"
+"QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}\n"
+"QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png) 0;}\n"
+"QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png) 0;}\n"
+"QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}\n"
+"QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}\n"
+"QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
+"QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}\n"
+"")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.treeView.setAutoScroll(False)
         self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.treeView.setIconSize(QtCore.QSize(16, 22))
         self.treeView.setIndentation(16)
         self.treeView.setObjectName("treeView")
         self.verticalLayout.addWidget(self.treeView)

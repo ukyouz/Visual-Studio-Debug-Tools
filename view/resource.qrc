@@ -1,20 +1,23 @@
 <RCC>
   <qresource prefix="icon">
+    <file>images/vswin2019/Field_16x.svg</file>
+    <file>images/vswin2019/Field_left_16x.svg</file>
+    <file>images/vswin2019/Structure_16x.svg</file>
     <file>images/treeview/border-collapse.png</file>
     <file>images/treeview/border-collapse-more.png</file>
     <file>images/treeview/border-end.png</file>
-    <file>images/treeview/border-line.png</file>
     <file>images/treeview/border-expand.png</file>
     <file>images/treeview/border-expand-more.png</file>
+    <file>images/treeview/border-line.png</file>
     <file>images/treeview/border-more.png</file>
   </qresource>
   <qresource prefix="action">
-    <file>images/vscode/pause.svg</file>
-    <file>images/vscode/resume.svg</file>
-    <file>images/vscode/stop.svg</file>
-    <file>images/vscode/new-file.svg</file>
-    <file>images/vscode/new-folder.svg</file>
-    <file>images/vscode/history.svg</file>
-    <file>images/vscode/three-bars.svg</file>
+    <file>images/vswin2019/History_16x.svg</file>
+    <file>images/vswin2019/HamburgerMenu_16x.svg</file>
+    <file>images/vswin2019/Pause_16x.svg</file>
+    <file>images/vswin2019/Run_16x.svg</file>
+    <file>images/vswin2019/Stop_16x.svg</file>
+    <file>images/vswin2019/OpenFile_16x.svg</file>
+    <file>images/vswin2019/OpenFolder_16x.svg</file>
   </qresource>
 </RCC>

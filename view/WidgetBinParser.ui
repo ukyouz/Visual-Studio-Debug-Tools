@@ -248,15 +248,16 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png);}
-QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png);}
-QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png);}
-QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png);}
-QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png);}
-QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png);}
-QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png);}
-QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png);}
-QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png);}</string>
+          <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
+QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
+QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}
+QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png) 0;}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png) 0;}
+QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
+QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}
+QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
+QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}
+</string>
          </property>
          <property name="frameShape">
           <enum>QFrame::Panel</enum>
@@ -266,6 +267,12 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
          </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::ExtendedSelection</enum>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>16</width>
+           <height>22</height>
+          </size>
          </property>
          <property name="indentation">
           <number>16</number>

@@ -64,7 +64,7 @@
           </property>
           <property name="icon">
            <iconset resource="resource.qrc">
-            <normaloff>:/action/images/vscode/history.svg</normaloff>:/action/images/vscode/history.svg</iconset>
+            <normaloff>:/action/images/vswin2019/History_16x.svg</normaloff>:/action/images/vswin2019/History_16x.svg</iconset>
           </property>
           <property name="popupMode">
            <enum>QToolButton::InstantPopup</enum>

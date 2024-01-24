@@ -132,7 +132,7 @@
         </property>
         <property name="icon">
          <iconset resource="resource.qrc">
-          <normaloff>:/action/images/vscode/pause.svg</normaloff>:/action/images/vscode/pause.svg</iconset>
+          <normaloff>:/action/images/vswin2019/Pause_16x.svg</normaloff>:/action/images/vswin2019/Pause_16x.svg</iconset>
         </property>
         <property name="autoRaise">
          <bool>true</bool>
@@ -146,7 +146,7 @@
         </property>
         <property name="icon">
          <iconset resource="resource.qrc">
-          <normaloff>:/action/images/vscode/resume.svg</normaloff>:/action/images/vscode/resume.svg</iconset>
+          <normaloff>:/action/images/vswin2019/Run_16x.svg</normaloff>:/action/images/vswin2019/Run_16x.svg</iconset>
         </property>
         <property name="autoRaise">
          <bool>true</bool>
@@ -160,7 +160,7 @@
         </property>
         <property name="icon">
          <iconset resource="resource.qrc">
-          <normaloff>:/action/images/vscode/stop.svg</normaloff>:/action/images/vscode/stop.svg</iconset>
+          <normaloff>:/action/images/vswin2019/Stop_16x.svg</normaloff>:/action/images/vswin2019/Stop_16x.svg</iconset>
         </property>
         <property name="autoRaise">
          <bool>true</bool>

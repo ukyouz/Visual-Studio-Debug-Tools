@@ -87,6 +87,7 @@
     <widget class="QLabel" name="labelTitle">
      <property name="font">
       <font>
+       <family>Yu Gothic UI</family>
        <bold>true</bold>
       </font>
      </property>
@@ -108,7 +109,7 @@
      </property>
      <property name="icon">
       <iconset resource="resource.qrc">
-       <normaloff>:/action/images/vscode/three-bars.svg</normaloff>:/action/images/vscode/three-bars.svg</iconset>
+       <normaloff>:/action/images/vswin2019/HamburgerMenu_16x.svg</normaloff>:/action/images/vswin2019/HamburgerMenu_16x.svg</iconset>
      </property>
      <property name="popupMode">
       <enum>QToolButton::InstantPopup</enum>

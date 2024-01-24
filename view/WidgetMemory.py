@@ -31,7 +31,7 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.btnHistory = QtWidgets.QToolButton(parent=self.frame_2)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/action/images/vscode/history.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        icon.addPixmap(QtGui.QPixmap(":/action/images/vswin2019/History_16x.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.btnHistory.setIcon(icon)
         self.btnHistory.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
         self.btnHistory.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)

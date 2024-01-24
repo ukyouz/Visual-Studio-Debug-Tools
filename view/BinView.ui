@@ -103,18 +103,18 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QToolButton" name="toolButton">
+         <widget class="QToolButton" name="btnOpenFiles">
           <property name="text">
            <string>Open File</string>
           </property>
           <property name="icon">
            <iconset resource="resource.qrc">
-            <normaloff>:/action/images/vscode/new-file.svg</normaloff>:/action/images/vscode/new-file.svg</iconset>
+            <normaloff>:/action/images/vswin2019/OpenFile_16x.svg</normaloff>:/action/images/vswin2019/OpenFile_16x.svg</iconset>
           </property>
           <property name="iconSize">
            <size>
-            <width>14</width>
-            <height>14</height>
+            <width>16</width>
+            <height>16</height>
            </size>
           </property>
           <property name="shortcut">
@@ -139,7 +139,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="checkOpenedOnly">
           <property name="text">
            <string>Opened Only</string>
           </property>
@@ -149,7 +149,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView">
+      <widget class="QTreeView" name="treeExplorer">
        <property name="palette">
         <palette>
          <active>
@@ -177,9 +177,39 @@
          <disabled/>
         </palette>
        </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
+QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
+QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}
+QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png) 0;}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-end.png) 0;}
+QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
+QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}
+QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
+QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}
+</string>
+       </property>
        <property name="frameShape">
         <enum>QFrame::NoFrame</enum>
        </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="indentation">
+        <number>16</number>
+       </property>
+       <attribute name="headerVisible">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="headerMinimumSectionSize">
+        <number>16</number>
+       </attribute>
       </widget>
      </item>
     </layout>
