@@ -143,11 +143,15 @@
             <property name="text">
              <string>History</string>
             </property>
+            <property name="icon">
+             <iconset resource="resource.qrc">
+              <normaloff>:/action/images/vswin2019/History_16x.svg</normaloff>:/action/images/vswin2019/History_16x.svg</iconset>
+            </property>
             <property name="popupMode">
              <enum>QToolButton::InstantPopup</enum>
             </property>
             <property name="toolButtonStyle">
-             <enum>Qt::ToolButtonTextOnly</enum>
+             <enum>Qt::ToolButtonTextBesideIcon</enum>
             </property>
            </widget>
           </item>
@@ -308,6 +312,8 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

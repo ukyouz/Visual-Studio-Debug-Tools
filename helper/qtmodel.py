@@ -334,10 +334,7 @@ class StructTreeModel(AbstractTreeModel):
                     return QtGui.QColor("blue")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
-                    if self.rowCount(index):
-                        return QtGui.QIcon(":icon/images/vswin2019/Structure_16x.svg")
-                    else:
-                        return QtGui.QIcon(":icon/images/vswin2019/Field_16x.svg")
+                    return QtGui.QIcon(":icon/images/vswin2019/Field_left_16x.svg")
 
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         ...
