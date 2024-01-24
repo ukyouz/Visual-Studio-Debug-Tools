@@ -31,7 +31,7 @@ class ParseRecord:
 
 
 class BinViewer(AppCtrl):
-    def __init__(self, fileio=None):
+    def __init__(self, filename=None):
         super().__init__()
         self.ui = BinView.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -40,6 +40,7 @@ class BinViewer(AppCtrl):
 
         # events
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
+        self.ui.btnOpenFiles.clicked.connect(self._onFileOpened)
         self.ui.treeExplorer.setModel(qtmodel.FileExplorerModel(Path()))
 
         self._plugins = {}
@@ -48,9 +49,8 @@ class BinViewer(AppCtrl):
             loadpdb.LoadPdb(self),
         ])
 
-        # properties
-        if fileio:
-            self._loadFile(fileio)
+        if filename:
+            self._onFileOpened(filename)
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
@@ -66,7 +66,7 @@ class BinViewer(AppCtrl):
         except KeyError:
             raise PluginNotLoaded(plg_cls)
 
-    def _onFileOpened(self, filename=False):
+    def _onFileOpened(self, filename=""):
         if not filename:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self,
@@ -83,7 +83,7 @@ class BinViewer(AppCtrl):
             with open(filename, "rb") as fs:
                 fileio = io.BytesIO(fs.read())
                 fileio.name = filename
-                self._loadFile(fileio)
+                QtCore.QTimer.singleShot(0, lambda: self._loadFile(fileio))
 
     def _loadFile(self, fileio: io.BytesIO):
         widget = BinParser(self, fileio)
@@ -99,11 +99,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-
-    fileio = io.BytesIO()
-    if args.file:
-        with open(args.file, "rb") as fs:
-            fileio = io.BytesIO(fs.read())
-    window = BinViewer(fileio)
+    window = BinViewer(args.file)
     window.show()
     sys.exit(app.exec())

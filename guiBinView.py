@@ -18,11 +18,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-
-    fileio = None
-    if args.file:
-        with open(args.file, "rb") as fs:
-            fileio = io.BytesIO(fs.read())
-    window = BinViewerApp(fileio)
+    window = BinViewerApp(args.file)
     window.show()
     sys.exit(app.exec())
