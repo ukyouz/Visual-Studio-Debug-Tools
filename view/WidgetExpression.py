@@ -62,6 +62,7 @@ class Ui_Form(object):
 "QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}\n"
 "")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
+        self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView.setIconSize(QtCore.QSize(16, 22))
         self.treeView.setIndentation(16)
         self.treeView.setUniformRowHeights(True)

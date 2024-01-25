@@ -125,7 +125,6 @@ class Ui_Form(object):
 "QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}\n"
 "")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
-        self.treeView.setAutoScroll(False)
         self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView.setIconSize(QtCore.QSize(16, 22))
         self.treeView.setIndentation(16)
@@ -142,7 +141,7 @@ class Ui_Form(object):
         self.tableView.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.tableView.setShowGrid(False)
         self.tableView.setObjectName("tableView")
-        self.tableView.verticalHeader().setDefaultSectionSize(24)
+        self.tableView.verticalHeader().setDefaultSectionSize(25)
         self.verticalLayout_2.addWidget(self.splitter)
 
         self.retranslateUi(Form)

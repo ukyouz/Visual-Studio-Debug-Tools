@@ -266,9 +266,6 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
          <property name="frameShape">
           <enum>QFrame::Panel</enum>
          </property>
-         <property name="autoScroll">
-          <bool>false</bool>
-         </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::ExtendedSelection</enum>
          </property>
@@ -305,7 +302,7 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
        <bool>false</bool>
       </property>
       <attribute name="verticalHeaderDefaultSectionSize">
-       <number>24</number>
+       <number>25</number>
       </attribute>
      </widget>
     </widget>

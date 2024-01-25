@@ -124,6 +124,9 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
      </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::ExtendedSelection</enum>
+     </property>
      <property name="iconSize">
       <size>
        <width>16</width>
