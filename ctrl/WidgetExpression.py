@@ -1,3 +1,4 @@
+import re
 import sys
 
 from PyQt6 import QtCore
@@ -37,6 +38,7 @@ class Expression(QtWidgets.QWidget):
         model = qtmodel.StructTreeModel(empty_struct)
         model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
+        model.pvoidStructChanged.connect(self._lazy_cast_pointer)
         self.ui.treeView.setModel(model)
 
     def _onHistoryClicked(self, val):
@@ -119,6 +121,46 @@ class Expression(QtWidgets.QWidget):
             pdb.parse_struct,
             structname=struct,
             expr=item["expr"] + notation,
+            addr=address,
+            count=count,
+            finished_cb=_cb,
+        )
+
+    def _lazy_cast_pointer(self, parent, address: int, count: int, ref_struct: str):
+        dbg = self.app.plugin(debugger.Debugger)
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        model = self.ui.treeView.model()
+        assert isinstance(model, qtmodel.StructTreeModel), "Only StructTreeModel available here"
+
+        item = parent.internalPointer().copy()
+
+        # TODO: use C syntax parse for more robust parsing
+        match = re.match(r"(?P<STRUCT>.+)\*", ref_struct.strip())
+        if match is None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                "Invalid struct pointer type: %r" % ref_struct,
+            )
+            item["fields"] = None
+            model.setItem(item, parent)
+            return
+
+        struct = match["STRUCT"].strip()
+
+        def _cb(struct_record):
+            if struct_record is None:
+                item["levelname"] = "load failed"
+                return
+            model.loadStream(dbg.get_memory_stream())
+            item["fields"] = struct_record["fields"]
+            model.setItem(item, parent)
+
+        notation = "->" if count == 1 else ""
+        self.app.exec_async(
+            pdb.parse_struct,
+            structname=struct,
+            expr="((%s)(%s))%s" % (ref_struct, item["expr"], notation),
             addr=address,
             count=count,
             finished_cb=_cb,

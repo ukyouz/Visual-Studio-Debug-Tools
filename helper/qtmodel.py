@@ -241,7 +241,7 @@ def bitmask(bitcnt):
 
 class StructTreeModel(AbstractTreeModel):
     pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
-    pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, str)
+    pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, int, str)
 
     headers = [
         "Levelname",
@@ -283,9 +283,11 @@ class StructTreeModel(AbstractTreeModel):
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "count":
             if item["is_pointer"] and self.allow_dereferece_pointer:
-                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+                if not item["type"].lower().endswith("pvoid"):
+                    # only allow non-pvoid pointer be editable
+                    flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "type" and self.allow_dereferece_pointer:
-            if item[tag].lower().endswith("pvoid") or item.get("is_pvoid", False):
+            if item[tag].lower().endswith("pvoid") or item.get("_is_pvoid", False):
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
 
         if flags & QtCore.Qt.ItemFlag.ItemIsEditable:
@@ -387,9 +389,13 @@ class StructTreeModel(AbstractTreeModel):
             self.fileio.write(new_val.to_bytes(size, "little"))
             return True
         elif tag == "type":
-            item["is_pvoid"] = True
+            old_value = item.get(tag, "")
+            if value == old_value:
+                return False
+            item["_is_pvoid"] = True
             item[tag] = value
-            self.pvoidStructChanged.emit(index, self._calc_val(item), value)
+            count = item.get("_count", 1)
+            self.pvoidStructChanged.emit(index, self._calc_val(item), count, value)
             return True
         elif tag == "count":
             old_value = item.get("_count", 1)
@@ -492,9 +498,11 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(index)
         new_count = len(record["fields"]) if record["fields"] else 0
         self.removeRows(0, self.rowCount(index), index)
+        self.layoutAboutToBeChanged.emit()
         self.beginInsertRows(index, 0, new_count - 1)
         item.update(record)
         self.endInsertRows()
+        self.layoutChanged.emit()
 
     def refreshIndex(self, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
