@@ -240,7 +240,7 @@ def bitmask(bitcnt):
 
 
 class StructTreeModel(AbstractTreeModel):
-    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int, int)
+    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
     pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, str)
 
     headers = [
