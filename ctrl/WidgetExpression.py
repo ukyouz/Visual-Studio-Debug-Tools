@@ -65,11 +65,12 @@ class Expression(QtWidgets.QWidget):
             else:
                 self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
                 return
+        # print("Virtual Base:", hex(virt_base))
         expr = self.ui.lineStruct.text()
 
         def _cb(struct_record):
             self.ui.lineStruct.setEnabled(True)
-            if struct_record is None or struct_record["fields"] is None:
+            if struct_record is None:
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
@@ -95,6 +96,7 @@ class Expression(QtWidgets.QWidget):
             pdb.query_expression,
             expr=expr,
             virtual_base=virt_base,
+            io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=_err,
         )

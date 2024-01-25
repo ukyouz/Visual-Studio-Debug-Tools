@@ -116,7 +116,7 @@ class LoadPdb(Plugin):
             for c in s["fields"]:
                 self._add_expr(c, expr + c["levelname"])
 
-    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, add_dummy_root=False):
+    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, recursive=True, add_dummy_root=False):
         if structname == "":
             return pdb.new_struct()
 
@@ -127,7 +127,7 @@ class LoadPdb(Plugin):
         except KeyError:
             return pdb.new_struct()
 
-        s = tpi.form_structs(lf, addr)
+        s = tpi.form_structs(lf, addr, recursive)
         if count > 1:
             s["levelname"] = "[0]"
             childs = [s]
@@ -154,11 +154,27 @@ class LoadPdb(Plugin):
             )
         return s
 
-    def query_expression(self, expr: str, virtual_base: int=0):
+    def _iter_fields(self, expr: str) -> list[str | int]:
+        _expr = expr.replace("->", ".")
+        _expr = _expr.replace("[", ".")
+        _expr = _expr.replace("]", ".")
+        for f in _expr.split("."):
+            if f == "":
+                continue
+            try:
+                yield eval(f)
+            except:
+                yield f
+
+    def query_expression(self, expr: str, virtual_base: int=0, io_stream=None):
         tpi = self._pdb.streams[2]
         dbi = self._pdb.streams[3]
         glb = self._pdb.streams[dbi.header.symrecStream]
 
+        subfields = list(self._iter_fields(expr))
+        expr = subfields.pop(0)
+
+        has_subfields = len(subfields)
         if expr in glb.s_gdata32:
             # remap global address
             try:
@@ -171,22 +187,59 @@ class LoadPdb(Plugin):
             section_offset = sects[glb_info.section - 1].VirtualAddress
             glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
 
-            struct = tpi.types[glb_info.typind].name
-            return self.parse_struct(struct, expr, addr=glb_addr)
-
+            structname = tpi.types[glb_info.typind].name
+            out_struct = self.parse_struct(structname, expr, addr=glb_addr, recursive=not has_subfields)
         elif match := re.match(r"\((?P<STRUCT>.+)\*\s*\)(?P<ADDR>.+)", expr):
             # TODO: use C syntax parser for better commpatibility
-            struct = match["STRUCT"].strip()
+            structname = match["STRUCT"].strip()
             addr = match["ADDR"]
-            if struct not in tpi.structs:
+            if structname not in tpi.structs:
                 return
             try:
                 glb_addr = eval(addr)
             except:
                 return
-            expr = "(*(%s))" % expr
-            return self.parse_struct(struct, expr, addr=glb_addr)
+            if expr[-1] != ")":
+                expr = "(*(%s))" % expr
+            else:
+                expr = "*(%s)" % expr
+            out_struct = self.parse_struct(structname, expr, addr=glb_addr, recursive=not has_subfields)
+        else:
+            return
 
+        while subfields:
+            f = subfields.pop(0)
+            try:
+                out_struct = out_struct["fields"][f]
+            except:
+                return
+
+            last_field = subfields == []
+            if not out_struct["is_pointer"]:
+                lvlname = out_struct["levelname"]
+                _expr = out_struct["expr"]
+                out_struct = tpi.form_structs(out_struct["lf"], addr=out_struct["address"], recursive=last_field)
+                out_struct["levelname"] = lvlname
+                self._add_expr(out_struct, _expr)
+            else:
+                if io_stream is None:
+                    return
+                if last_field:
+                    break
+                io_stream.seek(out_struct["address"])
+                addr = int.from_bytes(io_stream.read(out_struct["size"]), "little")
+                count = f if isinstance(f, int) else 1
+                notation = "->" if count == 1 else ""
+                out_struct = self.parse_struct(
+                    structname=out_struct["lf"].utypeRef.name,
+                    expr=out_struct["expr"] + notation,
+                    addr=addr,
+                    count=count,
+                    recursive=False,
+                )
+
+        out_struct["levelname"] = out_struct["expr"]
+        return out_struct
 
 class Test(Plugin):
 
