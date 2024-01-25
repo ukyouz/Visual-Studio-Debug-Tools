@@ -1,5 +1,5 @@
-import io
 import pickle
+import re
 from pathlib import Path
 
 from PyQt6 import QtWidgets
@@ -103,7 +103,7 @@ class LoadPdb(Plugin):
             for c in s["fields"]:
                 self._shift_addr(c, shift)
 
-    def _add_expr(self, s: pdb.StructRecord, expr: str):
+    def _add_expr(self, s, expr: str):
         s["expr"] = expr
         if isinstance(s["fields"], dict):
             if expr.endswith("->") or expr.endswith("."):
@@ -159,22 +159,34 @@ class LoadPdb(Plugin):
         dbi = self._pdb.streams[3]
         glb = self._pdb.streams[dbi.header.symrecStream]
 
-        if expr not in glb.s_gdata32:
-            return None
+        if expr in glb.s_gdata32:
+            # remap global address
+            try:
+                sects = self._pdb.streams[dbi.dbgheader.snSectionHdrOrig].sections
+                omap = self._pdb.streams[dbi.dbgheader.snOmapFromSrc]
+            except AttributeError:
+                sects = self._pdb.streams[dbi.dbgheader.snSectionHdr].sections
+                omap = DummyOmap()
+            glb_info = glb.s_gdata32[expr]
+            section_offset = sects[glb_info.section - 1].VirtualAddress
+            glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
 
-        # remap global address
-        try:
-            sects = self._pdb.streams[dbi.dbgheader.snSectionHdrOrig].sections
-            omap = self._pdb.streams[dbi.dbgheader.snOmapFromSrc]
-        except AttributeError:
-            sects = self._pdb.streams[dbi.dbgheader.snSectionHdr].sections
-            omap = DummyOmap()
-        glb_info = glb.s_gdata32[expr]
-        section_offset = sects[glb_info.section - 1].VirtualAddress
-        glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
+            struct = tpi.types[glb_info.typind].name
+            return self.parse_struct(struct, expr, addr=glb_addr)
 
-        struct = tpi.types[glb_info.typind].name
-        return self.parse_struct(struct, expr, addr=glb_addr)
+        elif match := re.match(r"\((?P<STRUCT>.+)\*\s*\)(?P<ADDR>.+)", expr):
+            # TODO: use C syntax parser for better commpatibility
+            struct = match["STRUCT"].strip()
+            addr = match["ADDR"]
+            if struct not in tpi.structs:
+                return
+            try:
+                glb_addr = eval(addr)
+            except:
+                return
+            expr = "(*(%s))" % expr
+            return self.parse_struct(struct, expr, addr=glb_addr)
+
 
 class Test(Plugin):
 
