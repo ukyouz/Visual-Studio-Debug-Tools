@@ -218,6 +218,11 @@ class HistoryMenu(QtCore.QObject):
         for data in self.data_list:
             title = self.stringify(data)
             _add_action(menu, data)
+
+        menu.addSeparator()
+        action = menu.addAction("Clear History")
+        action.triggered.connect(lambda: self.btn.menu().clear())
+
         self.btn.setMenu(menu)
 
     def stringify(self, data) -> str:
