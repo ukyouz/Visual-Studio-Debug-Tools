@@ -29,6 +29,7 @@ class Expression(QtWidgets.QWidget):
         self.ui.btnParse.clicked.connect(self._addExpression)
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
+        self.ui.treeView.installEventFilter(self)
 
         self._init_ui()
 
@@ -40,6 +41,20 @@ class Expression(QtWidgets.QWidget):
         model.pointerDereferenced.connect(self._lazy_load_pointer)
         model.pvoidStructChanged.connect(self._lazy_cast_pointer)
         self.ui.treeView.setModel(model)
+
+    def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
+        if obj == self.ui.treeView:
+            if evt.type() == QtCore.QEvent.Type.KeyPress:
+                key = evt.key()
+                indexes = [x for x in self.ui.treeView.selectedIndexes() if x.column() == 0]
+                if key == QtCore.Qt.Key.Key_Delete:
+                    if len(indexes) == 1:
+                        # can only the delete top level structrue
+                        if indexes[0].parent().isValid():
+                            return False
+                        model = self.ui.treeView.model()
+                        model.removeRow(indexes[0].row(), indexes[0].parent())
+        return False
 
     def _onHistoryClicked(self, val):
         self.ui.lineStruct.setText(val)
