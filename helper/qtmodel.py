@@ -278,6 +278,7 @@ class StructTreeModel(AbstractTreeModel):
 
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
+
         if tag == "value":
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "count":
@@ -286,6 +287,11 @@ class StructTreeModel(AbstractTreeModel):
         elif tag == "type" and self.allow_dereferece_pointer:
             if item[tag].lower().endswith("pvoid") or item.get("is_pvoid", False):
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+
+        if flags & QtCore.Qt.ItemFlag.ItemIsEditable:
+            if item.get("_is_invalid", False):
+                flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
+
         return flags
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
@@ -334,11 +340,21 @@ class StructTreeModel(AbstractTreeModel):
                 if tag in {"value", "count", "address"}:
                     return QtGui.QFont("Consolas")
             case QtCore.Qt.ItemDataRole.ForegroundRole:
+                # QTreeView request order:
+                #   - ForegroundRole
+                #   - DisplayRole, if we _calc_val here, ForegroundRole will be updated in the next cycle
+                #   - BackgroundRole
+                self._calc_val(item)  # update value in advanced to render correct color
+                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                    return
                 if tag == "value":
                     if item.get("_changed_since_prev", False):
                         return QtGui.QColor("red")
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
                     return QtGui.QColor("blue")
+            case QtCore.Qt.ItemDataRole.BackgroundRole:
+                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                    return QtGui.QColor("#f0d6d5")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
                     return QtGui.QIcon(":icon/images/vswin2019/Field_left_16x.svg")
@@ -386,6 +402,7 @@ class StructTreeModel(AbstractTreeModel):
 
     def _calc_val(self, item: dict) -> Any:
         if not item.get("_refresh_requested", False) and item.get("value", None):
+            # return cached value unless _refresh_requested set to True
             return item["value"]
 
         base = item["address"]
@@ -398,7 +415,9 @@ class StructTreeModel(AbstractTreeModel):
         self.fileio.seek(base)
         try:
             val = int.from_bytes(self.fileio.read(size), "little")
+            item["_is_invalid"] = False
         except:
+            item["_is_invalid"] = True
             return 0
         if boff and bsize:
             val = (val >> boff) & bitmask(bsize)
