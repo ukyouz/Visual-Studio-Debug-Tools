@@ -1,0 +1,6 @@
+[submodule "src/modules/pdbparser"]
+	path = src/modules/pdbparser
+	url = https://github.com/ukyouz/pdbparse
+[submodule "src/modules/winappdbg"]
+	path = src/modules/winappdbg
+	url = https://github.com/ukyouz/winappdbg
