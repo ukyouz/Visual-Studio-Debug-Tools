@@ -239,6 +239,36 @@ def bitmask(bitcnt):
     return (1 << bitcnt) - 1
 
 
+def _calc_val(fileio: Stream, item: dict) -> Any:
+    if not item.get("_refresh_requested", False) and item.get("value", None):
+        # return cached value unless _refresh_requested set to True
+        return item["value"]
+
+    base = item["address"]
+    size = item["size"]
+    if size > 8:
+        return None
+    boff = item["bitoff"]
+    bsize = item["bitsize"]
+
+    fileio.seek(base)
+    try:
+        val = int.from_bytes(fileio.read(size), "little")
+        item["_is_invalid"] = False
+    except:
+        item["_is_invalid"] = True
+        return 0
+    if boff and bsize:
+        val = (val >> boff) & bitmask(bsize)
+
+    old_value = item.get("value", None)
+    item["_changed_since_prev"] = old_value is not None and old_value != val
+    item["_refresh_requested"] = False
+    item["value"] = val
+
+    return val
+
+
 class StructTreeModel(AbstractTreeModel):
     pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
     pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, int, str)
@@ -305,7 +335,7 @@ class StructTreeModel(AbstractTreeModel):
             case QtCore.Qt.ItemDataRole.DisplayRole | QtCore.Qt.ItemDataRole.EditRole:
                 match tag:
                     case "value":
-                        val = self._calc_val(item)
+                        val = _calc_val(self.fileio, item)
                         if val is not None:
                             if self.hex_mode:
                                 bitsz = item.get("bitsize", None) or item["size"] * 8
@@ -315,7 +345,7 @@ class StructTreeModel(AbstractTreeModel):
                                 return str(val)
                         elif item["fields"] and item["size"] == len(item["fields"]):
                             # try display c-string
-                            values = [self._calc_val(x) for x in item["fields"]]
+                            values = [_calc_val(self.fileio, x) for x in item["fields"]]
                             if all(x is not None for x in values):
                                 data = bytes(values)
                                 if is_cstring(data):
@@ -346,7 +376,7 @@ class StructTreeModel(AbstractTreeModel):
                 #   - ForegroundRole
                 #   - DisplayRole, if we _calc_val here, ForegroundRole will be updated in the next cycle
                 #   - BackgroundRole
-                self._calc_val(item)  # update value in advanced to render correct color
+                _calc_val(self.fileio, item)  # update value in advanced to render correct color
                 if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
                     return
                 if tag == "value":
@@ -395,45 +425,16 @@ class StructTreeModel(AbstractTreeModel):
             item["_is_pvoid"] = True
             item[tag] = value
             count = item.get("_count", 1)
-            self.pvoidStructChanged.emit(index, self._calc_val(item), count, value)
+            self.pvoidStructChanged.emit(index, _calc_val(self.fileio, item), count, value)
             return True
         elif tag == "count":
             old_value = item.get("_count", 1)
             if value == old_value or value <= 0:
                 return False
             item["_count"] = value
-            self.pointerDereferenced.emit(index, self._calc_val(item), value)
+            self.pointerDereferenced.emit(index, _calc_val(self.fileio, item), value)
             return True
         return False
-
-    def _calc_val(self, item: dict) -> Any:
-        if not item.get("_refresh_requested", False) and item.get("value", None):
-            # return cached value unless _refresh_requested set to True
-            return item["value"]
-
-        base = item["address"]
-        size = item["size"]
-        if size > 8:
-            return None
-        boff = item["bitoff"]
-        bsize = item["bitsize"]
-
-        self.fileio.seek(base)
-        try:
-            val = int.from_bytes(self.fileio.read(size), "little")
-            item["_is_invalid"] = False
-        except:
-            item["_is_invalid"] = True
-            return 0
-        if boff and bsize:
-            val = (val >> boff) & bitmask(bsize)
-
-        old_value = item.get("value", None)
-        item["_changed_since_prev"] = old_value is not None and old_value != val
-        item["_refresh_requested"] = False
-        item["value"] = val
-
-        return val
 
     def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
         item = self.itemFromIndex(parent)
@@ -486,7 +487,7 @@ class StructTreeModel(AbstractTreeModel):
         item["is_pointer"] = False
         item["fields"] = None
         self.dataChanged.emit(index, index)
-        self.pointerDereferenced.emit(parent, self._calc_val(item), item.get("_count", 1))
+        self.pointerDereferenced.emit(parent, _calc_val(self.fileio, item), item.get("_count", 1))
 
     def appendItem(self, record: dict, parent=QtCore.QModelIndex()):
         last_row = self.rowCount()
