@@ -2,6 +2,7 @@ import io
 import sys
 from dataclasses import dataclass
 from dataclasses import field
+from typing import Literal
 from typing import Optional
 
 from PyQt6 import QtCore
@@ -19,15 +20,19 @@ from view import WidgetBinParser
 class ParseRecord:
     struct: str
     offset: str
+    count: int
+    parse_mode: Literal["tree", "table"]
     model: Optional[QtCore.QAbstractItemModel] = field(default=None)
 
 
 class ParseHistoryMenu(HistoryMenu):
     def stringify(self, data: ParseRecord) -> str:
+        num = "[%d]" % data.count if data.count > 1 else ""
+        struct = "(%s *)" % data.struct if data.parse_mode == "table" else data.struct
         if data.offset:
-            return "%s; %s" % (data.struct, data.offset)
+            return "%s%s; %s" % (struct, num, data.offset)
         else:
-            return data.struct
+            return "%s%s" % (struct, num)
 
 
 class BinParser(QtWidgets.QWidget):
@@ -77,37 +82,57 @@ class BinParser(QtWidgets.QWidget):
 
     def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self, getattr(fileio, "name", "noname"))
-        tblmodel = qtmodel.HexTable(fileio, self.ui.tableView)
-        self.ui.tableView.setModel(tblmodel)
-
-        treemodel = self.ui.treeView.model()
-        if isinstance(treemodel, qtmodel.StructTreeModel):
-            treemodel.toggleHexMode(self.ui.btnToggleHex.isChecked())
-            fileio.seek(self.parse_offset)
-            treemodel.loadStream(io.BytesIO(fileio.read()))
+        tblmodel = qtmodel.HexTable(fileio, self.ui.tableMemory)
+        self.ui.tableMemory.setModel(tblmodel)
 
     def _onLineOffsetChanged(self):
-        model = self.ui.tableView.model()
+        model = self.ui.tableMemory.model()
         if isinstance(model, qtmodel.HexTable):
             model.shiftOffset(self.parse_offset)
 
     def _onBtnToggleHexClicked(self):
-        model = self.ui.treeView.model()
-        if isinstance(model, qtmodel.StructTreeModel):
-            checked = self.ui.btnToggleHex.isChecked()
-            model.toggleHexMode(checked)
+        page = self.ui.stackedWidget.currentWidget()
+        if page is self.ui.pageTable:
+            model = self.ui.tableView.model()
+            if isinstance(model, qtmodel.StructTableModel):
+                model.toggleHexMode(self.ui.btnToggleHex.isChecked())
+        else:
+            model = self.ui.treeView.model()
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.toggleHexMode(self.ui.btnToggleHex.isChecked())
 
     def _onBtnParseClicked(self):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
-        def _cb(res):
+        def _cb_table(res):
+            self.ui.btnParse.setEnabled(True)
+            if res is None:
+                return
+            model = self._load_table(res)
+            if model.rowCount():
+                p = ParseRecord(
+                    struct=structname,
+                    offset=self.ui.lineOffset.text(),
+                    count=self.ui.spinParseCount.value(),
+                    parse_mode="table",
+                    model=model,
+                )
+                self.parse_hist.add_data(p)
+
+        def _cb_tree(res):
             self.ui.btnParse.setEnabled(True)
             if res is None:
                 return
             model = self._load_tree(res)
             if model.rowCount():
-                p = ParseRecord(structname, self.ui.lineOffset.text(), model)
+                p = ParseRecord(
+                    struct=structname,
+                    offset=self.ui.lineOffset.text(),
+                    count=self.ui.spinParseCount.value(),
+                    parse_mode="tree",
+                    model=model,
+                )
                 self.parse_hist.add_data(p)
 
         def _err(*args):
@@ -118,26 +143,46 @@ class BinParser(QtWidgets.QWidget):
             )
 
         self.ui.btnParse.setEnabled(False)
-        self.app.exec_async(
-            pdb.parse_struct,
-            structname,
-            addr=self.parse_offset,
-            expr=structname,
-            count=self.ui.spinParseCount.value(),
-            add_dummy_root=True,
-            finished_cb=_cb,
-            errored_cb=_err,
-        )
+        if self.ui.checkParseTable.isChecked():
+            self.app.exec_async(
+                pdb.parse_array,
+                structname,
+                addr=self.parse_offset,
+                expr="",
+                count=self.ui.spinParseCount.value(),
+                finished_cb=_cb_table,
+                errored_cb=_err,
+            )
+        else:
+            self.app.exec_async(
+                pdb.parse_struct,
+                structname,
+                addr=self.parse_offset,
+                expr=structname,
+                count=self.ui.spinParseCount.value(),
+                add_dummy_root=True,
+                finished_cb=_cb_tree,
+                errored_cb=_err,
+            )
 
     def _onParseHistoryClicked(self, data: ParseRecord):
         self.ui.lineStruct.setText(data.struct)
         self.ui.lineOffset.setText(data.offset)
+        self.ui.spinParseCount.setValue(data.count or 1)
+        self.ui.checkParseTable.setChecked(data.parse_mode == "table")
         self._onLineOffsetChanged()
         if data.model:
-            self.ui.treeView.setModel(data.model)
+            if data.parse_mode == "table":
+                self.ui.tableView.setModel(data.model)
+                self.ui.stackedWidget.setCurrentWidget(self.ui.pageTable)
+            else:
+                self.ui.treeView.setModel(data.model)
+                self.ui.stackedWidget.setCurrentWidget(self.ui.pageTree)
 
-    def _load_tree(self, data: dict):
+    def _load_tree(self, data: dict) -> qtmodel.StructTreeModel:
+        self.ui.stackedWidget.setCurrentWidget(self.ui.pageTree)
         model = qtmodel.StructTreeModel(data)
+        model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
             self.fileio.seek(self.parse_offset)
@@ -147,6 +192,17 @@ class BinParser(QtWidgets.QWidget):
         self.ui.treeView.setExpanded(model.index(0, 0), True)
         for c in range(model.columnCount()):
             self.ui.treeView.resizeColumnToContents(c)
+        return model
+
+    def _load_table(self, data: list) -> qtmodel.StructTableModel:
+        self.ui.stackedWidget.setCurrentWidget(self.ui.pageTable)
+        model = qtmodel.StructTableModel(data)
+        model.toggleHexMode(self.ui.btnToggleHex.isChecked())
+        if self.fileio:
+            # TODO: global address fileio reader
+            self.fileio.seek(self.parse_offset)
+            model.loadStream(io.BytesIO(self.fileio.read()))
+        self.ui.tableView.setModel(model)
         return model
 
 

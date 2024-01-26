@@ -539,6 +539,80 @@ class BorderItemDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
 
+class StructTableModel(QtCore.QAbstractTableModel):
+    def __init__(self, data: list, parent=None):
+        super().__init__(parent)
+        self.fileio = io.BytesIO()
+        self.hex_mode = True
+        self._data = data
+        if isinstance(data, list) and data != []:
+            self.titles = [x["expr"].replace(".", "\n.").lstrip() for x in data[0]]
+        else:
+            self.titles = []
+
+    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if role == QtCore.Qt.ItemDataRole.DisplayRole: # only change what DisplayRole returns
+            if orientation == QtCore.Qt.Orientation.Horizontal:
+                return self.titles[section]
+            elif orientation == QtCore.Qt.Orientation.Vertical:
+                return str(section + 1)
+        return super().headerData(section, orientation, role) # must have this line
+
+    def data(self, index: QtCore.QModelIndex, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        row = index.row()
+        col = index.column()
+        item = self._data[row][col]
+        if role in {QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole}:
+            val = _calc_val(self.fileio, item)
+            if val is not None:
+                if self.hex_mode:
+                    bitsz = item.get("bitsize", None) or item["size"] * 8
+                    size = min(item["size"], math.ceil(bitsz / 8))
+                    return f"0x%0{size * 2}x" % val
+                else:
+                    return str(val)
+            else:
+                return ""
+        elif role == QtCore.Qt.ItemDataRole.FontRole:
+            return QtGui.QFont("Consolas")
+        elif role == QtCore.Qt.ItemDataRole.ForegroundRole:
+            # QTableView request order:
+            #   - ForegroundRole
+            #   - DisplayRole, if we _calc_val here, ForegroundRole will be updated in the next cycle
+            #   - BackgroundRole
+            _calc_val(self.fileio, item)  # update value in advanced to render correct color
+            if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                return
+            if item.get("_changed_since_prev", False):
+                return QtGui.QColor("red")
+            # if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
+            #     return QtGui.QColor("blue")
+
+    def flags(self, index: QtCore.QModelIndex):
+        flags = super().flags(index)
+        flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self._data)
+
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        return len(self._data[0]) if self.rowCount() else 0
+
+    def refresh(self):
+        tl = self.index(0, 0)
+        br = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(tl, br)
+
+    def loadStream(self, fileio: Stream):
+        self.fileio = fileio
+        self.refresh()
+
+    def toggleHexMode(self, hexmode: bool):
+        self.hex_mode = hexmode
+        self.refresh()
+
+
 def get_icon(filename):
     fileInfo = QtCore.QFileInfo(filename)
     iconProvider = QtWidgets.QFileIconProvider()

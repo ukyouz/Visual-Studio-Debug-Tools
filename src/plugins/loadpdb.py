@@ -1,6 +1,7 @@
 import pickle
 import re
 from pathlib import Path
+from typing import Iterable
 
 from PyQt6 import QtWidgets
 
@@ -154,7 +155,7 @@ class LoadPdb(Plugin):
             )
         return s
 
-    def _iter_fields(self, expr: str) -> list[str | int]:
+    def _iter_fields(self, expr: str) -> Iterable[str | int]:
         _expr = expr.replace("->", ".")
         _expr = _expr.replace("[", ".")
         _expr = _expr.replace("]", ".")
@@ -165,6 +166,69 @@ class LoadPdb(Plugin):
                 yield eval(f)
             except:
                 yield f
+
+    def _flatten_dict(self, s: dict, out: list):
+        childs = s.get("fields", None)
+        s["fields"] = None
+        if isinstance(childs, dict):
+            for c in childs.values():
+                self._flatten_dict(c, out)
+        elif isinstance(childs, list):
+            for c in childs:
+                self._flatten_dict(c, out)
+        else:
+            out.append(s)
+
+    def parse_array(self, struct: str, expr: str="", addr=0, count=1):
+        tpi = self._pdb.streams[2]
+
+        subfields = list(self._iter_fields(struct))
+        structname = subfields.pop(0)
+        if not isinstance(structname, str):
+            return
+
+        has_childs = subfields == []
+        out_struct = self.parse_struct(structname, expr, addr, recursive=has_childs)
+
+        while subfields:
+            f = subfields.pop(0)
+            try:
+                out_struct = out_struct["fields"][f]
+            except:
+                return
+
+            if out_struct["is_pointer"]:
+                return
+
+            last_field = subfields == []
+            lvlname = out_struct["levelname"]
+            out_struct = tpi.form_structs(out_struct["lf"], addr=out_struct["address"], recursive=last_field)
+            out_struct["levelname"] = lvlname
+            self._add_expr(out_struct, "")
+
+        if isinstance(out_struct["fields"], list):
+            array = []
+            for x in out_struct["fields"]:
+                cut_pos = len(x["levelname"])
+                row = []
+                self._flatten_dict(x, row)
+                for c in row:
+                    c["expr"] = c["expr"][cut_pos:]
+                array.append(row)
+        else:
+            backup = pickle.dumps(out_struct)
+
+            array = []
+            for n in range(count):
+                copied = pickle.loads(backup)
+                copied["levelname"] = "[%d]" % n
+                self._shift_addr(copied, n * out_struct["size"])
+                self._add_expr(copied, "")
+                row = []
+                self._flatten_dict(copied, row)
+                array.append(row)
+
+        return array
 
     def query_expression(self, expr: str, virtual_base: int=0, io_stream=None):
         tpi = self._pdb.streams[2]
