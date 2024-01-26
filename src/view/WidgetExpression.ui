@@ -110,7 +110,8 @@
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
+      <string notr="true">QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}
+QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
 QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
 QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}
 QTreeView::branch:has-siblings:adjoins-item{border-image:url(:/icon/images/treeview/border-more.png) 0;}

@@ -32,6 +32,7 @@ class Memory(QtWidgets.QWidget):
 
         self.ui.lineAddress.returnPressed.connect(self._loadMemory)
         self.ui.lineSize.returnPressed.connect(self._loadMemory)
+        self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
 
     @property
     def requestAddress(self):
@@ -77,15 +78,15 @@ class Memory(QtWidgets.QWidget):
         model = qtmodel.HexTable(mem)
         model.viewAddress = self.requestAddress
         model.viewSize = self.requestSize
-        self.ui.tableView.setModel(model)
-        self.ui.tableView.resizeColumnsToContents()
+        self.ui.tableMemory.setModel(model)
+        self.ui.tableMemory.resizeColumnsToContents()
         self.ui.labelAddress.setText(hex(self.requestAddress))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
     def dumpBuffer(self):
         dbg = self.app.plugin(debugger.Debugger)
         mem = dbg.get_memory_stream()
-        model = self.ui.tableView.model()
+        model = self.ui.tableMemory.model()
         if not isinstance(model, qtmodel.HexTable):
             QtWidgets.QMessageBox.warning(
                 self,

@@ -524,6 +524,20 @@ class StructTreeModel(AbstractTreeModel):
         self.refresh()
 
 
+class BorderItemDelegate(QtWidgets.QStyledItemDelegate):
+    color = QtGui.QColor("#d8d8d8")
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+
+        line = QtCore.QLine(option.rect.topRight(), option.rect.bottomRight())
+
+        painter.save()
+        painter.setPen(self.color)
+        painter.drawLine(line)
+        painter.restore()
+
+
 def get_icon(filename):
     fileInfo = QtCore.QFileInfo(filename)
     iconProvider = QtWidgets.QFileIconProvider()
