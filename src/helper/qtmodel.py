@@ -301,6 +301,24 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(index)
         if self.canFetchMore(index):
             return 1
+
+        if isinstance(item["fields"], list):
+            # TreeView calls `rowCount` before `index`
+            # so just make a psuedo internal layer here
+            child_cnt = len(item["fields"])
+            if child_cnt > 100:
+                item["_count"] = child_cnt
+                childs = item["fields"]
+                item["fields"] = []
+                for off in range(0, child_cnt, 100):
+                    fake_layer = childs[0].copy()
+                    fake_layer["expr"] = ""
+                    cnt = min(child_cnt, off + 99) - off + 1
+                    fake_layer["levelname"] = "[%d:%d]" % (off, min(child_cnt - 1, off + 99))
+                    fake_layer["size"] = cnt * fake_layer["size"]
+                    fake_layer["fields"] = childs[off: off + 100]
+                    item["fields"].append(fake_layer)
+
         return len(item["fields"]) if item["fields"] is not None else 0
 
     def flags(self, index: QtCore.QModelIndex):
@@ -357,7 +375,7 @@ class StructTreeModel(AbstractTreeModel):
                             return ""
                     case "count":
                         if isinstance(item["fields"], list):
-                            return len(item["fields"])
+                            return item.get("_count", len(item["fields"]))
                         if item["is_pointer"] and self.allow_dereferece_pointer:
                             return item.get("_count", 1)
                     case _:
