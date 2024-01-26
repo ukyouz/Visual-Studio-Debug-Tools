@@ -637,7 +637,7 @@ class FileExplorerModel(AbstractTreeModel):
 
     def _insert_file(self, file: Path):
         if file in self.requestPaths:
-            return
+            return self.pathIndexes[file]
         self.requestPaths.add(file)
         parent = self._insert_folder(file.parent)
         folder = self.itemFromIndex(parent)
