@@ -96,6 +96,7 @@ class Dock(Plugin):
             menu.addSeparator()
             action = self._addAction(menu, "Refresh", expr.refreshTree)
             action.setIcon(QtGui.QIcon("view/images/ctrl/Refresh_16x.svg"))
+            self._addAction(menu, "Clear expressions", expr.clearTree)
             self._addAction(menu, "Add Expression View", self.addExpressionView)
             action.setIcon(QtGui.QIcon("view/images/ctrl/VariableExpression_16x.svg"))
 

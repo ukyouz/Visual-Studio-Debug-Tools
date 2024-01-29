@@ -196,6 +196,12 @@ class Expression(QtWidgets.QWidget):
         if isinstance(model, qtmodel.StructTreeModel):
             model.refreshIndex(index)
 
+    def clearTree(self):
+        model = self.ui.treeView.model()
+
+        if isinstance(model, qtmodel.StructTreeModel):
+            model.removeRows(0, model.rowCount())
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
