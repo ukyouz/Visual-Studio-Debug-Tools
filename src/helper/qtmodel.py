@@ -562,6 +562,7 @@ class StructTableModel(QtCore.QAbstractTableModel):
         super().__init__(parent)
         self.fileio = io.BytesIO()
         self.hex_mode = True
+        self.char_mode = False
         self._data = data
         if isinstance(data, list) and data != []:
             self.titles = [x["expr"].replace(".", "\n.").lstrip() for x in data[0]]
@@ -583,7 +584,10 @@ class StructTableModel(QtCore.QAbstractTableModel):
         if role in {QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole}:
             val = _calc_val(self.fileio, item)
             if val is not None:
-                if self.hex_mode:
+                if self.char_mode:
+                    raw = val.to_bytes(item["size"], "little")
+                    return str(raw)
+                elif self.hex_mode:
                     bitsz = item.get("bitsize", None) or item["size"] * 8
                     size = min(item["size"], math.ceil(bitsz / 8))
                     return f"0x%0{size * 2}x" % val
@@ -628,6 +632,10 @@ class StructTableModel(QtCore.QAbstractTableModel):
 
     def toggleHexMode(self, hexmode: bool):
         self.hex_mode = hexmode
+        self.refresh()
+
+    def toggleCharMode(self, charmode: bool):
+        self.char_mode = charmode
         self.refresh()
 
 

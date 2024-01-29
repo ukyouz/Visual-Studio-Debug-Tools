@@ -56,6 +56,7 @@ class BinParser(QtWidgets.QWidget):
         self.ui.lineOffset.returnPressed.connect(self._onBtnParseClicked)
         self.ui.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
+        self.ui.btnToggleChar.clicked.connect(self._onBtnToggleCharClicked)
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
@@ -101,6 +102,13 @@ class BinParser(QtWidgets.QWidget):
             if isinstance(model, qtmodel.StructTreeModel):
                 model.toggleHexMode(self.ui.btnToggleHex.isChecked())
 
+    def _onBtnToggleCharClicked(self):
+        page = self.ui.stackedWidget.currentWidget()
+        if page is self.ui.pageTable:
+            model = self.ui.tableView.model()
+            if isinstance(model, qtmodel.StructTableModel):
+                model.toggleCharMode(self.ui.btnToggleChar.isChecked())
+
     def _onBtnParseClicked(self):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
@@ -116,6 +124,8 @@ class BinParser(QtWidgets.QWidget):
             if res is None:
                 return
             model = self._load_table(res)
+            model.toggleHexMode(self.ui.btnToggleHex.isChecked())
+            model.toggleCharMode(self.ui.btnToggleChar.isChecked())
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
@@ -125,12 +135,15 @@ class BinParser(QtWidgets.QWidget):
                     model=model,
                 )
                 self.parse_hist.add_data(p)
+                for c in range(model.columnCount()):
+                    self.ui.tableView.resizeColumnToContents(c)
 
         def _cb_tree(res):
             self.setEnabled(True)
             if res is None:
                 return
             model = self._load_tree(res)
+            model.toggleHexMode(self.ui.btnToggleHex.isChecked())
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
@@ -148,13 +161,14 @@ class BinParser(QtWidgets.QWidget):
                 "Please load pdbin first!",
             )
 
+        count = self.ui.spinParseCount.value()
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_array,
                 structname,
                 addr=self.parse_offset,
                 expr="",
-                count=self.ui.spinParseCount.value(),
+                count=count,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
@@ -164,7 +178,7 @@ class BinParser(QtWidgets.QWidget):
                 structname,
                 addr=self.parse_offset,
                 expr=structname,
-                count=self.ui.spinParseCount.value(),
+                count=count,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
                 errored_cb=_err,
