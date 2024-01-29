@@ -105,8 +105,14 @@ class BinParser(QtWidgets.QWidget):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
+        self.setEnabled(False)
+
+        if not self.app.menu("PDB").isEnabled():
+            QtCore.QTimer.singleShot(100, self._onBtnParseClicked)
+            return
+
         def _cb_table(res):
-            self.ui.btnParse.setEnabled(True)
+            self.setEnabled(True)
             if res is None:
                 return
             model = self._load_table(res)
@@ -121,7 +127,7 @@ class BinParser(QtWidgets.QWidget):
                 self.parse_hist.add_data(p)
 
         def _cb_tree(res):
-            self.ui.btnParse.setEnabled(True)
+            self.setEnabled(True)
             if res is None:
                 return
             model = self._load_tree(res)
@@ -142,7 +148,6 @@ class BinParser(QtWidgets.QWidget):
                 "Please load pdbin first!",
             )
 
-        self.ui.btnParse.setEnabled(False)
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_array,
