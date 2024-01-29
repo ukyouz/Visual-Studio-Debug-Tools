@@ -258,7 +258,7 @@ class LoadPdb(Plugin):
             section_offset = sects[glb_info.section - 1].VirtualAddress
             glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
 
-            lf = tpi.types[glb_info.typind]
+            lf = tpi.get_type_lf(glb_info.typind)
             out_struct = tpi.form_structs(lf, addr=glb_addr, recursive=not has_subfields)
             out_struct["levelname"] = top_expr
             self._add_expr(out_struct, top_expr)
