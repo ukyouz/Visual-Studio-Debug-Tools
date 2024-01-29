@@ -63,7 +63,15 @@ class Expression(QtWidgets.QWidget):
         dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
-        virt_base = dbg.get_virtual_base()
+        try:
+            virt_base = dbg.get_virtual_base()
+        except PermissionError as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                str(e),
+            )
+            return
         if virt_base is None:
             rtn = QtWidgets.QMessageBox.warning(
                 self,
