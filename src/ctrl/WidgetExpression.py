@@ -30,6 +30,7 @@ class Expression(QtWidgets.QWidget):
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
         self.ui.treeView.installEventFilter(self)
+        self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
 
         self._init_ui()
 
@@ -111,7 +112,7 @@ class Expression(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(
                 self,
                 "PDB Error!",
-                "Please load pdbin first!",
+                repr(args),
             )
 
         self.ui.lineStruct.setEnabled(False)
