@@ -19,7 +19,9 @@ def bytes_to_ascii(data: bytes):
 
 
 def is_cstring(data: bytes):
-    return all(32 <= x <= 126 or x == 0 for x in data)
+    if 0 in data:
+        data = data[: data.index(0)]
+    return all(32 <= x <= 126 for x in data)
 
 
 class Stream(Protocol):
@@ -353,15 +355,7 @@ class StructTreeModel(AbstractTreeModel):
             case QtCore.Qt.ItemDataRole.DisplayRole | QtCore.Qt.ItemDataRole.EditRole:
                 match tag:
                     case "value":
-                        val = _calc_val(self.fileio, item)
-                        if val is not None:
-                            if self.hex_mode:
-                                bitsz = item.get("bitsize", None) or item["size"] * 8
-                                size = min(item["size"], math.ceil(bitsz / 8))
-                                return f"0x%0{size * 2}x" % val
-                            else:
-                                return str(val)
-                        elif item["fields"] and item["size"] == len(item["fields"]):
+                        if item["fields"] and item["size"] == len(item["fields"]):
                             # try display c-string
                             values = [_calc_val(self.fileio, x) for x in item["fields"]]
                             if all(x is not None for x in values):
@@ -371,6 +365,14 @@ class StructTreeModel(AbstractTreeModel):
                                     cstr = bytes_to_ascii(data[:end])
                                     if len(cstr) <= 64:
                                         return repr(cstr)
+                        val = _calc_val(self.fileio, item)
+                        if val is not None:
+                            if self.hex_mode:
+                                bitsz = item.get("bitsize", None) or item["size"] * 8
+                                size = min(item["size"], math.ceil(bitsz / 8))
+                                return f"0x%0{size * 2}x" % val
+                            else:
+                                return str(val)
                         else:
                             return ""
                     case "count":
