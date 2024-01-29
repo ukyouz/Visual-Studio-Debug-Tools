@@ -1,5 +1,6 @@
 import pickle
 import re
+from contextlib import suppress
 from pathlib import Path
 from typing import Iterable
 
@@ -95,7 +96,7 @@ class LoadPdb(Plugin):
                 "Not loaded",
             )
 
-    def _shift_addr(self, s: pdb.StructRecord, shift: int=0):
+    def _shift_addr(self, s: dict, shift: int=0):
         s["address"] = s["address"] + shift
         if isinstance(s["fields"], dict):
             for c in s["fields"].values():
@@ -117,7 +118,7 @@ class LoadPdb(Plugin):
             for c in s["fields"]:
                 self._add_expr(c, expr + c["levelname"])
 
-    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, recursive=True, add_dummy_root=False):
+    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, recursive=True, add_dummy_root=False) -> pdb.StructRecord:
         if structname == "":
             return pdb.new_struct()
 
@@ -236,10 +237,17 @@ class LoadPdb(Plugin):
         glb = self._pdb.streams[dbi.header.symrecStream]
 
         subfields = list(self._iter_fields(expr))
-        expr = subfields.pop(0)
+        top_expr = subfields.pop(0)
+        if not isinstance(top_expr, str):
+            return
 
         has_subfields = len(subfields)
-        if expr in glb.s_gdata32:
+        glb_info = None
+        with suppress(KeyError):
+            glb_info = glb.s_gdata32[top_expr]
+        with suppress(KeyError):
+            glb_info = glb.s_ldata32[top_expr]
+        if glb_info:
             # remap global address
             try:
                 sects = self._pdb.streams[dbi.dbgheader.snSectionHdrOrig].sections
@@ -247,13 +255,14 @@ class LoadPdb(Plugin):
             except AttributeError:
                 sects = self._pdb.streams[dbi.dbgheader.snSectionHdr].sections
                 omap = DummyOmap()
-            glb_info = glb.s_gdata32[expr]
             section_offset = sects[glb_info.section - 1].VirtualAddress
             glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
 
-            structname = tpi.types[glb_info.typind].name
-            out_struct = self.parse_struct(structname, expr, addr=glb_addr, recursive=not has_subfields)
-        elif match := re.match(r"\((?P<STRUCT>.+)\*\s*\)(?P<ADDR>.+)", expr):
+            lf = tpi.types[glb_info.typind]
+            out_struct = tpi.form_structs(lf, addr=glb_addr, recursive=not has_subfields)
+            out_struct["levelname"] = top_expr
+            self._add_expr(out_struct, top_expr)
+        elif match := re.match(r"\((?P<STRUCT>.+)\*\s*\)(?P<ADDR>.+)", top_expr):
             # TODO: use C syntax parser for better commpatibility
             structname = match["STRUCT"].strip()
             addr = match["ADDR"]
@@ -263,11 +272,11 @@ class LoadPdb(Plugin):
                 glb_addr = eval(addr)
             except:
                 return
-            if expr[-1] != ")":
-                expr = "(*(%s))" % expr
+            if top_expr[-1] != ")":
+                top_expr = "(*(%s))" % top_expr
             else:
-                expr = "*(%s)" % expr
-            out_struct = self.parse_struct(structname, expr, addr=glb_addr, recursive=not has_subfields)
+                top_expr = "*(%s)" % top_expr
+            out_struct = self.parse_struct(structname, top_expr, addr=glb_addr, recursive=not has_subfields)
         else:
             return
 
