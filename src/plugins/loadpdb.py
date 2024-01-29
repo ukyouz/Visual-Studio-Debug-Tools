@@ -12,8 +12,11 @@ from modules.pdbparser.pdbparser import pdb
 from modules.pdbparser.pdbparser import picklepdb
 
 
-class DummyOmap:
+class InvalidExpression(Exception):
+    """invalid expr"""
 
+
+class DummyOmap:
     def remap(self, addr):
         return addr
 
@@ -124,10 +127,16 @@ class LoadPdb(Plugin):
 
         expr = expr or structname
         tpi = self._pdb.streams[2]
-        try:
-            lf = tpi.structs[structname]
-        except KeyError:
-            return pdb.new_struct()
+        dbi = self._pdb.streams[3]
+        glb = self._pdb.streams[dbi.header.symrecStream]
+        if structname in glb.s_udt:
+            user_defined_type = glb.s_udt[structname]
+            lf = tpi.get_type_lf(user_defined_type.typind)
+        else:
+            try:
+                lf = tpi.structs[structname]
+            except KeyError:
+                raise InvalidExpression(structname)
 
         s = tpi.form_structs(lf, addr, recursive)
         if count > 1:
