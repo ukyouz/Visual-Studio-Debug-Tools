@@ -6,3 +6,4 @@ pyuic6.exe .\view\WidgetExpression.ui -o .\view\WidgetExpression.py
 pyuic6.exe .\view\WidgetMemory.ui -o .\view\WidgetMemory.py
 pyuic6.exe .\view\WidgetProcessSelector.ui -o .\view\WidgetProcessSelector.py
 pyuic6.exe .\view\WidgetDockTitleBar.ui -o .\view\WidgetDockTitleBar.py
+pyuic6.exe .\view\WidgetPicklePdb.ui -o .\view\WidgetPicklePdb.py

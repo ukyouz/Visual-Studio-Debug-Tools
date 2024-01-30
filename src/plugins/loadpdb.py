@@ -8,6 +8,7 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
+from ctrl.WidgetPicklePdb import PicklePdb
 from modules.pdbparser.pdbparser import pdb
 from modules.pdbparser.pdbparser import picklepdb
 
@@ -30,9 +31,8 @@ class LoadPdb(Plugin):
                 "name": "PDB",
                 "submenus": [
                     {
-                        "name": "Load PDB file...",
-                        "command": "LoadPdbin",
-                        # "shortcut": "",
+                        "name": "Generate PDB...",
+                        "command": "ShowPicklePdb",
                     },
                     {"name": "---",},
                     {
@@ -45,8 +45,8 @@ class LoadPdb(Plugin):
 
     def registerCommands(self):
         return [
-            ("LoadPdbin", self.load_pdbin),
             ("ShowPdbStatus", self.show_status),
+            ("ShowPicklePdb", self.show_pickle_pdb),
         ]
 
     def post_init(self):
@@ -84,6 +84,11 @@ class LoadPdb(Plugin):
                     filename,
                     finished_cb=_cb,
                 )
+
+    def show_pickle_pdb(self):
+        self.widget = PicklePdb(self.app)
+        self.widget.loaded.connect(lambda f: self.load_pdbin(f))
+        self.widget.show()
 
     def show_status(self):
         if self._pdb_fname:
