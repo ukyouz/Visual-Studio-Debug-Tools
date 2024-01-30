@@ -129,7 +129,7 @@ class VisualStudioDebugger(AppCtrl):
         self.ui = VSdebugger.Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("VS Debugger")
-        self.setWindowIcon(QtGui.QIcon("view/images/AnalysisServerConnection_16x.svg"))
+        self.setWindowIcon(QtGui.QIcon("view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico"))
 
         self._plugins = {}
         self.loadPlugins([
