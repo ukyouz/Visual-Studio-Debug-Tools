@@ -29,12 +29,12 @@ class Dock(Plugin):
                     {
                         "name": "Add Memory View",
                         "command": "AddMemoryView",
-                        "icon": "view/images/ctrl/Memory_16x.svg",
+                        "icon": ":icon/images/ctrl/Memory_16x.svg",
                     },
                     {
                         "name": "Add Expression View",
                         "command": "AddExpressionView",
-                        "icon": "view/images/ctrl/VariableExpression_16x.svg",
+                        "icon": ":icon/images/ctrl/VariableExpression_16x.svg",
                     },
                 ],
             },
@@ -82,7 +82,7 @@ class Dock(Plugin):
 
     def addExpressionView(self):
         dockWidget = self.generate_dockwidget()
-        dockWidget.setWindowIcon(QtGui.QIcon("view/images/ctrl/VariableExpression_16x.svg"))
+        dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
         expr = Expression(self.app)
         self.docks["expression"][dockWidget] = expr
         dockWidget.setWidget(expr)
@@ -95,16 +95,16 @@ class Dock(Plugin):
             self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
             menu.addSeparator()
             action = self._addAction(menu, "Refresh", expr.refreshTree)
-            action.setIcon(QtGui.QIcon("view/images/ctrl/Refresh_16x.svg"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             self._addAction(menu, "Clear expressions", expr.clearTree)
-            self._addAction(menu, "Add Expression View", self.addExpressionView)
-            action.setIcon(QtGui.QIcon("view/images/ctrl/VariableExpression_16x.svg"))
+            action = self._addAction(menu, "Add Expression View", self.addExpressionView)
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
 
         return dockWidget
 
     def addMemoryView(self):
         dockWidget = self.generate_dockwidget()
-        dockWidget.setWindowIcon(QtGui.QIcon("view/images/ctrl/Memory_16x.svg"))
+        dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
         mem = Memory(self.app)
         self.docks["memory"][dockWidget] = mem
         dockWidget.setWidget(mem)
@@ -118,7 +118,7 @@ class Dock(Plugin):
             menu.addSeparator()
             self._addAction(menu, "Dump Memory...", mem.dumpBuffer)
             action = self._addAction(menu, "Add Memory View", self.addMemoryView)
-            action.setIcon(QtGui.QIcon("view/images/ctrl/Memory_16x.svg"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
 
         return dockWidget
 

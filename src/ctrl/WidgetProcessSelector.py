@@ -35,7 +35,7 @@ class ProcessSelector(QtWidgets.QWidget):
             {
                 "name": "Refresh processes",
                 "command": "RefreshProcesses",
-                "icon": "view/images/ctrl/VirtualMachineRefresh_16x.svg",
+                "icon": ":icon/images/ctrl/VirtualMachineRefresh_16x.svg",
                 "shortcut": "F5",
                 "position": 0,
             },

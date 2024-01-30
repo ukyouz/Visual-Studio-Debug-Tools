@@ -154,12 +154,19 @@ class BinParser(QtWidgets.QWidget):
                 )
                 self.parse_hist.add_data(p)
 
-        def _err(*args):
-            QtWidgets.QMessageBox.warning(
-                self,
-                "PDB Error!",
-                "Please load pdbin first!",
-            )
+        def _err(e, _):
+            if isinstance(e, loadpdb.InvalidExpression):
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "PDB Error!",
+                    "Invalid expression: %r" % structname,
+                )
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "PDB Error!",
+                    "Please load pdbin first!",
+                )
 
         count = self.ui.spinParseCount.value()
         if self.ui.checkParseTable.isChecked():
