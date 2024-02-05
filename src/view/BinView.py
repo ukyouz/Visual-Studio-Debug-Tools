@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.mdiArea)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(parent=self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -107,7 +107,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "BinViewer"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.dockWidget.setWindowTitle(_translate("MainWindow", "Explorer"))
         self.btnOpenFiles.setText(_translate("MainWindow", "Open File"))

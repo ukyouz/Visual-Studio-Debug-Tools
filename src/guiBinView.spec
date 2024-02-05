@@ -7,6 +7,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('view/images/*.ico', 'view/images/'),
+        ('langs/*.qm', 'langs/'),
     ],
     hiddenimports=[],
     hookspath=[],

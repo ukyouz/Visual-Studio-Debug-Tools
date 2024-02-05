@@ -19,6 +19,7 @@ from ctrl.WidgetMemory import Memory
 from ctrl.WidgetProcessSelector import ProcessSelector
 from plugins import loadpdb
 from plugins import run_script
+from plugins import translator
 from view import VSdebugger
 from view import resource
 
@@ -140,6 +141,7 @@ class VisualStudioDebugger(AppCtrl):
             run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             Dock(self),
+            translator.Translator(self),
         ])
 
         editToolBar = QtWidgets.QToolBar("Process", self)
@@ -178,5 +180,6 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     window = VisualStudioDebugger()
+
     window.show()
     sys.exit(app.exec())
