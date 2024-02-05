@@ -22,7 +22,7 @@ def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
     if title:
         app.setWindowTitle("%s - %s" % (title, clsname))
     else:
-        app.setWindowTitle("%s" % title)
+        app.setWindowTitle("%s" % clsname)
 
 
 @dataclass

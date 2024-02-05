@@ -36,7 +36,7 @@ class BinViewer(AppCtrl):
         super().__init__()
         self.ui = BinView.Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle("Bin Viewer")
+        set_app_title(self, "")
         self.setWindowIcon(QtGui.QIcon("view/images/dsquery_153.ico"))
 
         # events

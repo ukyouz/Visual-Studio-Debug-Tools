@@ -11,6 +11,7 @@ from ctrl.qtapp import ClsType
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
+from ctrl.qtapp import set_app_title
 from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
@@ -128,7 +129,7 @@ class VisualStudioDebugger(AppCtrl):
         super().__init__()
         self.ui = VSdebugger.Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle("VS Debugger")
+        set_app_title(self, "")
         self.setWindowIcon(QtGui.QIcon("view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico"))
 
         self._plugins = {}
