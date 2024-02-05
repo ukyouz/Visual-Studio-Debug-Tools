@@ -56,7 +56,7 @@ class Dock(Plugin):
 
         width = self.app.size().width()
         self.app.resizeDocks([dm], [width * 2 // 3], QtCore.Qt.Orientation.Horizontal)
-        self.app.tabifyDockWidget(de, dm)
+        self.app.tabifyDockWidget(dm, de)
 
     def generate_dockwidget(self):
         dockWidget = QtWidgets.QDockWidget(parent=self.app)
