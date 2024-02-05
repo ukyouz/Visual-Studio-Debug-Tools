@@ -19,7 +19,7 @@ class PicklePdb(QtWidgets.QWidget):
         super().__init__()
         self.ui = WidgetPicklePdb.Ui_Form()
         self.ui.setupUi(self)
-        self.setWindowIcon(app.windowIcon())
+        self.setWindowIcon(QtGui.QIcon(":icon/images/vswin2019/Database_16x.svg"))
         set_app_title(self, "")
 
         self.app = app

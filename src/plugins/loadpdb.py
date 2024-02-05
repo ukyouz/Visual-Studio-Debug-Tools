@@ -33,6 +33,7 @@ class LoadPdb(Plugin):
                     {
                         "name": "Generate PDB...",
                         "command": "ShowPicklePdb",
+                        "icon": ":icon/images/vswin2019/Database_16x.svg",
                     },
                     {"name": "---",},
                     {
