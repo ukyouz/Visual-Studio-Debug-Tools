@@ -17,6 +17,7 @@ from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
 from ctrl.WidgetProcessSelector import ProcessSelector
 from plugins import loadpdb
+from plugins import run_script
 from view import VSdebugger
 from view import resource
 
@@ -134,6 +135,7 @@ class VisualStudioDebugger(AppCtrl):
 
         self._plugins = {}
         self.loadPlugins([
+            run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             Dock(self),
         ])

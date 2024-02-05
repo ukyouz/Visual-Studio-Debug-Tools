@@ -1,6 +1,7 @@
 import abc
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from functools import partial
 from typing import Callable
 from typing import NotRequired
@@ -50,6 +51,7 @@ class UiForm(Protocol):
 
 class AppCtrl(QtWidgets.QMainWindow):
     ui: UiForm
+    app_dir: Path = Path(".")
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)

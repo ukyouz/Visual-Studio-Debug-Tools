@@ -161,7 +161,7 @@
               <item>
                <widget class="QLabel" name="labelFilename">
                 <property name="text">
-                 <string>Filename</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -169,7 +169,12 @@
             </widget>
            </item>
            <item>
-            <widget class="QPlainTextEdit" name="plaintextSource">
+            <widget class="CodeEdit" name="plaintextSource">
+             <property name="font">
+              <font>
+               <family>Consolas</family>
+              </font>
+             </property>
              <property name="frameShape">
               <enum>QFrame::Panel</enum>
              </property>
@@ -200,6 +205,20 @@
                <number>0</number>
               </property>
               <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Running Time:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="labelRunningTime">
+                <property name="text">
+                 <string>0:00:00</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="horizontalSpacer">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -213,9 +232,30 @@
                </spacer>
               </item>
               <item>
+               <widget class="QPushButton" name="btnSaveFile">
+                <property name="text">
+                 <string>Save</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resource.qrc">
+                  <normaloff>:/action/images/vswin2019/Save_16x.svg</normaloff>:/action/images/vswin2019/Save_16x.svg</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="btnRunScript">
                 <property name="text">
                  <string>Run</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resource.qrc">
+                  <normaloff>:/action/images/vswin2019/Run_16x.svg</normaloff>:/action/images/vswin2019/Run_16x.svg</iconset>
+                </property>
+                <property name="autoDefault">
+                 <bool>false</bool>
+                </property>
+                <property name="default">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -224,7 +264,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QPlainTextEdit" name="plainTextEdit_2">
+         <widget class="QPlainTextEdit" name="plaintextLog">
           <property name="palette">
            <palette>
             <active>
@@ -252,6 +292,11 @@
             <disabled/>
            </palette>
           </property>
+          <property name="font">
+           <font>
+            <family>Consolas</family>
+           </font>
+          </property>
           <property name="frameShape">
            <enum>QFrame::Box</enum>
           </property>
@@ -270,6 +315,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CodeEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header location="global">pyqode/core/api.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resource.qrc"/>
  </resources>
