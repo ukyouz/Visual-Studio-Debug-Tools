@@ -1,5 +1,6 @@
 import sys
 from collections import defaultdict
+from pathlib import Path
 from typing import Type
 
 from PyQt6 import QtCore
@@ -131,7 +132,8 @@ class VisualStudioDebugger(AppCtrl):
         self.ui = VSdebugger.Ui_MainWindow()
         self.ui.setupUi(self)
         set_app_title(self, "")
-        self.setWindowIcon(QtGui.QIcon("view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico"))
+        self.app_dir = Path(__file__).parent
+        self.setWindowIcon(QtGui.QIcon(str(self.app_dir / "view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico")))
 
         self._plugins = {}
         self.loadPlugins([

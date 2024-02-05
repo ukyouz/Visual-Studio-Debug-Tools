@@ -1,8 +1,8 @@
 import abc
 from dataclasses import dataclass
 from dataclasses import field
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 from typing import Callable
 from typing import NotRequired
 from typing import Protocol
@@ -24,6 +24,9 @@ def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
         app.setWindowTitle("%s - %s" % (title, clsname))
     else:
         app.setWindowTitle("%s" % clsname)
+
+
+i18n = QtCore.QCoreApplication.translate
 
 
 @dataclass
@@ -116,7 +119,7 @@ class AppCtrl(QtWidgets.QMainWindow):
                         menu.addSeparator()
                     continue
                 if submenus := act.get("submenus", []):
-                    submenu = self._addMenu(menu, act["name"])
+                    submenu = self._addMenu(menu, i18n("MainWindow", act["name"]))
                     _make_menu(submenus, submenu)
                     menu.addAction(submenu.menuAction())
                 else:
@@ -148,7 +151,7 @@ class AppCtrl(QtWidgets.QMainWindow):
         else:
             menu = QtWidgets.QMenu(parent=parent)
             menu.setObjectName(norm_name)
-            menu.setTitle(_translate("MainWindow", name))
+            menu.setTitle(i18n("MainWindow", name))
             setattr(self.ui, norm_name, menu)
         return menu
 
@@ -156,9 +159,9 @@ class AppCtrl(QtWidgets.QMainWindow):
         action = QtGui.QAction(parent=parent)
         norm_actname = "action" + normalized(name)
         action.setObjectName(norm_actname)
-        action.setText(_translate("MainWindow", name))
+        action.setText(i18n("MainWindow", name))
         if shortcut:
-            action.setShortcut(_translate("MainWindow", shortcut))
+            action.setShortcut(i18n("MainWindow", shortcut))
         if cmd:
             action.triggered.connect(partial(self.run_cmd, cmd))
         return action
@@ -176,9 +179,6 @@ def normalized(name: str) -> str:
     name = name.replace("...", "")
     tbl = str.maketrans(" ", "_")
     return name.translate(tbl)
-
-
-_translate = QtCore.QCoreApplication.translate
 
 
 class PluginNotLoaded(Exception):

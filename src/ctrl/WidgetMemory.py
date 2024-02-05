@@ -5,10 +5,13 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
+from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import debugger
 from view import WidgetMemory
+
+tr = lambda txt: i18n("Memory", txt)
 
 
 class MemoryHistory(HistoryMenu):
@@ -69,7 +72,7 @@ class Memory(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                (
+                tr(
                     "You shall attach to a process before this operation.\n"
                     "Attach to current selected process and continue?"
                 ),
@@ -99,7 +102,7 @@ class Memory(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                "Not support dump memory from current model: %r" % model,
+                tr("Not support dump memory from current model: %r") % model,
             )
             return
 
@@ -121,7 +124,7 @@ class Memory(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.information(
                     self,
                     self.__class__.__name__,
-                    "Successfully dump memory to\n%r" % filename,
+                    tr("Successfully dump memory to\n%r") % filename,
                 )
             else:
                 QtWidgets.QMessageBox.warning(

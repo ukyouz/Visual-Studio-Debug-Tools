@@ -37,7 +37,8 @@ class BinViewer(AppCtrl):
         self.ui = BinView.Ui_MainWindow()
         self.ui.setupUi(self)
         set_app_title(self, "")
-        self.setWindowIcon(QtGui.QIcon("view/images/dsquery_153.ico"))
+        self.app_dir = Path(__file__).parent
+        self.setWindowIcon(QtGui.QIcon(str(self.app_dir / "view/images/dsquery_153.ico")))
 
         # events
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
