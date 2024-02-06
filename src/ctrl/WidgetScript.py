@@ -7,6 +7,7 @@ from pyqode.core import api
 from pyqode.core import modes
 from pyqode.core import panels
 from PyQt6 import QtCore
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -28,6 +29,7 @@ class Script(QtWidgets.QWidget):
         self.ui = WidgetScript.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
+        self.setWindowIcon(QtGui.QIcon(":icon/images/vswin2019/FSScript_16x.svg"))
 
         self.app = app
 

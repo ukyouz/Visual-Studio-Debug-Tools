@@ -11,6 +11,25 @@
     <file>images/ctrl/Memory_16x.svg</file>
     <file>images/ctrl/Refresh_16x.svg</file>
     <file>images/ctrl/VariableExpression_16x.svg</file>
+    <file>images/vswin2019/FSScript_16x.svg</file>
+    <file>images/ctrl/VirtualMachineRefresh_16x.svg</file>
+    <file>images/treeview/border-expand-more.png</file>
+    <file>images/treeview/border-line.png</file>
+    <file>images/treeview/border-more.png</file>
+  </qresource>
+  <qresource prefix="icon">
+    <file>images/vswin2019/Field_16x.svg</file>
+    <file>images/vswin2019/Field_left_16x.svg</file>
+    <file>images/vswin2019/Structure_16x.svg</file>
+    <file>images/treeview/border-collapse.png</file>
+    <file>images/treeview/border-collapse-more.png</file>
+    <file>images/treeview/border-end.png</file>
+    <file>images/treeview/border-expand.png</file>
+    <file>images/vswin2019/Database_16x.svg</file>
+    <file>images/ctrl/Memory_16x.svg</file>
+    <file>images/ctrl/Refresh_16x.svg</file>
+    <file>images/ctrl/VariableExpression_16x.svg</file>
+    <file>images/vswin2019/FSScript_16x.svg</file>
     <file>images/ctrl/VirtualMachineRefresh_16x.svg</file>
     <file>images/treeview/border-expand-more.png</file>
     <file>images/treeview/border-line.png</file>
