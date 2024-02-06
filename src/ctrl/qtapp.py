@@ -97,6 +97,10 @@ class AppCtrl(QtWidgets.QMainWindow):
         norm_name = "menu" + normalized(name)
         return getattr(self.ui, norm_name)
 
+    def action(self, name) -> QtGui.QAction:
+        norm_name = "action" + normalized(name)
+        return getattr(self.ui, norm_name)
+
     def setupMenues(self, parent, menues):
 
         def _get_action_at(menu, pos):
@@ -158,6 +162,8 @@ class AppCtrl(QtWidgets.QMainWindow):
     def _makeAction(self, parent, name, shortcut=None, cmd=None):
         action = QtGui.QAction(parent=parent)
         norm_actname = "action" + normalized(name)
+        assert not hasattr(self.ui, norm_actname), "Duplicated actioins"
+        setattr(self.ui, norm_actname, action)
         action.setObjectName(norm_actname)
         action.setText(i18n("MainWindow", name))
         if shortcut:

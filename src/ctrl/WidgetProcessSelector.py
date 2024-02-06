@@ -24,8 +24,6 @@ class ProcessSelector(QtWidgets.QWidget):
         self.ui.btnAttach.clicked.connect(self.attach_current_selected_process)
         self.ui.btnDetach.clicked.connect(self.detach_current_selected_process)
 
-        self.load_ui()
-
         self.app.loadPlugins([
             debugger.Debugger(self.app),
         ])
@@ -42,7 +40,9 @@ class ProcessSelector(QtWidgets.QWidget):
             { "name": "---", },
         ])
 
-    def load_ui(self):
+        self.load_ui(False)
+
+    def load_ui(self, show_status=True):
         def _cb_load_processes(unique_processes):
             if not unique_processes:
                 return
@@ -53,18 +53,23 @@ class ProcessSelector(QtWidgets.QWidget):
             if val := self.app.app_setting.value("Process/filename", ""):
                 if val in unique_processes:
                     self.ui.comboProcess.setCurrentText(val)
+            if show_status:
+                self.app.statusBar().showMessage("Processes are reloaded.")
 
         self.update_ui_states(False)
         self.app.exec_async(
             self._get_processes,
             finished_cb=_cb_load_processes,
         )
+        if show_status:
+            self.app.statusBar().showMessage("Refreshing processes...")
 
     def update_ui_states(self, process_attached: bool):
         self.ui.comboProcess.setEnabled(not process_attached)
         self.ui.frameDebugger.setEnabled(process_attached)
         self.ui.btnAttach.setVisible(not process_attached)
         self.ui.btnDetach.setVisible(process_attached)
+        self.app.action("Refresh processes").setEnabled(not process_attached)
 
     def _get_processes(self):
         processes = ProcessDebugger.list_processes()
