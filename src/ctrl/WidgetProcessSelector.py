@@ -23,6 +23,7 @@ class ProcessSelector(QtWidgets.QWidget):
         # ui events
         self.ui.btnAttach.clicked.connect(self.attach_current_selected_process)
         self.ui.btnDetach.clicked.connect(self.detach_current_selected_process)
+        self.ui.frameDebugger.setVisible(False)
 
         self.app.loadPlugins([
             debugger.Debugger(self.app),
