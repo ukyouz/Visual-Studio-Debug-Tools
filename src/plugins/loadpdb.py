@@ -67,8 +67,8 @@ class LoadPdb(Plugin):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
-                print(_pdb)
                 self.app.menu("PDB").setEnabled(True)
+                self.app.statusBar().showMessage("Pdbin is Loaded.")
 
             self.app.menu("PDB").setEnabled(False)
 
@@ -85,6 +85,7 @@ class LoadPdb(Plugin):
                     filename,
                     finished_cb=_cb,
                 )
+            self.app.statusBar().showMessage("Loading... %r" % filename)
 
     def show_pickle_pdb(self):
         self.widget = PicklePdb(self.app)

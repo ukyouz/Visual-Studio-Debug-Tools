@@ -27,11 +27,17 @@ class PicklePdb(QtWidgets.QWidget):
         self.ui.btnGenerateSelected.clicked.connect(self._generate_pdbin)
         self.ui.btnLoadSelected.clicked.connect(self._load_pdbin)
 
-    def _open_folder(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
-            self,
-            caption="Open VS build folder",
-        )
+        if val := self.app.app_setting.value("LoadPdb/lastGeneratedFolder", ""):
+            QtCore.QTimer.singleShot(0, lambda: self._open_folder(val))
+
+    def _open_folder(self, folder=""):
+        if not folder:
+            prev_folder = self.app.app_setting.value("LoadPdb/lastGeneratedFolder", "")
+            folder = QtWidgets.QFileDialog.getExistingDirectory(
+                self,
+                directory=prev_folder,
+                caption="Open VS build folder",
+            )
         if not folder:
             return
 
@@ -98,6 +104,8 @@ class PicklePdb(QtWidgets.QWidget):
         self.ui.treeBin.setModel(model)
         if model.rowCount():
             self.ui.treeBin.setExpanded(model.index(0, 0), True)
+
+        self.app.app_setting.setValue("LoadPdb/lastGeneratedFolder", root)
 
     def _load_pdbin(self):
         model = self.ui.treeBin.model()
