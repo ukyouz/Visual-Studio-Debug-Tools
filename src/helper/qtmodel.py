@@ -260,7 +260,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
     except:
         item["_is_invalid"] = True
         return 0
-    if boff and bsize:
+    if boff is not None and bsize is not None:
         val = (val >> boff) & bitmask(bsize)
 
     old_value = item.get("value", None)

@@ -105,7 +105,7 @@ class PicklePdb(QtWidgets.QWidget):
         if model.rowCount():
             self.ui.treeBin.setExpanded(model.index(0, 0), True)
 
-        self.app.app_setting.setValue("LoadPdb/lastGeneratedFolder", root)
+        self.app.app_setting.setValue("LoadPdb/lastGeneratedFolder", str(root))
 
     def _load_pdbin(self):
         model = self.ui.treeBin.model()
