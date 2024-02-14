@@ -35,6 +35,15 @@ class RunScript(Plugin):
             ("OpenScriptWindow", self.open_script_window),
         ]
 
+    def post_init(self):
+        self.script = None
+        self.app.evt.add_hook("ApplicationClosed", self._onClosed)
+
+    def _onClosed(self, evt):
+        if self.script:
+            self.script.close()
+
     def open_script_window(self):
-        self.script = Script(self.app)
+        if self.script is None:
+            self.script = Script(self.app)
         self.script.show()

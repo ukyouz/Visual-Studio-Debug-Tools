@@ -51,9 +51,16 @@ class LoadPdb(Plugin):
         ]
 
     def post_init(self):
+        self.widget = None
+        self.app.evt.add_hook("ApplicationClosed", self._onClosed)
+
         self._pdb_fname = ""
         if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
             self.load_pdbin(val)
+
+    def _onClosed(self, evt):
+        if self.widget:
+            self.widget.close()
 
     def load_pdbin(self, filename=""):
         if not filename:
@@ -88,8 +95,9 @@ class LoadPdb(Plugin):
             self.app.statusBar().showMessage("Loading... %r" % filename)
 
     def show_pickle_pdb(self):
-        self.widget = PicklePdb(self.app)
-        self.widget.loaded.connect(lambda f: self.load_pdbin(f))
+        if self.widget is None:
+            self.widget = PicklePdb(self.app)
+            self.widget.loaded.connect(lambda f: self.load_pdbin(f))
         self.widget.show()
 
     def show_status(self):

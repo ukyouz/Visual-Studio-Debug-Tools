@@ -52,6 +52,10 @@ class Script(QtWidgets.QWidget):
         self.ui.treeExplorer.setModel(model)
         self.ui.treeExplorer.setExpanded(model.index(0, 0), True)
 
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        editor = self.ui.plaintextSource
+        editor.backend.stop()
+
     def _init_code_editor(self, editor: api.CodeEdit):
         editor.backend.start("helper/pyqode_backend.py")
         editor.modes.append(modes.CodeCompletionMode())

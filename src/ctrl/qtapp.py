@@ -1,4 +1,5 @@
 import abc
+from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
@@ -40,6 +41,18 @@ class CommandManager:
         self.cmds[cmdname](**kwargs)
 
 
+@dataclass
+class EventManager:
+    evts: dict[str, list[Callable]] = field(default_factory=partial(defaultdict, list))
+
+    def apply_hook(self, eventname: str, *args, **kwargs):
+        for fn in self.evts.get(eventname, []):
+            fn(*args, **kwargs)
+
+    def add_hook(self, eventname: str, fn: Callable):
+        if fn not in self.evts.get(eventname, []):
+            self.evts[eventname].append(fn)
+
 
 ClsType = TypeVar("ClsType")
 
@@ -59,6 +72,7 @@ class AppCtrl(QtWidgets.QMainWindow):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.cmd = CommandManager()
+        self.evt = EventManager()
         self.threadpool = QtCore.QThreadPool()
         self.app_setting = QtCore.QSettings("app.ini", QtCore.QSettings.Format.IniFormat)
 
@@ -92,6 +106,9 @@ class AppCtrl(QtWidgets.QMainWindow):
             or it will cause circular import error.
             You may want to raise some error when plugin is not loaded.
         """
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        self.evt.apply_hook("ApplicationClosed", a0)
 
     def menu(self, name) -> QtWidgets.QMenu:
         norm_name = "menu" + normalized(name)
