@@ -120,8 +120,6 @@ class Script(QtWidgets.QWidget):
                 return
             self.ui.labelFilename.setText(filename)
             self.ui.plaintextSource.file.open(filename)
-            # with open(filename) as fs:
-            #     self.ui.plaintextSource.setPlainText(fs.read(), "text", "utf8")
 
     def _save_file(self):
         filename = self.ui.labelFilename.text()
@@ -133,8 +131,7 @@ class Script(QtWidgets.QWidget):
                 filter="Any (*.py)",
             )
         if filename:
-            with open(filename, "w") as fs:
-                fs.write(self.ui.plaintextSource.toPlainText())
+            self.ui.plaintextSource.file.save()
             self.ui.plaintextSource.document().setModified(False)
             self._init_explorer()
 
