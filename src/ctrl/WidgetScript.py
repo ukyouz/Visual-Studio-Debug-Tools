@@ -40,6 +40,7 @@ class Script(QtWidgets.QWidget):
         self.ui.btnLoadFile.clicked.connect(self._load_file)
         self.ui.btnSaveFile.clicked.connect(self._save_file)
         self.ui.btnRunScript.clicked.connect(self._run_script)
+        self.ui.btnReset.clicked.connect(self._clear_screen)
         self.ui.plaintextSource.modificationChanged.connect(self._update_window_title)
 
         self.printed.connect(self._async_print_log)
@@ -86,9 +87,11 @@ class Script(QtWidgets.QWidget):
                 self._load_file(str(item))
 
     def _update_window_title(self):
-        set_app_title(self, self.ui.labelFilename.text())
+        editor = self.ui.plaintextSource
+        filename = editor.file.name if editor.file.opening else ""
+        set_app_title(self, filename)
         title = self.windowTitle()
-        if self.ui.plaintextSource.document().isModified():
+        if filename and self.ui.plaintextSource.document().isModified():
             title = "(Modified) " + title
         self.setWindowTitle(title)
 
@@ -134,6 +137,11 @@ class Script(QtWidgets.QWidget):
             self.ui.plaintextSource.file.save()
             self.ui.plaintextSource.document().setModified(False)
             self._init_explorer()
+
+    def _clear_screen(self):
+        self.ui.plaintextSource.file.close()
+        self.ui.labelFilename.setText("")
+        self.ui.labelRunningTime.setText("0:00:00")
 
     def _run_script(self):
         self.ui.plaintextLog.setPlainText("")

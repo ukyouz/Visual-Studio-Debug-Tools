@@ -205,6 +205,19 @@
                <number>0</number>
               </property>
               <item>
+               <widget class="QToolButton" name="btnReset">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Reset</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QLabel" name="label_2">
                 <property name="text">
                  <string>Running Time:</string>
@@ -232,13 +245,25 @@
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="btnSaveFile">
+               <widget class="QToolButton" name="btnSaveFile">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string>Save</string>
                 </property>
                 <property name="icon">
                  <iconset resource="resource.qrc">
                   <normaloff>:/action/images/vswin2019/Save_16x.svg</normaloff>:/action/images/vswin2019/Save_16x.svg</iconset>
+                </property>
+                <property name="toolButtonStyle">
+                 <enum>Qt::ToolButtonTextBesideIcon</enum>
+                </property>
+                <property name="autoRaise">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
