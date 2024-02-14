@@ -46,6 +46,11 @@ class Script(QtWidgets.QWidget):
         self.printed.connect(self._async_print_log)
         self.errored.connect(self._async_print_err)
 
+        if file := self.app.app_setting.value("Script/scriptFile", None):
+            self._load_file(file)
+        if script := self.app.app_setting.value("Script/textSource", ""):
+            self.ui.plaintextSource.setPlainText(script, "text/plain", "utf8")
+
     def _init_explorer(self):
         model = qtmodel.FileExplorerModel(Path(""))
         flist = list((self.app.app_dir / "scripts").rglob("*.py"))
@@ -56,6 +61,9 @@ class Script(QtWidgets.QWidget):
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         editor = self.ui.plaintextSource
         editor.backend.stop()
+        self.app.app_setting.setValue("Script/textSource", self.ui.plaintextSource.toPlainText())
+        if self.ui.plaintextSource.file.name:
+            self.app.app_setting.setValue("Script/scriptFile", self.ui.labelFilename.text())
 
     def _init_code_editor(self, editor: api.CodeEdit):
         editor.backend.start("helper/pyqode_backend.py")
