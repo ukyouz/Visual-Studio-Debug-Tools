@@ -214,12 +214,14 @@ class Script(QtWidgets.QWidget):
     def _async_print_log(self, a: str):
         # self.ui.plaintextLog.appendPlainText(a)
 
-        self.ui.plaintextLog.appendPlainText(a[:100000])
-        if len(a) > 100000:
-            self.ui.plaintextLog.appendPlainText("...")
+        shorten_msg = a[:100000]
+        # self.ui.plaintextLog.appendPlainText(a[:100000])
 
-        # self.ui.plaintextLog.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        # self.ui.plaintextLog.insertPlainText(a)
+        self.ui.plaintextLog.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.ui.plaintextLog.insertPlainText(shorten_msg)
+        if len(a) > 100000:
+            self.ui.plaintextLog.insertPlainText("...")
+        self.ui.plaintextLog.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
     def _async_print_err(self, a: str):
         html_raw = a.replace("\n", "<br>")
