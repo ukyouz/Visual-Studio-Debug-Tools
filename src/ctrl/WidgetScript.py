@@ -70,7 +70,8 @@ class Script(QtWidgets.QWidget):
         flist = list((self.app.app_dir / "scripts").rglob("*.py"))
         model.addFiles(flist)
         self.ui.treeExplorer.setModel(model)
-        self.ui.treeExplorer.setExpanded(model.index(0, 0), True)
+        if len(flist):
+            self.ui.treeExplorer.setExpanded(model.index(0, 0), True)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         editor = self.ui.plaintextSource
@@ -80,7 +81,7 @@ class Script(QtWidgets.QWidget):
             self.app.app_setting.setValue("Script/scriptFile", self.ui.labelFilename.text())
 
     def _init_code_editor(self, editor: api.CodeEdit):
-        editor.backend.start("helper/pyqode_backend.py")
+        editor.backend.start(str(self.app.app_dir / "helper/pyqode_backend.py"))
         editor.modes.append(modes.CodeCompletionMode())
         editor.modes.append(modes.PygmentsSyntaxHighlighter(editor.document()))
         editor.modes.get(modes.PygmentsSyntaxHighlighter).pygments_style = 'xcode'
