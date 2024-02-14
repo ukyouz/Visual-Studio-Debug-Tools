@@ -338,15 +338,3 @@ class LoadPdb(Plugin):
         out_struct["levelname"] = out_struct["expr"]
         return out_struct
 
-class Test(Plugin):
-
-    def registerCommands(self) -> list[tuple]:
-        return [
-            ("Test", self._test),
-        ]
-
-    def _test(self):
-        pdb = self.app.plugin(LoadPdb)
-        print(pdb._pdb)
-
-
