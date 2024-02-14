@@ -1,6 +1,8 @@
+import logging
 import pickle
 import re
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -9,8 +11,11 @@ from PyQt6 import QtWidgets
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.WidgetPicklePdb import PicklePdb
+from helper import qtmodel
 from modules.pdbparser.pdbparser import pdb
 from modules.pdbparser.pdbparser import picklepdb
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidExpression(Exception):
@@ -20,6 +25,64 @@ class InvalidExpression(Exception):
 class DummyOmap:
     def remap(self, addr):
         return addr
+
+
+@dataclass
+class CStruct:
+    _record: pdb.StructRecord
+    _stream: qtmodel.Stream
+
+    def __getattr__(self, field: str):
+        if not isinstance(self._record["fields"], dict):
+            raise InvalidExpression("Field not found: %r" % field)
+        return CStruct(self._record["fields"][field], self._stream)
+
+    def __getitem__(self, index: int):
+        if not isinstance(self._record["fields"], list):
+            raise InvalidExpression("Index not found: %r" % index)
+        return CStruct(self._record["fields"][index], self._stream)
+
+    def __iter__(self):
+        if isinstance(self._record["fields"], list):
+            for key, item in enumerate(self._record["fields"].__iter__()):
+                yield key, CStruct(item, self._stream)
+        if isinstance(self._record["fields"], dict):
+            for key, item in self._record["fields"].items():
+                yield key, CStruct(item, self._stream)
+
+    def __repr__(self):
+        fields = self._record["fields"]
+        if isinstance(fields, list):
+            flen = len(fields)
+            display_fields = ["%d=..." % i for i in range(flen)][:10]
+            fields_txt = ", ".join(display_fields)
+            if len(display_fields) != flen:
+                fields_txt += ", ..., %d=..." % flen
+            fields_txt = "[%s]" % fields_txt
+        elif isinstance(fields, dict):
+            fields_txt = ", ".join(["%s=..." % k for k in fields])
+            fields_txt = "{%s}" % fields_txt
+        else:
+            fields_txt = "()"
+        return "{}{}".format(
+            self._record["type"],
+            fields_txt,
+        )
+
+    def __int__(self) -> int:
+        item = self._record
+
+        base = item["address"]
+        size = item["size"]
+        boff = item["bitoff"]
+        bsize = item["bitsize"]
+
+        self._stream.seek(base)
+        val = int.from_bytes(self._stream.read(size), "little")
+        if boff is not None and bsize is not None:
+            val = (val >> boff) & qtmodel.bitmask(bsize)
+
+        return val
 
 
 class LoadPdb(Plugin):
@@ -70,6 +133,7 @@ class LoadPdb(Plugin):
                 filter="Any (*.*)"
             )
         if filename:
+            logger.debug("loadpdb: %r", filename)
             def _cb(_pdb):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
@@ -335,3 +399,17 @@ class LoadPdb(Plugin):
         out_struct["levelname"] = out_struct["expr"]
         return out_struct
 
+    def deref_cstruct(self, cs: CStruct, addr: int=0, count=1) -> CStruct:
+        # TODO: just use real c parser for derefence struct pointer
+        item = cs._record
+        if not hasattr(item["lf"], "utypeRef"):
+            return None
+
+        addr = addr or item.get("value", 0) or 0
+
+        struct = item["lf"].utypeRef.name
+
+        notation = "->" if count == 1 else ""
+        expr = item.get("expr", "") + notation
+
+        return CStruct(self.parse_struct(struct, expr, addr=addr, count=count), cs._stream)
