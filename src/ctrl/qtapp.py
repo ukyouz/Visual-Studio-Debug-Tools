@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 from typing import NotRequired
 from typing import Protocol
+from typing import Self
 from typing import Type
 from typing import TypedDict
 from typing import TypeVar
@@ -129,7 +130,7 @@ class AppCtrl(QtWidgets.QMainWindow):
             except IndexError:
                 return None
 
-        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu):
+        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu, ag: QtGui.QActionGroup=None):
             prev_pos = None
             for act in actions:
                 if act["name"] == "---":
@@ -141,7 +142,8 @@ class AppCtrl(QtWidgets.QMainWindow):
                     continue
                 if submenus := act.get("submenus", []):
                     submenu = self._addMenu(menu, i18n("MainWindow", act["name"]))
-                    _make_menu(submenus, submenu)
+                    ag = QtGui.QActionGroup(submenu) if act.get("actionGroup", False) else None
+                    _make_menu(submenus, submenu, ag)
                     menu.addAction(submenu.menuAction())
                 else:
                     action = self._makeAction(
@@ -152,6 +154,11 @@ class AppCtrl(QtWidgets.QMainWindow):
                     )
                     if icon := act.get("icon", None):
                         action.setIcon(QtGui.QIcon(icon))
+                    if ag:
+                        ag.addAction(action)
+                        action.setCheckable(True)
+                    if check := act.get("checked", False):
+                        action.setChecked(check)
                     prev_action = None
                     pos = act.get("position", prev_pos)
                     if pos is not None:
@@ -195,7 +202,9 @@ class MenuAction(TypedDict):
     shortcut: NotRequired[str]
     icon: NotRequired[str]
     position: NotRequired[int]
-    submenus: NotRequired[list]
+    submenus: NotRequired[list[Self]]
+    checked: NotRequired[bool]
+    actionGroup: NotRequired[bool]
 
 
 def normalized(name: str) -> str:

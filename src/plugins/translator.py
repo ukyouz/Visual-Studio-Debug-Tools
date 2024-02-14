@@ -14,17 +14,21 @@ class Translator(Plugin):
             self.tranlate_ui(val)
 
     def registerMenues(self) -> list[MenuAction]:
+        val = self.app.app_setting.value("app/lang", "")
         return [
             {
                 "name": "Languages",
+                "actionGroup": True,
                 "submenus": [
                     {
                         "name": "English",
                         "command": "SetLanguageEnglish",
+                        "checked": val == "",
                     },
                     {
                         "name": "日本語",
                         "command": "SetLanguageJapanese",
+                        "checked": val == "ja_JP",
                     },
                 ],
             },
