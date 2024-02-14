@@ -334,10 +334,13 @@ class StructTreeModel(AbstractTreeModel):
         if tag == "value":
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "count":
+            p_item = self.itemFromIndex(self.parent(index))
             if item["is_pointer"] and self.allow_dereferece_pointer:
-                if not item["type"].lower().endswith("pvoid"):
-                    # only allow non-pvoid pointer be editable
-                    flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+                if not isinstance(p_item.get("fields", None), list):
+                    # not in array
+                    if not item["type"].lower().endswith("pvoid"):
+                        # only allow non-pvoid pointer be editable
+                        flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "type" and self.allow_dereferece_pointer:
             if item[tag].lower().endswith("pvoid") or item.get("_is_pvoid", False):
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
@@ -496,7 +499,8 @@ class StructTreeModel(AbstractTreeModel):
             return False
         item = self.itemFromIndex(parent)
         return (
-            item.get("is_pointer", False)
+            not item["type"].lower().endswith("pvoid")
+            and item.get("is_pointer", False)
             and (item["fields"] is None or item["fields"] == "")
         )
 
@@ -506,7 +510,7 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(index)
         item.update(self.itemFromIndex(parent))
         item["levelname"] = "loading..."
-        item["is_pointer"] = False
+        # item["is_pointer"] = False
         item["fields"] = None
         self.dataChanged.emit(index, index)
         self.pointerDereferenced.emit(parent, _calc_val(self.fileio, item), item.get("_count", 1))
