@@ -74,10 +74,7 @@ class LoadPdb(Plugin):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
-                self.app.menu("PDB").setEnabled(True)
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
-
-            self.app.menu("PDB").setEnabled(False)
 
             path = Path(filename)
             if path.suffix == ".pdbin":
