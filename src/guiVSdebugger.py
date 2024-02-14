@@ -168,11 +168,6 @@ class VisualStudioDebugger(AppCtrl):
 
 
 if __name__ == '__main__':
-    from argparse import ArgumentParser
-    p = ArgumentParser()
-    p.add_argument("file", nargs="?", default="")
-    args = p.parse_args()
-
     # https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7
     import ctypes
     myappid = __file__
