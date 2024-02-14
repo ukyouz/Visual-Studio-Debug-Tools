@@ -46,15 +46,15 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="menuTool">
     <property name="title">
-     <string>File</string>
+     <string>Tool</string>
     </property>
     <addaction name="actionOpen_File"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
-   <addaction name="menuFile"/>
+   <addaction name="menuTool"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget">

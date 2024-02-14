@@ -28,8 +28,8 @@ class Ui_MainWindow(object):
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
         self.menubar.setObjectName("menubar")
-        self.menuFile = QtWidgets.QMenu(parent=self.menubar)
-        self.menuFile.setObjectName("menuFile")
+        self.menuTool = QtWidgets.QMenu(parent=self.menubar)
+        self.menuTool.setObjectName("menuTool")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -96,10 +96,10 @@ class Ui_MainWindow(object):
         self.actionOpen_File.setObjectName("actionOpen_File")
         self.actionQuit = QtGui.QAction(parent=MainWindow)
         self.actionQuit.setObjectName("actionQuit")
-        self.menuFile.addAction(self.actionOpen_File)
-        self.menuFile.addSeparator()
-        self.menuFile.addAction(self.actionQuit)
-        self.menubar.addAction(self.menuFile.menuAction())
+        self.menuTool.addAction(self.actionOpen_File)
+        self.menuTool.addSeparator()
+        self.menuTool.addAction(self.actionQuit)
+        self.menubar.addAction(self.menuTool.menuAction())
 
         self.retranslateUi(MainWindow)
         self.actionQuit.triggered.connect(MainWindow.close) # type: ignore
@@ -108,7 +108,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "BinViewer"))
-        self.menuFile.setTitle(_translate("MainWindow", "File"))
+        self.menuTool.setTitle(_translate("MainWindow", "Tool"))
         self.dockWidget.setWindowTitle(_translate("MainWindow", "Explorer"))
         self.btnOpenFiles.setText(_translate("MainWindow", "Open File"))
         self.btnOpenFiles.setShortcut(_translate("MainWindow", "Ctrl+S, Ctrl+R"))

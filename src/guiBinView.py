@@ -20,6 +20,7 @@ from ctrl.qtapp import set_app_title
 from ctrl.WidgetBinParser import BinParser
 from helper import qtmodel
 from plugins import loadpdb
+from plugins import run_script
 from plugins import translator
 from view import BinView
 from view import resource
@@ -49,6 +50,7 @@ class BinViewer(AppCtrl):
         self._plugins = {}
         self.subwidgets = []
         self.loadPlugins([
+            run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             translator.Translator(self),
         ])
