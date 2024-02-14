@@ -47,6 +47,7 @@ class ProcessSelector(QtWidgets.QWidget):
         def _cb_load_processes(unique_processes):
             if not unique_processes:
                 return
+            self.ui.comboProcess.clear()
             if len(unique_processes):
                 self.ui.comboProcess.addItems(unique_processes)
                 self.ui.comboProcess.setCurrentIndex(0)
