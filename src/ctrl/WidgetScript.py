@@ -65,7 +65,11 @@ class Script(QtWidgets.QWidget):
 
     def _init_explorer(self):
         model = qtmodel.FileExplorerModel(Path(""))
-        flist = list((self.app.app_dir / "scripts").rglob("*.py"))
+        if hasattr(sys, "frozen"):
+            # for pyinstaller bundled
+            flist = list((self.app.app_dir / "../scripts").rglob("*.py"))
+        else:
+            flist = list((self.app.app_dir / "scripts").rglob("*.py"))
         model.addFiles(flist)
         self.ui.treeExplorer.setModel(model)
         if len(flist):

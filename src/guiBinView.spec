@@ -8,6 +8,7 @@ a = Analysis(
     datas=[
         ('view/images/*.ico', 'view/images/'),
         ('langs/*.qm', 'langs/'),
+        ('scripts', 'scripts/'),
     ],
     hiddenimports=[],
     hookspath=[],
