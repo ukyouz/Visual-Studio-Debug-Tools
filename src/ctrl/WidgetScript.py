@@ -63,8 +63,6 @@ class Script(QtWidgets.QWidget):
         if script := self.app.app_setting.value("Script/textSource", ""):
             self.ui.plaintextSource.setPlainText(script, "text/plain", "utf8")
 
-        self.gui_stdout = WidgetLogger(self)
-
     def _init_explorer(self):
         model = qtmodel.FileExplorerModel(Path(""))
         flist = list((self.app.app_dir / "scripts").rglob("*.py"))
@@ -187,7 +185,8 @@ class Script(QtWidgets.QWidget):
         timer.start(1000)
 
         _backup = sys.stdout
-        sys.stdout = self.gui_stdout
+        gui_stdout = WidgetLogger(self)
+        sys.stdout = gui_stdout
 
         def cb(_):
             timer.stop()
@@ -204,16 +203,16 @@ class Script(QtWidgets.QWidget):
                 "app": self.app,
                 # "print": lambda *a: self.printed.emit(" ".join(pformat(x) for x in a)),
             },
-            errored_cb= lambda *a: self.errored.emit(" ".join(pformat(x) for x in a)),
+            errored_cb= lambda *a: self.errored.emit(" ".join(str(x) for x in a)),
             finished_cb=cb,
         )
 
     def _async_print_log(self, a: str):
-        self.ui.plaintextLog.appendPlainText(a)
+        # self.ui.plaintextLog.appendPlainText(a)
 
-        # self.ui.plaintextLog.appendPlainText(a[:10000])
-        # if len(a) > 10000:
-        #     self.ui.plaintextLog.appendPlainText("...")
+        self.ui.plaintextLog.appendPlainText(a[:100000])
+        if len(a) > 100000:
+            self.ui.plaintextLog.appendPlainText("...")
 
         # self.ui.plaintextLog.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         # self.ui.plaintextLog.insertPlainText(a)
