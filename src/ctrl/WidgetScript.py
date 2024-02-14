@@ -81,7 +81,11 @@ class Script(QtWidgets.QWidget):
             self.app.app_setting.setValue("Script/scriptFile", self.ui.labelFilename.text())
 
     def _init_code_editor(self, editor: api.CodeEdit):
-        editor.backend.start(str(self.app.app_dir / "helper/pyqode_backend.py"))
+        if hasattr(sys, "frozen"):
+            # for pyinstaller bundled
+            editor.backend.start(str(self.app.app_dir / "pyqode_backend.exe"))
+        else:
+            editor.backend.start(str(self.app.app_dir / "helper/pyqode_backend.py"))
         editor.modes.append(modes.CodeCompletionMode())
         editor.modes.append(modes.PygmentsSyntaxHighlighter(editor.document()))
         editor.modes.get(modes.PygmentsSyntaxHighlighter).pygments_style = 'xcode'
