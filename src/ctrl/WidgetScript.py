@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from pprint import pformat
 
 from pyqode.core import api
 from pyqode.core import modes
@@ -18,6 +19,17 @@ from view import WidgetScript
 from view import resource
 
 tr = lambda txt: i18n("Script", txt)
+
+
+class WidgetLogger:
+    def __init__(self, editor) -> None:
+        self.editor = editor
+
+    def write(self, a):
+        self.editor.printed.emit(a)
+
+    def flush(self):
+        ...
 
 
 class Script(QtWidgets.QWidget):
@@ -50,6 +62,8 @@ class Script(QtWidgets.QWidget):
             self._load_file(file)
         if script := self.app.app_setting.value("Script/textSource", ""):
             self.ui.plaintextSource.setPlainText(script, "text/plain", "utf8")
+
+        self.gui_stdout = WidgetLogger(self)
 
     def _init_explorer(self):
         model = qtmodel.FileExplorerModel(Path(""))
@@ -167,24 +181,37 @@ class Script(QtWidgets.QWidget):
         timer.timeout.connect(progressing)
         timer.start(1000)
 
+        _backup = sys.stdout
+        sys.stdout = self.gui_stdout
+
         def cb(_):
             timer.stop()
             self.ui.btnRunScript.setEnabled(True)
+            self.ui.btnReset.setEnabled(True)
+            sys.stdout = _backup
 
         self.ui.btnRunScript.setEnabled(False)
+        self.ui.btnReset.setEnabled(False)
         self.app.exec_async(
             exec,
             script,
             {
                 "app": self.app,
-                "print": lambda *a: self.printed.emit(" ".join(str(x) for x in a)),
+                # "print": lambda *a: self.printed.emit(" ".join(pformat(x) for x in a)),
             },
-            errored_cb= lambda *a: self.errored.emit(" ".join(str(x) for x in a)),
+            errored_cb= lambda *a: self.errored.emit(" ".join(pformat(x) for x in a)),
             finished_cb=cb,
         )
 
     def _async_print_log(self, a: str):
         self.ui.plaintextLog.appendPlainText(a)
+
+        # self.ui.plaintextLog.appendPlainText(a[:10000])
+        # if len(a) > 10000:
+        #     self.ui.plaintextLog.appendPlainText("...")
+
+        # self.ui.plaintextLog.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        # self.ui.plaintextLog.insertPlainText(a)
 
     def _async_print_err(self, a: str):
         html_raw = a.replace("\n", "<br>")
