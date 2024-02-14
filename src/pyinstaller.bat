@@ -11,4 +11,4 @@ COPY dist\pyqode_backend\pyqode_backend.exe dist\VSdebugger\_internal
 
 
 pyinstaller.exe --noconfirm .\guiBinView.spec
-COPY dist\BinView\BinView.exe dist\VSdebugger
+COPY dist\BinViewer\BinViewer.exe dist\VSdebugger
