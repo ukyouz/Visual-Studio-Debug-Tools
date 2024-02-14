@@ -686,7 +686,10 @@ class FileExplorerModel(AbstractTreeModel):
         elif role == QtCore.Qt.ItemDataRole.ToolTipRole:
             return str(item)
         elif role == QtCore.Qt.ItemDataRole.DecorationRole:
-            return get_icon(str(item))
+            if item.suffix == ".pdbin":
+                return QtGui.QIcon(":icon/images/vswin2019/Database_16x.svg")
+            else:
+                return get_icon(str(item))
 
     def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
         item = self.itemFromIndex(parent)
