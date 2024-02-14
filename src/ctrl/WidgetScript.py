@@ -204,6 +204,7 @@ class Script(QtWidgets.QWidget):
             exec,
             script,
             {
+                "__name__": "__main__",
                 "app": self.app,
                 # "print": lambda *a: self.printed.emit(" ".join(pformat(x) for x in a)),
             },
