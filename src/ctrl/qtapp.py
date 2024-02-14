@@ -1,4 +1,5 @@
 import abc
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -18,6 +19,21 @@ from PyQt6 import QtWidgets
 
 from helper.qtthread import Runnable
 from modules.utils.typ import DequeList
+
+
+class LogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name.startswith("pyqode."):
+            return False
+        return True
+
+
+logging.basicConfig(
+    format="[%(asctime)s][%(name)-5s][%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.DEBUG,
+)
+logging.getLogger().handlers[0].addFilter(LogFilter(__name__))
 
 
 def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
