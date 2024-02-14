@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from typing import Protocol
+from typing import Sequence
+from typing import Union
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -751,7 +753,7 @@ class FileExplorerModel(AbstractTreeModel):
 
         return self.index(r, 0, parent)
 
-    def addFiles(self, files: list[str | Path]) -> list[QtCore.QModelIndex]:
+    def addFiles(self, files: Sequence[Union[str, Path]]) -> list[QtCore.QModelIndex]:
         indexes = []
         for f in files:
             index = self._insert_file(Path(f).resolve())

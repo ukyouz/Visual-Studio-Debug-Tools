@@ -255,7 +255,7 @@ class LoadPdb(Plugin):
 
         return array
 
-    def query_expression(self, expr: str, virtual_base: int=0, io_stream=None):
+    def query_expression(self, expr: str, virtual_base: int=0, io_stream=None) -> dict | None:
         tpi = self._pdb.streams[2]
         dbi = self._pdb.streams[3]
         glb = self._pdb.streams[dbi.header.symrecStream]
