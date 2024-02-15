@@ -210,7 +210,7 @@ class LoadPdb(Plugin):
             lf = tpi.get_type_lf(user_defined_type.typind)
         else:
             try:
-                lf = tpi.structs[structname]
+                lf = tpi.get_type_lf_from_name(structname)
             except KeyError:
                 raise InvalidExpression(structname)
 

@@ -294,7 +294,7 @@ class StructTreeModel(AbstractTreeModel):
 
     def child(self, row, parent):
         item = self.itemFromIndex(parent)
-        for r, (_, x) in enumerate(iter_children(item["fields"])):
+        for r, (_, x) in enumerate(iter_children(item.get("fields", None))):
             if row == r:
                 return x
         return None
@@ -524,12 +524,14 @@ class StructTreeModel(AbstractTreeModel):
     def setItem(self, record: dict, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
         new_count = len(record["fields"]) if record["fields"] else 0
-        self.removeRows(0, self.rowCount(index), index)
-        self.layoutAboutToBeChanged.emit()
-        self.beginInsertRows(index, 0, new_count - 1)
-        item.update(record)
-        self.endInsertRows()
-        self.layoutChanged.emit()
+        if row_count := self.rowCount(index):
+            self.removeRows(0, row_count - 1, index)
+        if new_count:
+            self.layoutAboutToBeChanged.emit()
+            self.beginInsertRows(index, 0, new_count - 1)
+            item.update(record)
+            self.endInsertRows()
+            self.layoutChanged.emit()
 
     def refreshIndex(self, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
