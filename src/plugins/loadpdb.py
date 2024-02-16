@@ -405,7 +405,7 @@ class LoadPdb(Plugin):
         if not hasattr(item["lf"], "utypeRef"):
             return None
 
-        addr = addr or item.get("value", 0) or 0
+        addr = addr or int(cs) or item.get("value", 0) or 0
 
         struct = item["lf"].utypeRef.name
 
