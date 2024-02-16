@@ -54,6 +54,7 @@ class Script(QtWidgets.QWidget):
         self.ui.btnRunScript.clicked.connect(self._run_script)
         self.ui.btnReset.clicked.connect(self._clear_screen)
         self.ui.plaintextSource.modificationChanged.connect(self._update_window_title)
+        self.ui.plaintextSource.installEventFilter(self)
 
         self.printed.connect(self._async_print_log)
         self.errored.connect(self._async_print_err)
@@ -74,6 +75,21 @@ class Script(QtWidgets.QWidget):
         self.ui.treeExplorer.setModel(model)
         if len(flist):
             self.ui.treeExplorer.setExpanded(model.index(0, 0), True)
+
+    def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
+        if obj == self.ui.plaintextSource:
+            if evt.type() == QtCore.QEvent.Type.KeyPress:
+                key = evt.key()
+                modifiers = evt.modifiers()
+                ctrl = modifiers & QtCore.Qt.KeyboardModifier.ControlModifier
+                # print(ctrl, hex(key))
+                if ctrl and key == QtCore.Qt.Key.Key_Return:
+                    self._run_script()
+                    return True
+                if ctrl and key == ord('S'):
+                    self._save_file()
+                    return True
+        return False
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         editor = self.ui.plaintextSource
@@ -98,6 +114,7 @@ class Script(QtWidgets.QWidget):
         editor.modes.append(modes.OccurrencesHighlighterMode())
         editor.modes.append(modes.FileWatcherMode())
         editor.modes.get(modes.OccurrencesHighlighterMode).delay = 300
+        editor.modes.append(modes.IndenterMode())
         # editor.modes.append(modes.OutlineMode())
         editor.panels.append(panels.SearchAndReplacePanel(), api.Panel.Position.BOTTOM)
         editor.panels.append(panels.LineNumberPanel(), api.Panel.Position.LEFT)
