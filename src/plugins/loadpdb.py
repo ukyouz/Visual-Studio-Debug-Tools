@@ -386,7 +386,7 @@ class LoadPdb(Plugin):
                     break
                 io_stream.seek(out_struct["address"])
                 addr = int.from_bytes(io_stream.read(out_struct["size"]), "little")
-                count = f if isinstance(f, int) else 1
+                count = subfields[0] + 1 if isinstance(subfields[0], int) else 1
                 notation = "->" if count == 1 else ""
                 out_struct = self.parse_struct(
                     structname=out_struct["lf"].utypeRef.name,
