@@ -257,7 +257,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
 
     fileio.seek(base)
     try:
-        val = int.from_bytes(fileio.read(size), "little")
+        val = int.from_bytes(fileio.read(size), "little", signed=item.get("has_sign", False))
         item["_is_invalid"] = False
     except:
         item["_is_invalid"] = True
@@ -375,7 +375,7 @@ class StructTreeModel(AbstractTreeModel):
                             if self.hex_mode:
                                 bitsz = item.get("bitsize", None) or item["size"] * 8
                                 size = min(item["size"], math.ceil(bitsz / 8))
-                                return f"0x%0{size * 2}x" % val
+                                return f"{{:#0{size * 2 + 2}x}}".format(val)
                             else:
                                 return str(val)
                         else:
@@ -440,8 +440,12 @@ class StructTreeModel(AbstractTreeModel):
             if new_val == old_val:
                 return False
 
+            if not item.get("has_sign", False) and val < 0:
+                # cannot set a negative value to an unsigned type int
+                return False
+
             item["value"] = val
-            self.fileio.write(new_val.to_bytes(size, "little"))
+            self.fileio.write(new_val.to_bytes(size, "little", signed=item.get("has_sign", False)))
             return True
         elif tag == "type":
             old_value = item.get(tag, "")
@@ -600,7 +604,7 @@ class StructTableModel(QtCore.QAbstractTableModel):
                 elif self.hex_mode:
                     bitsz = item.get("bitsize", None) or item["size"] * 8
                     size = min(item["size"], math.ceil(bitsz / 8))
-                    return f"0x%0{size * 2}x" % val
+                    return f"{{:#0{size * 2 + 2}x}}".format(val)
                 else:
                     return str(val)
             else:
