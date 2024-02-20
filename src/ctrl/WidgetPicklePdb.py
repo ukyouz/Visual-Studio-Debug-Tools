@@ -28,6 +28,7 @@ class PicklePdb(QtWidgets.QWidget):
         self.ui.btnLoadSelected.clicked.connect(self._load_pdbin)
 
         if val := self.app.app_setting.value("LoadPdb/lastGeneratedFolder", ""):
+            self.setEnabled(False)
             QtCore.QTimer.singleShot(0, lambda: self._open_folder(val))
 
     def _open_folder(self, folder=""):
@@ -50,6 +51,7 @@ class PicklePdb(QtWidgets.QWidget):
 
         self.ui.labelFolder.setText(str(root))
         self._on_generated_done()
+        self.setEnabled(True)
 
     def _generate_pdbin(self):
         indexes = [x for x in self.ui.treePdb.selectedIndexes() if x.column() == 0]

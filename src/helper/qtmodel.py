@@ -330,6 +330,8 @@ class StructTreeModel(AbstractTreeModel):
 
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
+        if item is None:
+            return flags
 
         if tag == "value":
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
@@ -514,7 +516,7 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(index)
         item.update(self.itemFromIndex(parent))
         item["levelname"] = "loading..."
-        # item["is_pointer"] = False
+        item["is_pointer"] = False  # psuedo node is not real pointer
         item["fields"] = None
         self.dataChanged.emit(index, index)
         self.pointerDereferenced.emit(parent, _calc_val(self.fileio, item), item.get("_count", 1))

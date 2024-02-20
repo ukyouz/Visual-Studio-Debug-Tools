@@ -160,6 +160,7 @@ class LoadPdb(Plugin):
             self.widget = PicklePdb(self.app)
             self.widget.loaded.connect(lambda f: self.load_pdbin(f))
         self.widget.show()
+        self.widget.activateWindow()
 
     def show_status(self):
         if self._pdb_fname:

@@ -47,3 +47,4 @@ class RunScript(Plugin):
         if self.script is None:
             self.script = Script(self.app)
         self.script.show()
+        self.script.activateWindow()

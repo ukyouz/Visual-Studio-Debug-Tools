@@ -169,6 +169,7 @@ class Script(QtWidgets.QWidget):
                 return
             self.ui.labelFilename.setText(filename)
             self.ui.plaintextSource.file.open(filename)
+            self._update_window_title()
 
     def _save_file(self):
         filename = self.ui.labelFilename.text()

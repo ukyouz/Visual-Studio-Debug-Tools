@@ -34,6 +34,7 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 logging.getLogger().handlers[0].addFilter(LogFilter(__name__))
+logger = logging.getLogger(__name__)
 
 
 def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
@@ -97,7 +98,7 @@ class AppCtrl(QtWidgets.QMainWindow):
         self.cmd.trigger(cmdname, **kwargs)
 
     def _print_error_thread(self, expt, tb):
-        print(expt, tb)
+        logger.error(tb)
 
     def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, **kwargs):
         worker = Runnable(fn, *args, **kwargs)
