@@ -177,6 +177,7 @@ class Expression(QtWidgets.QWidget):
         def _cb(struct_record):
             if struct_record is None:
                 item["levelname"] = "load failed"
+                model.setItem(item, parent)
                 return
             model.loadStream(dbg.get_memory_stream())
             item["fields"] = struct_record["fields"]

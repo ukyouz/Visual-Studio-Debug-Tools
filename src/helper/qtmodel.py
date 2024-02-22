@@ -338,8 +338,8 @@ class StructTreeModel(AbstractTreeModel):
         elif tag == "count":
             p_item = self.itemFromIndex(self.parent(index))
             if item["is_pointer"] and self.allow_dereferece_pointer:
-                if not isinstance(p_item.get("fields", None), list):
-                    # not in array
+                if p_item is self._rootItem or not isinstance(p_item.get("fields", None), list):
+                    # not in array, except for the root item which add childs as list
                     if not item["type"].lower().endswith("pvoid"):
                         # only allow non-pvoid pointer be editable
                         flags |= QtCore.Qt.ItemFlag.ItemIsEditable
