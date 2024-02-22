@@ -134,7 +134,7 @@ class Script(QtWidgets.QWidget):
 
     def _update_window_title(self):
         editor = self.ui.plaintextSource
-        filename = editor.file.name if editor.file.opening else ""
+        filename = editor.file.path
         set_app_title(self, filename)
         title = self.windowTitle()
         if filename and self.ui.plaintextSource.document().isModified():
@@ -187,6 +187,7 @@ class Script(QtWidgets.QWidget):
 
     def _clear_screen(self):
         self.ui.plaintextSource.file.close()
+        self._update_window_title()
         self.ui.labelFilename.setText("")
         self.ui.labelRunningTime.setText("0:00:00")
 
