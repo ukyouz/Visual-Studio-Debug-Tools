@@ -317,6 +317,21 @@ class LoadPdb(Plugin):
 
         return array
 
+    def deref_record_struct(self, struct: dict, io_stream, count=1):
+        if io_stream is None:
+            return
+        assert struct["is_pointer"]
+        io_stream.seek(struct["address"])
+        addr = int.from_bytes(io_stream.read(struct["size"]), "little")
+        notation = "->" if count == 1 else ""
+        return self.parse_struct(
+            structname=struct["lf"].utypeRef.name,
+            expr=struct["expr"] + notation,
+            addr=addr,
+            count=count,
+            recursive=False,
+        )
+
     def query_expression(self, expr: str, virtual_base: int=0, io_stream=None) -> dict | None:
         tpi = self._pdb.streams[2]
         dbi = self._pdb.streams[3]
@@ -366,6 +381,9 @@ class LoadPdb(Plugin):
         else:
             return
 
+        if out_struct["is_pointer"] and has_subfields:
+            out_struct = self.deref_record_struct(out_struct, io_stream)
+
         while subfields:
             f = subfields.pop(0)
             try:
@@ -381,21 +399,10 @@ class LoadPdb(Plugin):
                 out_struct["levelname"] = lvlname
                 self._add_expr(out_struct, _expr)
             else:
-                if io_stream is None:
-                    return
                 if last_field:
                     break
-                io_stream.seek(out_struct["address"])
-                addr = int.from_bytes(io_stream.read(out_struct["size"]), "little")
                 count = subfields[0] + 1 if isinstance(subfields[0], int) else 1
-                notation = "->" if count == 1 else ""
-                out_struct = self.parse_struct(
-                    structname=out_struct["lf"].utypeRef.name,
-                    expr=out_struct["expr"] + notation,
-                    addr=addr,
-                    count=count,
-                    recursive=False,
-                )
+                out_struct = self.deref_record_struct(out_struct, io_stream, count)
 
         out_struct["levelname"] = out_struct["expr"]
         return out_struct
