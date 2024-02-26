@@ -157,7 +157,7 @@ class Script(QtWidgets.QWidget):
                 self,
                 caption="Open File",
                 directory=str(self.app.app_dir / "scripts"),
-                filter="Any (*.py)"
+                filter="Script (*.py);; Any (*.*)"
             )
         if filename:
             if not os.path.exists(filename):
@@ -178,7 +178,7 @@ class Script(QtWidgets.QWidget):
                 self,
                 tr("Save new script to..."),
                 directory=str(self.app.app_dir / "scripts"),
-                filter="Any (*.py)",
+                filter="Script (*.py);; Any (*.*)"
             )
         if filename:
             self.ui.plaintextSource.file.save()

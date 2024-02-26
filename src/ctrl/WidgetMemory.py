@@ -109,7 +109,7 @@ class Memory(QtWidgets.QWidget):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             caption="Save bin as...",
-            filter="Bin (*.bin); Any (*.*)",
+            filter="Bin (*.bin);; Any (*.*)",
         )
         if filename:
             mem.seek(model.viewAddress)
