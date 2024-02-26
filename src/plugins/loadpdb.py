@@ -295,7 +295,8 @@ class LoadPdb(Plugin):
 
         if isinstance(out_struct["fields"], list):
             array = []
-            for x in out_struct["fields"]:
+            _take_count = len(out_struct["fields"]) if count == 0 else count
+            for x in out_struct["fields"][: _take_count]:
                 cut_pos = len(x["levelname"])
                 row = []
                 self._flatten_dict(x, row)
@@ -306,7 +307,7 @@ class LoadPdb(Plugin):
             backup = pickle.dumps(out_struct)
 
             array = []
-            for n in range(count):
+            for n in range(max(1, count)):
                 copied = pickle.loads(backup)
                 copied["levelname"] = "[%d]" % n
                 self._shift_addr(copied, n * out_struct["size"])

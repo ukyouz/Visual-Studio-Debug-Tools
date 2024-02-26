@@ -52,6 +52,7 @@ class BinParser(QtWidgets.QWidget):
 
         # events
         self.ui.btnParse.clicked.connect(self._onBtnParseClicked)
+        self.ui.checkParseTable.clicked.connect(self._onCheckParseTableClicked)
         self.ui.lineStruct.returnPressed.connect(self._onBtnParseClicked)
         self.ui.lineOffset.returnPressed.connect(self._onBtnParseClicked)
         self.ui.lineOffset.editingFinished.connect(self._onLineOffsetChanged)
@@ -108,6 +109,16 @@ class BinParser(QtWidgets.QWidget):
             model = self.ui.tableView.model()
             if isinstance(model, qtmodel.StructTableModel):
                 model.toggleCharMode(self.ui.btnToggleChar.isChecked())
+
+    def _onCheckParseTableClicked(self):
+        is_array = self.ui.checkParseTable.isChecked()
+        old_count = self.ui.spinParseCount.value()
+        if is_array:
+            if old_count == 1:
+                self.ui.spinParseCount.setValue(0)
+        else:
+            if old_count == 0:
+                self.ui.spinParseCount.setValue(1)
 
     def _onBtnParseClicked(self):
         structname = self.ui.lineStruct.text()
