@@ -1,3 +1,4 @@
+import csv
 import io
 import math
 import os
@@ -653,6 +654,20 @@ class StructTableModel(QtCore.QAbstractTableModel):
     def toggleCharMode(self, charmode: bool):
         self.char_mode = charmode
         self.refresh()
+
+    def getTextFromIndexes(self, indexes: list[QtCore.QModelIndex]=None) -> str:
+        if indexes is None:
+            indexes = [self.index(r, c) for r in range(self.rowCount()) for c in range(self.columnCount())]
+        cols = set(i.column() for i in indexes)
+        headers = [self.headerData(c, QtCore.Qt.Orientation.Horizontal) for c in cols]
+        rows = defaultdict(list)
+        for ind in indexes:
+            rows[ind.row()].append(self.data(ind))
+        csvf = io.StringIO()
+        csvwriter = csv.writer(csvf, lineterminator='\n')
+        csvwriter.writerow(headers)
+        csvwriter.writerows(rows.values(), )
+        return csvf.getvalue()
 
 
 def get_icon(filename):

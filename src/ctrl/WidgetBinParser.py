@@ -2,10 +2,12 @@ import io
 import sys
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from typing import Literal
 from typing import Optional
 
 from PyQt6 import QtCore
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -61,6 +63,58 @@ class BinParser(QtWidgets.QWidget):
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
+        self.ui.tableView.installEventFilter(self)
+
+    def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
+        if obj == self.ui.tableView:
+            model = self.ui.tableView.model()
+            selected_indexes = self.ui.tableView.selectedIndexes()
+            if evt.type() == QtCore.QEvent.Type.KeyPress:
+                key = evt.key()
+                modifiers = evt.modifiers()
+                ctrl = modifiers & QtCore.Qt.KeyboardModifier.ControlModifier
+                if ctrl and key == ord("C"):
+                    if len(selected_indexes) > 1:
+                        if isinstance(model, qtmodel.StructTableModel):
+                            txt = model.getTextFromIndexes(selected_indexes)
+                            cb = QtGui.QGuiApplication.clipboard()
+                            cb.setText(txt, mode=cb.Clipboard)
+                            print(txt)
+                            return True
+        return False
+
+    def export_as_csv(self):
+        if self.fileio:
+            bin_fname = "/" + str(Path(self.fileio.name).with_suffix(".csv"))
+        else:
+            bin_fname = ""
+        dialog = QtWidgets.QFileDialog(self)
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            caption="Save as csv...",
+            directory=dialog.directory().filePath(bin_fname),
+            filter="CSV files (*.csv);; Any (*.*)"
+        )
+        if filename:
+            page = self.ui.stackedWidget.currentWidget()
+            if page is self.ui.pageTable:
+                model = self.ui.tableView.model()
+                if isinstance(model, qtmodel.StructTableModel):
+                    txt = model.getTextFromIndexes()
+                    try:
+                        with open(filename, "w") as fs:
+                            fs.write(txt)
+                        QtWidgets.QMessageBox.information(
+                            self,
+                            self.__class__.__name__,
+                            "Successfully exported table!\n%r" % filename,
+                        )
+                    except Exception as e:
+                        QtWidgets.QMessageBox.warning(
+                            self,
+                            self.__class__.__name__,
+                            "Error exported file! %s" % e,
+                        )
 
     @property
     def parse_offset(self):

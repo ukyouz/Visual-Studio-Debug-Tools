@@ -55,6 +55,15 @@ class BinViewer(AppCtrl):
             translator.Translator(self),
         ])
 
+        self.cmd.register("ExportParsingResultAsCsvFile", self._export_active_window)
+        self.setupMenues(self.menu("Tool"), [
+            {
+                "name": "Export parsing result as csv...",
+                "command": "ExportParsingResultAsCsvFile",
+                "position": 0,
+            },
+        ])
+
         if filenames:
             for f in filenames:
                 if os.path.isfile(f):
@@ -98,6 +107,12 @@ class BinViewer(AppCtrl):
         window = self.ui.mdiArea.addSubWindow(widget)
         widget.show()
         self.subwidgets.append(window)
+
+    def _export_active_window(self):
+        win = self.ui.mdiArea.activeSubWindow()
+        widget = win.widget()
+        if getattr(widget, "export_as_csv"):
+            widget.export_as_csv()
 
 
 if __name__ == '__main__':
