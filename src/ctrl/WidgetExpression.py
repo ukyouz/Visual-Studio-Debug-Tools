@@ -8,6 +8,7 @@ from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
 from plugins import loadpdb
 from view import WidgetExpression
@@ -36,7 +37,7 @@ class Expression(QtWidgets.QWidget):
 
     def _init_ui(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
-        empty_struct = pdb.parse_struct("")
+        empty_struct = pdb.parse_expr_to_struct("")
         model = qtmodel.StructTreeModel(empty_struct)
         model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
@@ -95,11 +96,6 @@ class Expression(QtWidgets.QWidget):
         def _cb(struct_record):
             self.ui.lineStruct.setEnabled(True)
             if struct_record is None:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    self.__class__.__name__,
-                    "Expression is invalid",
-                )
                 return
             self.ui.lineStruct.setText("")
             self.parse_hist.add_data(expr)
@@ -108,16 +104,24 @@ class Expression(QtWidgets.QWidget):
                 model.loadStream(dbg.get_memory_stream())
                 model.appendItem(struct_record)
 
-        def _err(*args):
-            QtWidgets.QMessageBox.warning(
-                self,
-                "PDB Error!",
-                repr(args),
-            )
+        def _err(err, traceback):
+            match err:
+                case InvalidExpression():
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        self.__class__.__name__,
+                        "Invalid Expression: %s" % str(err),
+                    )
+                case _:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "PDB Error!",
+                        repr(err),
+                    )
 
         self.ui.lineStruct.setEnabled(False)
         self.app.exec_async(
-            pdb.query_expression,
+            pdb.query_struct,
             expr=expr,
             virtual_base=virt_base,
             io_stream=dbg.get_memory_stream(),
@@ -131,8 +135,6 @@ class Expression(QtWidgets.QWidget):
         model = self.ui.treeView.model()
         item = parent.internalPointer().copy()
 
-        struct = item["lf"].utypeRef.name
-
         def _cb(struct_record):
             if struct_record is None:
                 item["levelname"] = "load failed"
@@ -142,13 +144,11 @@ class Expression(QtWidgets.QWidget):
                 item["fields"] = struct_record["fields"]
                 model.setItem(item, parent)
 
-        notation = "->" if count == 1 else ""
         self.app.exec_async(
-            pdb.parse_struct,
-            structname=struct,
-            expr=item["expr"] + notation,
-            addr=address,
+            pdb.deref_struct,
+            struct=item,
             count=count,
+            io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
         )
 
@@ -160,20 +160,6 @@ class Expression(QtWidgets.QWidget):
 
         item = parent.internalPointer().copy()
 
-        # TODO: use C syntax parse for more robust parsing
-        match = re.match(r"(?P<STRUCT>.+)\*", ref_struct.strip())
-        if match is None:
-            QtWidgets.QMessageBox.warning(
-                self,
-                self.__class__.__name__,
-                "Invalid struct pointer type: %r" % ref_struct,
-            )
-            item["fields"] = None
-            model.setItem(item, parent)
-            return
-
-        struct = match["STRUCT"].strip()
-
         def _cb(struct_record):
             if struct_record is None:
                 item["levelname"] = "load failed"
@@ -183,14 +169,28 @@ class Expression(QtWidgets.QWidget):
             item["fields"] = struct_record["fields"]
             model.setItem(item, parent)
 
-        notation = "->" if count == 1 else ""
+        def _err(err, traceback):
+            match err:
+                case InvalidExpression():
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        self.__class__.__name__,
+                        "Invalid Expression: %s" % str(err),
+                    )
+                case _:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "PDB Error!",
+                        repr(err),
+                    )
+
         self.app.exec_async(
-            pdb.parse_struct,
-            structname=struct,
-            expr="((%s)(%s))%s" % (ref_struct, item["expr"], notation),
-            addr=address,
+            pdb.deref_struct,
+            struct=item,
             count=count,
+            io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
+            errored_cb=_err,
         )
 
     def _onBtnToggleHexClicked(self):

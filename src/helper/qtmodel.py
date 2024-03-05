@@ -15,6 +15,9 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
+from modules.utils.myfunc import BITMASK
+from modules.utils.typ import Stream
+
 
 def bytes_to_ascii(data: bytes):
     string = [chr(x) if 32 <= x <= 126 else "." for x in data]
@@ -25,20 +28,6 @@ def is_cstring(data: bytes):
     if 0 in data:
         data = data[: data.index(0)]
     return all(32 <= x <= 126 for x in data)
-
-
-class Stream(Protocol):
-    def seek(self, offset: int, pos: int=os.SEEK_SET, /) -> int:
-        ...
-
-    def read(self, size: int) -> bytes:
-        ...
-
-    def write(self, buf: bytes, /) -> int:
-        ...
-
-    def tell(self) -> int:
-        ...
 
 
 class HexTable(QtCore.QAbstractTableModel):
@@ -239,11 +228,6 @@ def iter_children(data: Any):
         yield x
 
 
-@lru_cache
-def bitmask(bitcnt):
-    return (1 << bitcnt) - 1
-
-
 def _calc_val(fileio: Stream, item: dict) -> Any:
     if not item.get("_refresh_requested", False) and item.get("value", None):
         # return cached value unless _refresh_requested set to True
@@ -264,7 +248,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
         item["_is_invalid"] = True
         return 0
     if boff is not None and bsize is not None:
-        val = (val >> boff) & bitmask(bsize)
+        val = (val >> boff) & BITMASK(bsize)
 
     old_value = item.get("value", None)
     item["_changed_since_prev"] = old_value is not None and old_value != val
@@ -435,8 +419,8 @@ class StructTreeModel(AbstractTreeModel):
             self.fileio.seek(base)
             old_val = self.fileio.read(size)
             if boff and bsize:
-                val = (val & bitmask(bsize))
-                new_val = old_val & ~(bitmask(bsize) << boff)
+                val = (val & BITMASK(bsize))
+                new_val = old_val & ~(BITMASK(bsize) << boff)
                 new_val |= val << boff
             else:
                 new_val = val

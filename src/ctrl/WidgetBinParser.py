@@ -1,4 +1,5 @@
 import io
+import logging
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -16,6 +17,8 @@ from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import loadpdb
 from view import WidgetBinParser
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -119,8 +122,10 @@ class BinParser(QtWidgets.QWidget):
     @property
     def parse_offset(self):
         try:
-            return eval(self.ui.lineOffset.text())
-        except:
+            pdb = self.app.plugin(loadpdb.LoadPdb)
+            return pdb.query_struct(self.ui.lineOffset.text())["value"]
+        except Exception as e:
+            logger.warning(e)
             return 0
 
     def _onFileOpened(self, filename=False):
@@ -236,20 +241,18 @@ class BinParser(QtWidgets.QWidget):
         count = self.ui.spinParseCount.value()
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
-                pdb.parse_array,
+                pdb.parse_expr_to_table,
                 structname,
                 addr=self.parse_offset,
-                expr="",
                 count=count,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
         else:
             self.app.exec_async(
-                pdb.parse_struct,
+                pdb.parse_expr_to_struct,
                 structname,
                 addr=self.parse_offset,
-                expr=structname,
                 count=count,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,

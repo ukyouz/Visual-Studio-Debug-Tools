@@ -9,6 +9,7 @@ a = Analysis(
         ('view/images/*.ico', 'view/images/'),
         ('langs/*.qm', 'langs/'),
         ('scripts', 'scripts/'),
+        ('libs/*.so', 'libs/'),
     ],
     hiddenimports=[],
     hookspath=[],
