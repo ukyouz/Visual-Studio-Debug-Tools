@@ -57,3 +57,5 @@ Then load the `.pdbin` file, it will make you life easier.
 - C
 
 Due to limitations of pdb parser in my other repo, currently only support C. May be extended in the future.
+
+Though I might use the EnvDTE Interface for the debugger, wish I have time to migrate to that.
