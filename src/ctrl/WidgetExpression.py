@@ -1,4 +1,4 @@
-import re
+import logging
 import sys
 
 from PyQt6 import QtCore
@@ -12,6 +12,8 @@ from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
 from plugins import loadpdb
 from view import WidgetExpression
+
+logger = logging.getLogger(__name__)
 
 
 class Expression(QtWidgets.QWidget):
@@ -90,8 +92,8 @@ class Expression(QtWidgets.QWidget):
             else:
                 self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
                 return
-        # print("Virtual Base:", hex(virt_base))
         expr = self.ui.lineStruct.text()
+        logger.debug("Add: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
 
         def _cb(struct_record):
             self.ui.lineStruct.setEnabled(True)
@@ -144,6 +146,8 @@ class Expression(QtWidgets.QWidget):
                 item["fields"] = struct_record["fields"]
                 model.setItem(item, parent)
 
+        logger.debug("Expand: %r" % item["expr"])
+
         self.app.exec_async(
             pdb.deref_struct,
             struct=item,
@@ -183,6 +187,7 @@ class Expression(QtWidgets.QWidget):
                         "PDB Error!",
                         repr(err),
                     )
+        logger.debug("Casting: '(%s)%s', Count = %d" % (item["type"], item["expr"], count))
 
         self.app.exec_async(
             pdb.deref_struct,

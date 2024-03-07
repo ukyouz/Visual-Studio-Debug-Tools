@@ -82,7 +82,6 @@ class BinParser(QtWidgets.QWidget):
                             txt = model.getTextFromIndexes(selected_indexes)
                             cb = QtGui.QGuiApplication.clipboard()
                             cb.setText(txt, mode=cb.Clipboard)
-                            print(txt)
                             return True
         return False
 

@@ -71,10 +71,10 @@ class Debugger(Plugin):
         if self.pd is None:
             return
 
-    def get_memory_stream(self):
+    def get_memory_stream(self) -> DebuggerStream:
         return DebuggerStream(self.pd)
 
-    def get_virtual_base(self):
+    def get_virtual_base(self) -> int | None:
         if self.pd is None:
             return None
         return self.pd.proc.get_main_module().get_base()
