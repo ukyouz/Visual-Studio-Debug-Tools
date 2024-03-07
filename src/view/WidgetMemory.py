@@ -92,7 +92,7 @@ class Ui_Form(object):
         self.tableMemory.setObjectName("tableMemory")
         self.tableMemory.verticalHeader().setDefaultSectionSize(18)
         self.tableMemory.verticalHeader().setMinimumSectionSize(18)
-        self.tableMemory.verticalHeader().setStretchLastSection(True)
+        self.tableMemory.verticalHeader().setStretchLastSection(False)
         self.verticalLayout.addWidget(self.tableMemory)
         self.verticalLayout_2.addWidget(self.frame_3)
 
