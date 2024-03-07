@@ -11,6 +11,7 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
+from ctrl.qtapp import i18n
 from ctrl.WidgetPicklePdb import PicklePdb
 from helper import qtmodel
 from modules.pdbparser.pdbparser import pdb
@@ -20,6 +21,7 @@ from modules.treesitter.expr_parser import query_struct_from_expr
 from modules.utils.myfunc import BITMASK
 from modules.utils.typ import Stream
 
+tr = lambda txt: i18n("LoadPdb", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -298,7 +300,9 @@ class LoadPdb(Plugin):
         array = self._tabulate_a_struct(out_struct, count)
         return array
 
-    def query_struct(self, expr: str, virtual_base: int=0, io_stream=None) -> ViewStruct:
+    def query_struct(self, expr: str, virtual_base: int | None=0, io_stream=None) -> ViewStruct:
+        if virtual_base is None:
+            raise ValueError(tr("`virtual_base` is None! Maybe forgot to attach to a live process?"))
         struct = query_struct_from_expr(self._pdb, expr, virtual_base, io_stream)
         struct["levelname"] = expr
         _add_expr(struct, expr)
