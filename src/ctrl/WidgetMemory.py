@@ -41,8 +41,7 @@ class Memory(QtWidgets.QWidget):
         self.ui.lineSize.returnPressed.connect(self._loadMemory)
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
 
-    @property
-    def requestAddress(self):
+    def requestAddress(self) -> int:
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -61,8 +60,7 @@ class Memory(QtWidgets.QWidget):
             logger.warning(e)
             return 0
 
-    @property
-    def requestSize(self):
+    def requestSize(self) -> int:
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -117,11 +115,11 @@ class Memory(QtWidgets.QWidget):
 
         mem = dbg.get_memory_stream()
         model = qtmodel.HexTable(mem)
-        model.viewAddress = self.requestAddress
-        model.viewSize = self.requestSize
+        model.viewAddress = self.requestAddress()
+        model.viewSize = self.requestSize()
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
-        self.ui.labelAddress.setText(hex(self.requestAddress))
+        self.ui.labelAddress.setText(hex(self.requestAddress()))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
     def dumpBuffer(self):
