@@ -261,6 +261,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
 class StructTreeModel(AbstractTreeModel):
     pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
     pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, int, str)
+    exprChanged = QtCore.pyqtSignal(QtCore.QModelIndex)
 
     headers = [
         "Levelname",
@@ -318,7 +319,11 @@ class StructTreeModel(AbstractTreeModel):
         if item is None:
             return flags
 
-        if tag == "value":
+        if tag == "levelname":
+            if not self.parent(index).isValid():
+                # can only edit root item
+                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        elif tag == "value":
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "count":
             p_item = self.itemFromIndex(self.parent(index))
@@ -380,9 +385,6 @@ class StructTreeModel(AbstractTreeModel):
                             return str(val)
             case QtCore.Qt.ItemDataRole.ToolTipRole:
                 return item.get("expr", None)
-            case QtCore.Qt.ItemDataRole.FontRole:
-                if tag in {"value", "count", "address"}:
-                    return QtGui.QFont("Consolas")
             case QtCore.Qt.ItemDataRole.ForegroundRole:
                 # QTreeView request order:
                 #   - ForegroundRole
@@ -395,7 +397,8 @@ class StructTreeModel(AbstractTreeModel):
                     if item.get("_changed_since_prev", False):
                         return QtGui.QColor("red")
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
-                    return QtGui.QColor("blue")
+                    if index.column() != 0:
+                        return QtGui.QColor("blue")
             case QtCore.Qt.ItemDataRole.BackgroundRole:
                 if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
                     return QtGui.QColor("#f0d6d5")
@@ -406,7 +409,13 @@ class StructTreeModel(AbstractTreeModel):
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
-        if tag == "value":
+        if tag == "levelname":
+            if value == item["expr"] or value == "":
+                return False
+            item["expr"] = value
+            self.exprChanged.emit(index)
+            return True
+        elif tag == "value":
             try:
                 val = eval(value)
             except:
@@ -515,6 +524,7 @@ class StructTreeModel(AbstractTreeModel):
     def setItem(self, record: dict, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
         new_count = len(record["fields"]) if record["fields"] else 0
+        parent = index.parent()
         if row_count := self.rowCount(index):
             self.removeRows(0, row_count - 1, index)
         if new_count:
@@ -523,6 +533,9 @@ class StructTreeModel(AbstractTreeModel):
             item.update(record)
             self.endInsertRows()
             self.layoutChanged.emit()
+        else:
+            item.update(record)
+        self.dataChanged.emit(index, index)
 
     def refreshIndex(self, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)

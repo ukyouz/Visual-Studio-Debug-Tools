@@ -47,6 +47,7 @@ class Expression(QtWidgets.QWidget):
         model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
         model.pvoidStructChanged.connect(self._lazy_cast_pointer)
+        model.exprChanged.connect(self._change_expr)
         self.ui.treeView.setModel(model)
 
     def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
@@ -129,6 +130,46 @@ class Expression(QtWidgets.QWidget):
             pdb.query_struct,
             expr=expr,
             virtual_base=virt_base,
+            io_stream=dbg.get_memory_stream(),
+            finished_cb=_cb,
+            errored_cb=_err,
+        )
+
+    def _change_expr(self, parent):
+        dbg = self.app.plugin(debugger.Debugger)
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        model = self.ui.treeView.model()
+        item = parent.internalPointer()
+
+        def _cb(struct_record):
+            if struct_record is None:
+                item["levelname"] = "load failed"
+                return
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.loadStream(dbg.get_memory_stream())
+                model.setItem(struct_record, parent)
+
+        def _err(err, traceback):
+            match err:
+                case InvalidExpression():
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        self.__class__.__name__,
+                        "Invalid Expression: %s" % str(err),
+                    )
+                case _:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "PDB Error!",
+                        repr(err),
+                    )
+
+        logger.debug("Expand: %r" % item["expr"])
+
+        self.app.exec_async(
+            pdb.query_struct,
+            expr=item["expr"],
+            virtual_base = dbg.get_virtual_base(),
             io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=_err,
