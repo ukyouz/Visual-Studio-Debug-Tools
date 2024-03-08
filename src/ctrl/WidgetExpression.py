@@ -2,6 +2,7 @@ import logging
 import sys
 
 from PyQt6 import QtCore
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -34,6 +35,8 @@ class Expression(QtWidgets.QWidget):
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
         self.ui.treeView.installEventFilter(self)
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
+        self.ui.treeView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.treeView.customContextMenuRequested.connect(self._onContextMenuOpened)
 
         self._init_ui()
 
@@ -203,6 +206,27 @@ class Expression(QtWidgets.QWidget):
         if isinstance(model, qtmodel.StructTreeModel):
             checked = self.ui.btnToggleHex.isChecked()
             model.toggleHexMode(checked)
+
+    def _onContextMenuOpened(self, position):
+        indexes = [i for i in self.ui.treeView.selectedIndexes() if i.column() == 0]
+        model = self.ui.treeView.model()
+        if not isinstance(model, qtmodel.StructTreeModel):
+            return
+
+        menu = QtWidgets.QMenu()
+        if len(indexes) == 1:
+            item = model.itemFromIndex(indexes[0])
+            action = menu.addAction("Copy Expression")
+            action.triggered.connect(lambda: QtGui.QGuiApplication.clipboard().setText(item["expr"]))
+
+        menu.addSeparator()
+
+        if len(indexes):
+            action = menu.addAction("Refresh")
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
+
+        menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
 
     def refreshTree(self, index: QtCore.QModelIndex):
         index = index or QtCore.QModelIndex()
