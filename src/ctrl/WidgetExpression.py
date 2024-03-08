@@ -1,5 +1,7 @@
+import functools
 import logging
 import sys
+from contextlib import contextmanager
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -15,6 +17,22 @@ from plugins import loadpdb
 from view import WidgetExpression
 
 logger = logging.getLogger(__name__)
+
+
+def _err(widget, err, traceback):
+    match err:
+        case InvalidExpression():
+            QtWidgets.QMessageBox.warning(
+                widget,
+                widget.__class__.__name__,
+                "Invalid Expression: %s" % str(err),
+            )
+        case _:
+            QtWidgets.QMessageBox.warning(
+                widget,
+                "PDB Error!",
+                repr(err),
+            )
 
 
 class Expression(QtWidgets.QWidget):
@@ -46,7 +64,6 @@ class Expression(QtWidgets.QWidget):
         model = qtmodel.StructTreeModel(empty_struct)
         model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
-        model.pvoidStructChanged.connect(self._lazy_cast_pointer)
         model.exprChanged.connect(self._change_expr)
         self.ui.treeView.setModel(model)
 
@@ -100,7 +117,6 @@ class Expression(QtWidgets.QWidget):
         logger.debug("Add: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
 
         def _cb(struct_record):
-            self.ui.lineStruct.setEnabled(True)
             if struct_record is None:
                 return
             self.ui.lineStruct.setText("")
@@ -112,29 +128,17 @@ class Expression(QtWidgets.QWidget):
             for c in range(2, model.columnCount()):
                 self.ui.treeView.resizeColumnToContents(c)
 
-        def _err(err, traceback):
-            match err:
-                case InvalidExpression():
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        self.__class__.__name__,
-                        "Invalid Expression: %s" % str(err),
-                    )
-                case _:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "PDB Error!",
-                        repr(err),
-                    )
-
-        self.ui.lineStruct.setEnabled(False)
         self.app.exec_async(
             pdb.query_struct,
             expr=expr,
             virtual_base=virt_base,
             io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
-            errored_cb=_err,
+            errored_cb=functools.partial(_err, self),
+            block_UIs=[
+                self.ui.lineStruct,
+                self.ui.treeView,
+            ],
         )
 
     def _change_expr(self, parent):
@@ -151,21 +155,6 @@ class Expression(QtWidgets.QWidget):
                 model.loadStream(dbg.get_memory_stream())
                 model.setItem(struct_record, parent)
 
-        def _err(err, traceback):
-            match err:
-                case InvalidExpression():
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        self.__class__.__name__,
-                        "Invalid Expression: %s" % str(err),
-                    )
-                case _:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "PDB Error!",
-                        repr(err),
-                    )
-
         logger.debug("Expand: %r" % item["expr"])
 
         self.app.exec_async(
@@ -174,66 +163,29 @@ class Expression(QtWidgets.QWidget):
             virtual_base = dbg.get_virtual_base(),
             io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
-            errored_cb=_err,
+            errored_cb=functools.partial(_err, self),
+            block_UIs=[
+                self.ui.treeView,
+            ],
         )
 
-    def _lazy_load_pointer(self, parent, address, count):
+    def _lazy_load_pointer(self, parent, count):
         dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
-        model = self.ui.treeView.model()
         item = parent.internalPointer().copy()
 
         def _cb(struct_record):
+            model = self.ui.treeView.model()
+            assert isinstance(model, qtmodel.StructTreeModel), "Only StructTreeModel available here"
             if struct_record is None:
-                item["levelname"] = "load failed"
-                return
-            if isinstance(model, qtmodel.StructTreeModel):
-                model.loadStream(dbg.get_memory_stream())
-                item["fields"] = struct_record["fields"]
-                model.setItem(item, parent)
-
-        logger.debug("Expand: %r" % item["expr"])
-
-        self.app.exec_async(
-            pdb.deref_struct,
-            struct=item,
-            count=count,
-            io_stream=dbg.get_memory_stream(),
-            finished_cb=_cb,
-        )
-
-    def _lazy_cast_pointer(self, parent, address: int, count: int, ref_struct: str):
-        dbg = self.app.plugin(debugger.Debugger)
-        pdb = self.app.plugin(loadpdb.LoadPdb)
-        model = self.ui.treeView.model()
-        assert isinstance(model, qtmodel.StructTreeModel), "Only StructTreeModel available here"
-
-        item = parent.internalPointer().copy()
-
-        def _cb(struct_record):
-            if struct_record is None:
-                item["levelname"] = "load failed"
+                item["fields"][0]["levelname"] = "> err: load failed!"
                 model.setItem(item, parent)
                 return
             model.loadStream(dbg.get_memory_stream())
             item["fields"] = struct_record["fields"]
             model.setItem(item, parent)
 
-        def _err(err, traceback):
-            match err:
-                case InvalidExpression():
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        self.__class__.__name__,
-                        "Invalid Expression: %s" % str(err),
-                    )
-                case _:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "PDB Error!",
-                        repr(err),
-                    )
-        logger.debug("Casting: '(%s)%s', Count = %d" % (item["type"], item["expr"], count))
+        logger.debug("Expand: '(%s)%s', Count = %d" % (item["type"], item["expr"], count))
 
         self.app.exec_async(
             pdb.deref_struct,
@@ -241,7 +193,10 @@ class Expression(QtWidgets.QWidget):
             count=count,
             io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
-            errored_cb=_err,
+            errored_cb=functools.partial(_err, self),
+            block_UIs=[
+                self.ui.treeView,
+            ],
         )
 
     def _onBtnToggleHexClicked(self):

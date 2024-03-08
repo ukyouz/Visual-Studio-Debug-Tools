@@ -100,10 +100,18 @@ class AppCtrl(QtWidgets.QMainWindow):
     def _print_error_thread(self, expt, tb):
         logger.error(tb)
 
-    def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, **kwargs):
+    def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, block_UIs=None, **kwargs):
+        block_UIs = block_UIs or []
+        for ui in block_UIs:
+            ui.setEnabled(False)
+        def _enable_ui(*_):
+            for ui in block_UIs:
+                ui.setEnabled(True)
+
         worker = Runnable(fn, *args, **kwargs)
         if finished_cb:
             worker.finished.connect(finished_cb)
+        worker.finished.connect(_enable_ui)
         worker.errored.connect(self._print_error_thread)
         if errored_cb:
             worker.errored.connect(errored_cb)

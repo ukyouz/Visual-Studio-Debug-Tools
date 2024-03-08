@@ -263,8 +263,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
 
 
 class StructTreeModel(AbstractTreeModel):
-    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
-    pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, int, str)
+    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int)
     exprChanged = QtCore.pyqtSignal(QtCore.QModelIndex)
 
     headers = [
@@ -454,14 +453,14 @@ class StructTreeModel(AbstractTreeModel):
             item["_is_pvoid"] = True
             item[tag] = value
             count = item.get("_count", 1)
-            self.pvoidStructChanged.emit(index, _calc_val(self.fileio, item), count, value)
+            self.pointerDereferenced.emit(index, count)
             return True
         elif tag == "count":
             old_value = item.get("_count", 1)
             if value == old_value or value <= 0:
                 return False
             item["_count"] = value
-            self.pointerDereferenced.emit(index, _calc_val(self.fileio, item), value)
+            self.pointerDereferenced.emit(index, value)
             return True
         return False
 
@@ -517,7 +516,7 @@ class StructTreeModel(AbstractTreeModel):
         item["is_pointer"] = False  # psuedo node is not real pointer
         item["fields"] = None
         self.dataChanged.emit(index, index)
-        self.pointerDereferenced.emit(parent, _calc_val(self.fileio, item), item.get("_count", 1))
+        self.pointerDereferenced.emit(parent, item.get("_count", 1))
 
     def appendItem(self, record: dict, parent=QtCore.QModelIndex()):
         last_row = self.rowCount()
