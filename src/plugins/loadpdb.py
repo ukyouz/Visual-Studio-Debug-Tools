@@ -117,12 +117,12 @@ def _shift_addr(s: pdb.StructRecord, shift: int=0):
 
 
 def _add_expr(s: ViewStruct, expr: str):
-    s["expr"] = expr
+    if expr.endswith("->") or expr.endswith("."):
+        notation = ""
+    else:
+        notation = "->" if s.get("is_pointer", False) else "."
+    s["expr"] = expr.rstrip(notation)
     if isinstance(s["fields"], dict):
-        if expr.endswith("->") or expr.endswith("."):
-            notation = ""
-        else:
-            notation = "->" if s.get("is_pointer", False) else "."
         for c in s["fields"].values():
             _add_expr(c, expr + notation + c["levelname"])
     elif isinstance(s["fields"], list):
@@ -141,6 +141,13 @@ def _flatten_dict(s: pdb.StructRecord, out: list):
             _flatten_dict(c, out)
     else:
         out.append(s)
+
+
+def _remove_extra_paren(expr: str) -> str:
+    expr = expr.strip()
+    while expr.startswith("(") and expr.endswith(")"):
+        expr = expr[1: -1].strip()
+    return expr
 
 
 class LoadPdb(Plugin):
@@ -311,17 +318,17 @@ class LoadPdb(Plugin):
     def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1) -> ViewStruct:
         if count == 0:
             raise ValueError("Deref count at least 1, got: %d" % count)
-        _type = struct["type"]
-        if _type.startswith("(") and _type.endswith(")"):
-            _type = _type[1: -1]
+        _type = _remove_extra_paren(struct["type"])
         addr = struct["value"] or _read_value(struct, io_stream)
-        expr = "*(({}){:#08x})".format(_type, addr)
+        expr = "*((%s)%d)" % (_type, addr)
         out_struct = query_struct_from_expr(self._pdb, expr, io_stream=io_stream)
 
-        expr = struct.get("expr", "") or ""
+        _expr = _remove_extra_paren(struct.get("expr", "") or "")
         if count == 1:
-            expr = "*(%s)" % expr
-        out_struct = self._duplicate_as_array(expr, out_struct, count)
+            _expr = "(%s)->" % _expr
+        else:
+            _expr = "(%s)" % _expr
+        out_struct = self._duplicate_as_array(_expr, out_struct, count)
 
         return out_struct
 
