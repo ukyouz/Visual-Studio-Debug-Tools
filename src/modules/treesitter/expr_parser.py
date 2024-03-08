@@ -167,10 +167,11 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 # foo->bar
                 struct = _walk_syntax_node(childs[0])
                 _assert(isinstance(struct, dict), "Not a struct: %r" % childs[0].text)
-                notation = childs[1].text.decode()
+                notation = childs[1].type
                 field = childs[2].text.decode()
                 if notation == ".":
-                    _assert(isinstance(struct["fields"], dict), "Field not exists: b%r" % field)
+                    _assert(struct["fields"] is not None, "Notation error for pointer: b'%s%s'" % (notation, field))
+                    _assert(not isinstance(struct["fields"], list), "Notation error for array: b'%s%s'" % (notation, field))
                     sub_struct = struct["fields"][field]
                 elif notation == "->":
                     struct = deref_pointer(p, io_stream, struct, None, childs[0].text)

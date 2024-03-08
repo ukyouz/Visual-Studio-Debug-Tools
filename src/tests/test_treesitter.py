@@ -41,7 +41,7 @@ def p() -> pdb.PDB7:
         ("4 + (gA.attr -=2)", "Not support assignment yet: b'gA.attr -=2'"),
         ("B.s->szBuffer[999]", "Index out of range: b'[999]'"),
         ("gA.afunc->c", "Fail to deref: b'gA.afunc'"),
-        ("gA.afunc.c", "Field not exists: b'c'"),
+        ("gA.afunc.c", "Notation error for pointer: b'.c'"),
         ("gA.afunc[1]", "Fail to deref: b'gA.afunc'"),
         ("gA.b[gA.attr]", "KeyError('b')"),
         ("gA.s->szBuffer[gA.attr]", "Shall be a pointer type, got: 'TextHolder'"),
