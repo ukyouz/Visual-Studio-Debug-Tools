@@ -13,11 +13,13 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
+from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import loadpdb
 from view import WidgetBinParser
 
+tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -109,13 +111,13 @@ class BinParser(QtWidgets.QWidget):
                         QtWidgets.QMessageBox.information(
                             self,
                             self.__class__.__name__,
-                            "Successfully exported table!\n%r" % filename,
+                            tr("Successfully exported table!\n%r") % filename,
                         )
                     except Exception as e:
                         QtWidgets.QMessageBox.warning(
                             self,
                             self.__class__.__name__,
-                            "Error exported file! %s" % e,
+                            tr("Error exported file! %s") % e,
                         )
 
     @property
@@ -228,13 +230,13 @@ class BinParser(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(
                     self,
                     "PDB Error!",
-                    "Invalid expression: %r" % structname,
+                    tr("Invalid expression: %r") % structname,
                 )
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "PDB Error!",
-                    "Please load pdbin first!",
+                    tr("Please load pdbin first!"),
                 )
 
         count = self.ui.spinParseCount.value()

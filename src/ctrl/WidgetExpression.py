@@ -9,6 +9,7 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
+from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
@@ -16,6 +17,7 @@ from plugins import debugger
 from plugins import loadpdb
 from view import WidgetExpression
 
+tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -25,12 +27,12 @@ def _err(widget, err, traceback):
             QtWidgets.QMessageBox.warning(
                 widget,
                 widget.__class__.__name__,
-                "Invalid Expression: %s" % str(err),
+                tr("Invalid Expression: %s") % str(err),
             )
         case _:
             QtWidgets.QMessageBox.warning(
                 widget,
-                "PDB Error!",
+                tr("PDB Error!"),
                 repr(err),
             )
 
@@ -101,7 +103,7 @@ class Expression(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                (
+                tr(
                     "You shall attach to a process before this operation.\n"
                     "Attach to current selected process and continue?"
                 ),
@@ -214,13 +216,13 @@ class Expression(QtWidgets.QWidget):
         menu = QtWidgets.QMenu()
         if len(indexes) == 1:
             item = model.itemFromIndex(indexes[0])
-            action = menu.addAction("Copy Expression")
+            action = menu.addAction(tr("Copy Expression"))
             action.triggered.connect(lambda: QtGui.QGuiApplication.clipboard().setText(item["expr"]))
 
         menu.addSeparator()
 
         if len(indexes):
-            action = menu.addAction("Refresh")
+            action = menu.addAction(tr("Refresh"))
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
 
