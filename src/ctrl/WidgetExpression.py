@@ -31,7 +31,7 @@ class Expression(QtWidgets.QWidget):
         # event bindingd
         self.ui.lineStruct.returnPressed.connect(self._addExpression)
         self.ui.btnParse.clicked.connect(self._addExpression)
-        self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
+        # self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
         self.ui.treeView.installEventFilter(self)
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
@@ -109,6 +109,8 @@ class Expression(QtWidgets.QWidget):
             if isinstance(model, qtmodel.StructTreeModel):
                 model.loadStream(dbg.get_memory_stream())
                 model.appendItem(struct_record)
+            for c in range(2, model.columnCount()):
+                self.ui.treeView.resizeColumnToContents(c)
 
         def _err(err, traceback):
             match err:

@@ -88,6 +88,8 @@ class HexTable(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ItemDataRole.BackgroundRole:
             if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
                 return QtGui.QColor("#f0d6d5")
+        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            return QtCore.Qt.AlignmentFlag.AlignCenter
 
     def rowCount(self, _=QtCore.QModelIndex()):
         return math.ceil((self.streamSize - self.viewOffset) / self._bytesPerRow)
@@ -111,6 +113,8 @@ class HexTable(QtCore.QAbstractTableModel):
                     return hex(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
                 case QtCore.Qt.ItemDataRole.FontRole:
                     return QtGui.QFont("Consolas")
+                case QtCore.Qt.ItemDataRole.TextAlignmentRole:
+                    return QtCore.Qt.AlignmentFlag.AlignCenter
 
     def flags(self, index):
         flags = super().flags(index)
