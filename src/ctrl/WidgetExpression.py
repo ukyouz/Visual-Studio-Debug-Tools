@@ -180,6 +180,8 @@ class Expression(QtWidgets.QWidget):
             model = self.ui.treeView.model()
             assert isinstance(model, qtmodel.StructTreeModel), "Only StructTreeModel available here"
             if struct_record is None:
+                item["fields"][0]["_is_invalid"] = True
+                item["fields"][0]["is_pointer"] = False
                 item["fields"][0]["levelname"] = "> err: load failed!"
                 model.setItem(item, parent)
                 return

@@ -103,6 +103,7 @@ def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):
         "gA",
         "sizeof(gA)",
         "(BDefPtr)100",
+        "gA.x[0]"
     ]
 )
 def test_good_expr(stream: TestStream, p: pdb.PDB7, expr: str):

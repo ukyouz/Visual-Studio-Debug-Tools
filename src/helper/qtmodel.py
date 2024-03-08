@@ -337,8 +337,10 @@ class StructTreeModel(AbstractTreeModel):
                         # only allow non-pvoid pointer be editable
                         flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "type" and self.allow_dereferece_pointer:
-            if item[tag].lower().endswith("pvoid") or item.get("_is_pvoid", False):
-                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+            if item["is_pointer"] and self.allow_dereferece_pointer:
+                tpname = item[tag].lower()
+                if tpname.endswith("pvoid") or tpname.endswith("t_void *") or item.get("_is_pvoid", False):
+                    flags |= QtCore.Qt.ItemFlag.ItemIsEditable
 
         if flags & QtCore.Qt.ItemFlag.ItemIsEditable:
             if item.get("_is_invalid", False):
