@@ -97,6 +97,13 @@ class HexTable(QtCore.QAbstractTableModel):
     def columnCount(self, index=QtCore.QModelIndex()):
         return self.column + self.show_preview
 
+    @property
+    def addrPrefix(self) -> tuple[str, int]:
+        last_addr = "{:#010x}".format((self.rowCount() - 1) * self._bytesPerRow + self.viewOffset + self.viewAddress)
+        base = ("{:#0%dx}" % len(last_addr)).format(self.viewAddress)
+        prefix = os.path.commonprefix((last_addr, base))
+        return prefix + "x" * (len(last_addr) - len(prefix)), len(prefix)
+
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int) -> Any:
         if orientation == QtCore.Qt.Orientation.Horizontal:
             match role:
@@ -110,7 +117,9 @@ class HexTable(QtCore.QAbstractTableModel):
         elif orientation == QtCore.Qt.Orientation.Vertical:
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
-                    return hex(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
+                    _, prefix_cnt = self.addrPrefix
+                    now = "{:#010x}".format(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
+                    return "..." + now[prefix_cnt:]
                 case QtCore.Qt.ItemDataRole.FontRole:
                     return QtGui.QFont("Consolas")
                 case QtCore.Qt.ItemDataRole.TextAlignmentRole:

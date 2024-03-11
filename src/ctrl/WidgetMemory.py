@@ -119,7 +119,7 @@ class Memory(QtWidgets.QWidget):
         model.viewSize = self.requestSize()
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
-        self.ui.labelAddress.setText(hex(self.requestAddress()))
+        self.ui.labelAddress.setText("Address: {}".format(model.addrPrefix[0]))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
     def dumpBuffer(self):
