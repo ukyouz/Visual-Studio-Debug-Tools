@@ -13,7 +13,6 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
-from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
