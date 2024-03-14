@@ -4,10 +4,8 @@ import math
 import os
 from collections import defaultdict
 from contextlib import suppress
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from typing import Protocol
 from typing import Sequence
 from typing import Union
 
@@ -288,6 +286,7 @@ class StructTreeModel(AbstractTreeModel):
         self.fileio = io.BytesIO()
         self.hex_mode = True
         self.allow_dereferece_pointer = False
+        self.allow_edit_top_expr = True
         self._value_version = 0
 
     def child(self, row, parent):
@@ -332,7 +331,7 @@ class StructTreeModel(AbstractTreeModel):
             return flags
 
         if tag == "levelname":
-            if not self.parent(index).isValid():
+            if self.allow_edit_top_expr and not self.parent(index).isValid():
                 # can only edit root item
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "value":

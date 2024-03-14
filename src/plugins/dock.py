@@ -9,6 +9,7 @@ from ctrl.qtapp import Plugin
 from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
+from helper import qtmodel
 
 
 class Dock(Plugin):
@@ -62,9 +63,10 @@ class Dock(Plugin):
         titelbar.ui.btnMore.setMenu(menu)
         return dockWidget
 
-    def _addAction(self, menu, title, cb):
+    def _addAction(self, menu, title, cb=None):
         action = menu.addAction(title)
-        action.triggered.connect(cb)
+        if cb:
+            action.triggered.connect(cb)
         return action
 
     def _close_dock(self, dockWidget, widget_dict: dict):
@@ -83,11 +85,27 @@ class Dock(Plugin):
         titlebar = dockWidget.titleBarWidget()
         if isinstance(titlebar, DockTitleBar):
             menu = titlebar.ui.btnMore.menu()
-            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
+
+            action = self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
+
             menu.addSeparator()
+
+            action = self._addAction(menu, "Editable top expression")
+            def _toggle_editable_top_node(checked: bool):
+                model = expr.ui.treeView.model()
+                if isinstance(model, qtmodel.StructTreeModel):
+                    model.allow_edit_top_expr = checked
+            action.toggled.connect(_toggle_editable_top_node)
+            action.setCheckable(True)
+            action.setChecked(True)
+
+            menu.addSeparator()
+
             action = self._addAction(menu, "Refresh", expr.refreshTree)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
-            self._addAction(menu, "Clear expressions", expr.clearTree)
+
+            action = self._addAction(menu, "Clear expressions", expr.clearTree)
+
             action = self._addAction(menu, "Add Expression View", self.addExpressionView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
 

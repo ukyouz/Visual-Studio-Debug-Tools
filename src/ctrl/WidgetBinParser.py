@@ -278,6 +278,7 @@ class BinParser(QtWidgets.QWidget):
     def _load_tree(self, data: dict) -> qtmodel.StructTreeModel:
         self.ui.stackedWidget.setCurrentWidget(self.ui.pageTree)
         model = qtmodel.StructTreeModel(data)
+        model.allow_edit_top_expr = False
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
