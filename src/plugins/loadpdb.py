@@ -9,6 +9,7 @@ from typing import TypedDict
 from construct import Struct
 from PyQt6 import QtWidgets
 
+from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import i18n
@@ -163,6 +164,10 @@ class LoadPdb(Plugin):
                         "command": "ShowPicklePdb",
                         "icon": ":icon/images/vswin2019/Database_16x.svg",
                     },
+                    {
+                        "name": "Recently PDBs",
+                        "submenus": [],
+                    },
                     {"name": "---",},
                     {
                         "name": "Show PDB status...",
@@ -183,8 +188,16 @@ class LoadPdb(Plugin):
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
         self._pdb_fname = ""
-        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
-            self.load_pdbin(val)
+        current_pdb = self.app.app_setting.value("LoadPdb/pdbin", "")
+
+        menu = self.app.menu("Recently PDBs")
+        _recently_used = self.app.app_setting.value("LoadPdb/recent_used", [])
+        self._hist_pdbs = HistoryMenu(menu, _recently_used, default=current_pdb)
+        self._hist_pdbs.actionTriggered.connect(lambda _f: self.load_pdbin(_f))
+        self._hist_pdbs.cleared.connect(lambda: self.app.app_setting.remove("LoadPdb/recent_used"))
+
+        if current_pdb:
+            self.load_pdbin(current_pdb)
 
     def _onClosed(self, evt):
         if self.widget:
@@ -199,6 +212,10 @@ class LoadPdb(Plugin):
             )
         if filename:
             logger.debug("loadpdb: %r", filename)
+
+            self._hist_pdbs.add_data(filename)
+            self.app.app_setting.setValue("LoadPdb/recent_used", list(self._hist_pdbs.data_list))
+
             def _cb(_pdb):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename

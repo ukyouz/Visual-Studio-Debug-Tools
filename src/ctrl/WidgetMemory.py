@@ -31,7 +31,8 @@ class Memory(QtWidgets.QWidget):
         set_app_title(self, "")
 
         self.app = app
-        self.parse_hist = MemoryHistory(self.ui.btnHistory)
+        self.ui.btnHistory.setMenu(QtWidgets.QMenu())
+        self.parse_hist = MemoryHistory(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
 
         # attributes

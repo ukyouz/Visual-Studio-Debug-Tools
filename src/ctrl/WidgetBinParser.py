@@ -51,7 +51,8 @@ class BinParser(QtWidgets.QWidget):
         set_app_title(self, "")
 
         # properties
-        self.parse_hist = ParseHistoryMenu(self.ui.btnHistory)
+        self.ui.btnHistory.setMenu(QtWidgets.QMenu())
+        self.parse_hist = ParseHistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
         self.fileio = fileio
         if fileio:
