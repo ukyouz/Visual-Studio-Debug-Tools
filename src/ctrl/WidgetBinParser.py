@@ -125,7 +125,7 @@ class BinParser(QtWidgets.QWidget):
     def parse_offset(self):
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
-            return pdb.query_struct(self.ui.lineOffset.text())["value"]
+            return int(pdb.query_cstruct(self.ui.lineOffset.text(), io_stream=self.fileio))
         except Exception as e:
             logger.warning(e)
             return 0
@@ -281,8 +281,7 @@ class BinParser(QtWidgets.QWidget):
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
-            self.fileio.seek(self.parse_offset)
-            model.loadStream(io.BytesIO(self.fileio.read()))
+            model.loadStream(self.fileio)
         self.ui.treeView.setModel(model)
         # expand the first item
         self.ui.treeView.setExpanded(model.index(0, 0), True)
@@ -296,8 +295,7 @@ class BinParser(QtWidgets.QWidget):
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
-            self.fileio.seek(self.parse_offset)
-            model.loadStream(io.BytesIO(self.fileio.read()))
+            model.loadStream(self.fileio)
         self.ui.tableView.setModel(model)
         return model
 
