@@ -98,6 +98,10 @@ class PicklePdb(QtWidgets.QWidget):
                 out_dir = Path(self.ui.labelFolder.text()) / ".vsdbg",
                 finished_cb=cb,
                 errored_cb=err,
+                block_UIs=[
+                    self.ui.treePdb,
+                    self.ui.btnGenerateSelected,
+                ],
             )
 
     def _on_generated_done(self):

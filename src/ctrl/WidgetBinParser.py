@@ -187,7 +187,7 @@ class BinParser(QtWidgets.QWidget):
 
         self.setEnabled(False)
 
-        if not self.app.menu("PDB").isEnabled():
+        if pdb.is_loading():
             QtCore.QTimer.singleShot(100, self._onBtnParseClicked)
             return
 

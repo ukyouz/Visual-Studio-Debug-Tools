@@ -153,6 +153,7 @@ def _remove_extra_paren(expr: str) -> str:
 
 class LoadPdb(Plugin):
     _pdb: pdb.PDB7
+    _loading: bool
 
     def registerMenues(self) -> list[MenuAction]:
         return [
@@ -184,6 +185,7 @@ class LoadPdb(Plugin):
         ]
 
     def post_init(self):
+        self._loading = False
         self.widget = None
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
@@ -220,6 +222,7 @@ class LoadPdb(Plugin):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
+                self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
 
             path = Path(filename)
@@ -235,7 +238,11 @@ class LoadPdb(Plugin):
                     filename,
                     finished_cb=_cb,
                 )
+            self._loading = True
             self.app.statusBar().showMessage("Loading... %r" % filename)
+
+    def is_loading(self):
+        return self._loading
 
     def show_pickle_pdb(self):
         if self.widget is None:
