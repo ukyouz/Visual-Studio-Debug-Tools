@@ -330,8 +330,10 @@ class StructTreeModel(AbstractTreeModel):
         if item is None:
             return flags
 
+        is_top_editable_item = self.allow_edit_top_expr and not self.parent(index).isValid()
+
         if tag == "levelname":
-            if self.allow_edit_top_expr and not self.parent(index).isValid():
+            if is_top_editable_item:
                 # can only edit root item
                 flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "value":
@@ -352,7 +354,8 @@ class StructTreeModel(AbstractTreeModel):
 
         if flags & QtCore.Qt.ItemFlag.ItemIsEditable:
             if item.get("_is_invalid", False):
-                flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
+                if not is_top_editable_item:
+                    flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
 
         return flags
 
@@ -404,7 +407,7 @@ class StructTreeModel(AbstractTreeModel):
                 #   - DisplayRole, if we _calc_val here, ForegroundRole will be updated in the next cycle
                 #   - BackgroundRole
                 _calc_val(self.fileio, item)  # update value in advanced to render correct color
-                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                if item.get("_is_invalid", False):
                     return
                 if tag == "value":
                     if item.get("_changed_since_prev", False):
@@ -413,7 +416,7 @@ class StructTreeModel(AbstractTreeModel):
                     if index.column() != 0:
                         return QtGui.QColor("blue")
             case QtCore.Qt.ItemDataRole.BackgroundRole:
-                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                if item.get("_is_invalid", False):
                     return QtGui.QColor("#f0d6d5")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
@@ -426,6 +429,7 @@ class StructTreeModel(AbstractTreeModel):
             if value == item["expr"] or value == "":
                 return False
             item["expr"] = value
+            item["levelname"] = value
             self.exprChanged.emit(index)
             return True
         elif tag == "value":

@@ -349,7 +349,10 @@ class LoadPdb(Plugin):
 
         _expr = _remove_extra_paren(struct.get("expr", "") or "")
         if count == 1:
-            _expr = "(%s)->" % _expr
+            if _expr.startswith("("):
+                _expr = "(%s)->" % _expr
+            else:
+                _expr = "%s->" % _expr
         else:
             _expr = "(%s)" % _expr
         out_struct = self._duplicate_as_array(_expr, out_struct, count)

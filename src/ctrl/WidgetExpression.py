@@ -152,8 +152,9 @@ class Expression(QtWidgets.QWidget):
 
         def _cb(struct_record):
             if struct_record is None:
-                item["levelname"] = "load failed"
+                item["_is_invalid"] = True
                 return
+            item["_is_invalid"] = False
             if isinstance(model, qtmodel.StructTreeModel):
                 model.loadStream(dbg.get_memory_stream())
                 model.setItem(struct_record, parent)
