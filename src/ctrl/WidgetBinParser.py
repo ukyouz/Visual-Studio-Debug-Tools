@@ -198,6 +198,7 @@ class BinParser(QtWidgets.QWidget):
             model = self._load_table(res)
             model.toggleHexMode(self.ui.btnToggleHex.isChecked())
             model.toggleCharMode(self.ui.btnToggleChar.isChecked())
+            self.ui.btnToggleChar.setEnabled(True)
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
@@ -216,6 +217,7 @@ class BinParser(QtWidgets.QWidget):
                 return
             model = self._load_tree(res)
             model.toggleHexMode(self.ui.btnToggleHex.isChecked())
+            self.ui.btnToggleChar.setEnabled(False)
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
