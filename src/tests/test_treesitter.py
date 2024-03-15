@@ -63,12 +63,19 @@ def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
         ("((struct A *)100)->attr", 100),
         ("(struct A *)100", 100),
         ("(struct A *)gA.pint", 12),
-        ("(struct TextHolder *)gB.s->szBuffer", 12),
         ("*((struct A *)100)", 100),
         ("gA.pint", 103100),
         ("gA.s", 103108),
+        ("gA.x - 1", 12 - 4),
+        ("gA.x + 1", 12 + 4),
         ("gA", 102976),
+        ("gB.s - 1", 12 - 260),
+        ("gB.s + 1", 12 + 260),
+        ("gB.s->szBuffer - 1", 11),
+        ("gB.s->szBuffer + 1", 13),
         ("gB.s->szBuffer", 12),
+        ("gB.s->szBuffer", 12),
+        ("gB.s", 103384),
     ]
 )
 def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):

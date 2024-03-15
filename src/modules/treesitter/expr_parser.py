@@ -224,16 +224,34 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 else:
                     raise InvalidExpression("Fail to calculate: %r" % node.text)
             case "binary_expression":
-                left = _get_value_of(_walk_syntax_node(childs[0]))
+                lhs = _walk_syntax_node(childs[0])
                 operator = childs[1].type
-                right = _get_value_of(_walk_syntax_node(childs[2]))
-                match operator:
-                    case "&&":
-                        return int(left and right)
-                    case "||":
-                        return int(left or right)
-                    case _:
-                        return eval("int(%d %s %d)" % (left, operator, right))
+                rhs = _walk_syntax_node(childs[2])
+                if isinstance(lhs, dict) and lhs["is_pointer"] and isinstance(rhs, int):
+                    # shift pointer by count
+                    if operator not in "+-":
+                        raise InvalidExpression("Invalid pointer movement: %r" % node.text)
+                    deref_struct = deref_pointer(p, io_stream, lhs, None, childs[0].text)
+                    lhs["address"] = _get_value_of(lhs) + deref_struct["size"] * rhs * (-1 if operator == "-" else 1)
+                    return lhs
+                elif isinstance(lhs, dict) and isinstance(lhs["fields"], list) and isinstance(rhs, int):
+                    # shift array head by count
+                    if operator not in "+-":
+                        raise InvalidExpression("Invalid array movement: %r" % node.text)
+                    lhs = lhs["fields"][0]
+                    lhs["address"] += lhs["size"] * rhs * (-1 if operator == "-" else 1)
+                    lhs["levelname"] = "[%d]" % rhs
+                    return lhs
+                else:
+                    left = _get_value_of(lhs)
+                    right = _get_value_of(rhs)
+                    match operator:
+                        case "&&":
+                            return int(left and right)
+                        case "||":
+                            return int(left or right)
+                        case _:
+                            return eval("int(%d %s %d)" % (left, operator, right))
             case "update_expression":
                 # x ++
                 # x --
