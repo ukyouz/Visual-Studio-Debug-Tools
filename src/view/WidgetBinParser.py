@@ -48,6 +48,9 @@ class Ui_Form(object):
         self.label.setObjectName("label")
         self.gridLayout.addWidget(self.label, 1, 0, 1, 1)
         self.lineStruct = QtWidgets.QLineEdit(parent=self.frame)
+        font = QtGui.QFont()
+        font.setFamily("Consolas")
+        self.lineStruct.setFont(font)
         self.lineStruct.setFrame(True)
         self.lineStruct.setObjectName("lineStruct")
         self.gridLayout.addWidget(self.lineStruct, 0, 1, 1, 2)
@@ -57,6 +60,9 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lineOffset.sizePolicy().hasHeightForWidth())
         self.lineOffset.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setFamily("Consolas")
+        self.lineOffset.setFont(font)
         self.lineOffset.setObjectName("lineOffset")
         self.gridLayout.addWidget(self.lineOffset, 1, 1, 1, 2)
         self.verticalLayout_3.addWidget(self.frame)
@@ -156,9 +162,9 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView.sizePolicy().hasHeightForWidth())
         self.treeView.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
-        font.setFamily("Calibri")
+        font.setFamily("Consolas")
         self.treeView.setFont(font)
-        self.treeView.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}\n"
+        self.treeView.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8; padding: 0px 3px;}\n"
 "QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
 "QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}\n"
 "QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}\n"
@@ -168,7 +174,7 @@ class Ui_Form(object):
 "QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}\n"
 "QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
 "QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}\n"
-"")
+"QTreeView::item{  padding: 0px 6px; }")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView.setIconSize(QtCore.QSize(16, 22))
@@ -198,13 +204,13 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableMemory.sizePolicy().hasHeightForWidth())
         self.tableMemory.setSizePolicy(sizePolicy)
-        self.tableMemory.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}")
+        self.tableMemory.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}\n"
+"QTableView::item{  padding: 0px 6px; }")
         self.tableMemory.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.tableMemory.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.tableMemory.setShowGrid(False)
         self.tableMemory.setWordWrap(False)
         self.tableMemory.setObjectName("tableMemory")
-        self.tableMemory.horizontalHeader().setStretchLastSection(True)
         self.tableMemory.verticalHeader().setDefaultSectionSize(25)
         self.verticalLayout_2.addWidget(self.splitter)
 
@@ -217,6 +223,10 @@ class Ui_Form(object):
         Form.setWindowTitle(_translate("Form", "Form"))
         self.label_2.setText(_translate("Form", "Struct"))
         self.label.setText(_translate("Form", "Offset"))
+        self.lineStruct.setToolTip(_translate("Form", "You can use dot notation to query sub anonymous field."))
+        self.lineStruct.setPlaceholderText(_translate("Form", "type a struct name"))
+        self.lineOffset.setToolTip(_translate("Form", "Unit is byte"))
+        self.lineOffset.setPlaceholderText(_translate("Form", "4 + sizeof(xxDef)"))
         self.btnHistory.setText(_translate("Form", "History"))
         self.btnToggleChar.setText(_translate("Form", "\\x"))
         self.btnToggleHex.setText(_translate("Form", "0x"))

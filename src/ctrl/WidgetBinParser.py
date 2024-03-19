@@ -1,4 +1,5 @@
 import io
+import logging
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -12,10 +13,14 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
+from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from plugins import loadpdb
 from view import WidgetBinParser
+
+tr = lambda txt: i18n("Memory", txt)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,7 +51,8 @@ class BinParser(QtWidgets.QWidget):
         set_app_title(self, "")
 
         # properties
-        self.parse_hist = ParseHistoryMenu(self.ui.btnHistory)
+        self.ui.btnHistory.setMenu(QtWidgets.QMenu())
+        self.parse_hist = ParseHistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
         self.fileio = fileio
         if fileio:
@@ -79,7 +85,6 @@ class BinParser(QtWidgets.QWidget):
                             txt = model.getTextFromIndexes(selected_indexes)
                             cb = QtGui.QGuiApplication.clipboard()
                             cb.setText(txt, mode=cb.Clipboard)
-                            print(txt)
                             return True
         return False
 
@@ -107,20 +112,22 @@ class BinParser(QtWidgets.QWidget):
                         QtWidgets.QMessageBox.information(
                             self,
                             self.__class__.__name__,
-                            "Successfully exported table!\n%r" % filename,
+                            tr("Successfully exported table!\n%r") % filename,
                         )
                     except Exception as e:
                         QtWidgets.QMessageBox.warning(
                             self,
                             self.__class__.__name__,
-                            "Error exported file! %s" % e,
+                            tr("Error exported file! %s") % e,
                         )
 
     @property
     def parse_offset(self):
         try:
-            return eval(self.ui.lineOffset.text())
-        except:
+            pdb = self.app.plugin(loadpdb.LoadPdb)
+            return int(pdb.query_cstruct(self.ui.lineOffset.text(), io_stream=self.fileio))
+        except Exception as e:
+            logger.warning(e)
             return 0
 
     def _onFileOpened(self, filename=False):
@@ -180,7 +187,7 @@ class BinParser(QtWidgets.QWidget):
 
         self.setEnabled(False)
 
-        if not self.app.menu("PDB").isEnabled():
+        if pdb.is_loading():
             QtCore.QTimer.singleShot(100, self._onBtnParseClicked)
             return
 
@@ -191,6 +198,7 @@ class BinParser(QtWidgets.QWidget):
             model = self._load_table(res)
             model.toggleHexMode(self.ui.btnToggleHex.isChecked())
             model.toggleCharMode(self.ui.btnToggleChar.isChecked())
+            self.ui.btnToggleChar.setEnabled(True)
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
@@ -209,6 +217,7 @@ class BinParser(QtWidgets.QWidget):
                 return
             model = self._load_tree(res)
             model.toggleHexMode(self.ui.btnToggleHex.isChecked())
+            self.ui.btnToggleChar.setEnabled(False)
             if model.rowCount():
                 p = ParseRecord(
                     struct=structname,
@@ -224,32 +233,30 @@ class BinParser(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(
                     self,
                     "PDB Error!",
-                    "Invalid expression: %r" % structname,
+                    tr("Invalid expression: %r") % structname,
                 )
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "PDB Error!",
-                    "Please load pdbin first!",
+                    tr("Please load pdbin first!"),
                 )
 
         count = self.ui.spinParseCount.value()
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
-                pdb.parse_array,
+                pdb.parse_expr_to_table,
                 structname,
                 addr=self.parse_offset,
-                expr="",
                 count=count,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
         else:
             self.app.exec_async(
-                pdb.parse_struct,
+                pdb.parse_expr_to_struct,
                 structname,
                 addr=self.parse_offset,
-                expr=structname,
                 count=count,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
@@ -273,11 +280,11 @@ class BinParser(QtWidgets.QWidget):
     def _load_tree(self, data: dict) -> qtmodel.StructTreeModel:
         self.ui.stackedWidget.setCurrentWidget(self.ui.pageTree)
         model = qtmodel.StructTreeModel(data)
+        model.allow_edit_top_expr = False
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
-            self.fileio.seek(self.parse_offset)
-            model.loadStream(io.BytesIO(self.fileio.read()))
+            model.loadStream(self.fileio)
         self.ui.treeView.setModel(model)
         # expand the first item
         self.ui.treeView.setExpanded(model.index(0, 0), True)
@@ -291,8 +298,7 @@ class BinParser(QtWidgets.QWidget):
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
             # TODO: global address fileio reader
-            self.fileio.seek(self.parse_offset)
-            model.loadStream(io.BytesIO(self.fileio.read()))
+            model.loadStream(self.fileio)
         self.ui.tableView.setModel(model)
         return model
 

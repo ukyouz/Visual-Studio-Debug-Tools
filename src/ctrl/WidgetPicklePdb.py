@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 
@@ -58,7 +59,7 @@ class PicklePdb(QtWidgets.QWidget):
         model = self.ui.treePdb.model()
         if indexes and isinstance(model, qtmodel.FileExplorerModel):
             files = [model.itemFromIndex(x) for x in indexes]
-            print([model.itemFromIndex(x) for x in indexes])
+            logging.info("Generate: %r" % [model.itemFromIndex(x) for x in indexes])
 
             def progressing():
                 val = self.ui.progressBar.value()
@@ -97,6 +98,10 @@ class PicklePdb(QtWidgets.QWidget):
                 out_dir = Path(self.ui.labelFolder.text()) / ".vsdbg",
                 finished_cb=cb,
                 errored_cb=err,
+                block_UIs=[
+                    self.ui.treePdb,
+                    self.ui.btnGenerateSelected,
+                ],
             )
 
     def _on_generated_done(self):

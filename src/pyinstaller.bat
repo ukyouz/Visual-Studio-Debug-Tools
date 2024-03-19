@@ -1,3 +1,9 @@
+@REM @echo off
+
+
+py -m pytest tests --cov || goto :error
+coverage html
+
 pyinstaller.exe --noconfirm .\guiVSdebugger.spec
 
 @REM COPY dist\VSdebugger\_internal\view dist\VSdebugger\view

@@ -213,12 +213,8 @@ class Script(QtWidgets.QWidget):
 
         def cb(_):
             timer.stop()
-            self.ui.btnRunScript.setEnabled(True)
-            self.ui.btnReset.setEnabled(True)
             sys.stdout = _backup
 
-        self.ui.btnRunScript.setEnabled(False)
-        self.ui.btnReset.setEnabled(False)
         self.app.exec_async(
             exec,
             script,
@@ -229,6 +225,10 @@ class Script(QtWidgets.QWidget):
             },
             errored_cb= lambda *a: self.errored.emit(" ".join(str(x) for x in a)),
             finished_cb=cb,
+            block_UIs=[
+                self.ui.btnRunScript,
+                self.ui.btnReset,
+            ],
         )
 
     def _async_print_log(self, a: str):

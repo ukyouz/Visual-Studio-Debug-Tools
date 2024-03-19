@@ -5,10 +5,13 @@ from collections import Counter
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
+from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from modules.winkernel import ProcessDebugger
 from plugins import debugger
 from view import WidgetProcessSelector
+
+tr = lambda txt: i18n("Memory", txt)
 
 
 class ProcessSelector(QtWidgets.QWidget):
@@ -56,7 +59,7 @@ class ProcessSelector(QtWidgets.QWidget):
                 if val in unique_processes:
                     self.ui.comboProcess.setCurrentText(val)
             if show_status:
-                self.app.statusBar().showMessage("Processes are reloaded.")
+                self.app.statusBar().showMessage(tr("Processes are reloaded."))
 
         self.update_ui_states(False)
         self.app.exec_async(
@@ -64,7 +67,7 @@ class ProcessSelector(QtWidgets.QWidget):
             finished_cb=_cb_load_processes,
         )
         if show_status:
-            self.app.statusBar().showMessage("Refreshing processes...")
+            self.app.statusBar().showMessage(tr("Refreshing processes..."))
 
     def update_ui_states(self, process_attached: bool):
         self.ui.comboProcess.setEnabled(not process_attached)

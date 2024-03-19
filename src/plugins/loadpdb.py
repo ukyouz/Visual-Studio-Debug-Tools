@@ -1,36 +1,68 @@
 import logging
 import pickle
-import re
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Optional
+from typing import Self
+from typing import TypedDict
 
+from construct import Struct
 from PyQt6 import QtWidgets
 
+from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
+from ctrl.qtapp import i18n
 from ctrl.WidgetPicklePdb import PicklePdb
 from helper import qtmodel
 from modules.pdbparser.pdbparser import pdb
 from modules.pdbparser.pdbparser import picklepdb
+from modules.treesitter.expr_parser import InvalidExpression
+from modules.treesitter.expr_parser import query_struct_from_expr
+from modules.utils.myfunc import BITMASK
+from modules.utils.typ import Stream
 
+tr = lambda txt: i18n("LoadPdb", txt)
 logger = logging.getLogger(__name__)
 
 
-class InvalidExpression(Exception):
-    """invalid expr"""
+class ViewStruct(TypedDict):
+    # pdb.StructRecord
+    levelname: str
+    value: int | None
+    type: str
+    address: int
+    size: int
+    bitoff: int | None
+    bitsize: int | None
+    fields: list[Self] | dict[str, Self] | None
+    is_pointer: bool
+    has_sign: bool
+    lf: Struct | None
+
+    expr: Optional[str]
 
 
-class DummyOmap:
-    def remap(self, addr):
-        return addr
+def _read_value(item: pdb.StructRecord, stream: Stream) -> int:
+    if item["value"] is not None:
+        # for literal number, value will be the number
+        return item["value"]
+    base = item["address"]
+    size = item["size"]
+    boff = item["bitoff"]
+    bsize = item["bitsize"]
+
+    stream.seek(base)
+    val = int.from_bytes(stream.read(size), "little")
+    if boff is not None and bsize is not None:
+        val = (val >> boff) & BITMASK(bsize)
+    return val
 
 
 @dataclass
 class CStruct:
     _record: pdb.StructRecord
-    _stream: qtmodel.Stream
+    _stream: qtmodel.Stream | None
 
     def __getattr__(self, field: str):
         if not isinstance(self._record["fields"], dict):
@@ -70,23 +102,58 @@ class CStruct:
         )
 
     def __int__(self) -> int:
-        item = self._record
+        if self._stream is None:
+            return -1
+        return _read_value(self._record, self._stream)
 
-        base = item["address"]
-        size = item["size"]
-        boff = item["bitoff"]
-        bsize = item["bitsize"]
 
-        self._stream.seek(base)
-        val = int.from_bytes(self._stream.read(size), "little")
-        if boff is not None and bsize is not None:
-            val = (val >> boff) & qtmodel.bitmask(bsize)
+def _shift_addr(s: pdb.StructRecord, shift: int=0):
+    s["address"] = s["address"] + shift
+    if isinstance(s["fields"], dict):
+        for c in s["fields"].values():
+            _shift_addr(c, shift)
+    elif isinstance(s["fields"], list):
+        for c in s["fields"]:
+            _shift_addr(c, shift)
 
-        return val
+
+def _add_expr(s: ViewStruct, expr: str):
+    if expr.endswith("->") or expr.endswith("."):
+        notation = ""
+    else:
+        notation = "->" if s.get("is_pointer", False) else "."
+    s["expr"] = expr.rstrip(notation)
+    if isinstance(s["fields"], dict):
+        for c in s["fields"].values():
+            _add_expr(c, expr + notation + c["levelname"])
+    elif isinstance(s["fields"], list):
+        for c in s["fields"]:
+            _add_expr(c, expr + c["levelname"])
+
+
+def _flatten_dict(s: pdb.StructRecord, out: list):
+    childs = s.get("fields", None)
+    s["fields"] = None
+    if isinstance(childs, dict):
+        for c in childs.values():
+            _flatten_dict(c, out)
+    elif isinstance(childs, list):
+        for c in childs:
+            _flatten_dict(c, out)
+    else:
+        out.append(s)
+
+
+def _remove_extra_paren(expr: str) -> str:
+    expr = expr.strip()
+    while expr.startswith("(") and expr.endswith(")"):
+        expr = expr[1: -1].strip()
+    return expr
 
 
 class LoadPdb(Plugin):
     _pdb: pdb.PDB7
+    _loading: bool
 
     def registerMenues(self) -> list[MenuAction]:
         return [
@@ -97,6 +164,10 @@ class LoadPdb(Plugin):
                         "name": "Generate PDB...",
                         "command": "ShowPicklePdb",
                         "icon": ":icon/images/vswin2019/Database_16x.svg",
+                    },
+                    {
+                        "name": "Recently PDBs",
+                        "submenus": [],
                     },
                     {"name": "---",},
                     {
@@ -114,12 +185,21 @@ class LoadPdb(Plugin):
         ]
 
     def post_init(self):
+        self._loading = False
         self.widget = None
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
         self._pdb_fname = ""
-        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
-            self.load_pdbin(val)
+        current_pdb = self.app.app_setting.value("LoadPdb/pdbin", "")
+
+        menu = self.app.menu("Recently PDBs")
+        _recently_used = self.app.app_setting.value("LoadPdb/recent_used", [])
+        self._hist_pdbs = HistoryMenu(menu, _recently_used, default=current_pdb)
+        self._hist_pdbs.actionTriggered.connect(lambda _f: self.load_pdbin(_f))
+        self._hist_pdbs.cleared.connect(lambda: self.app.app_setting.remove("LoadPdb/recent_used"))
+
+        if current_pdb:
+            self.load_pdbin(current_pdb)
 
     def _onClosed(self, evt):
         if self.widget:
@@ -134,10 +214,15 @@ class LoadPdb(Plugin):
             )
         if filename:
             logger.debug("loadpdb: %r", filename)
+
+            self._hist_pdbs.add_data(filename)
+            self.app.app_setting.setValue("LoadPdb/recent_used", list(self._hist_pdbs.data_list))
+
             def _cb(_pdb):
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
+                self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
 
             path = Path(filename)
@@ -153,7 +238,11 @@ class LoadPdb(Plugin):
                     filename,
                     finished_cb=_cb,
                 )
+            self._loading = True
             self.app.statusBar().showMessage("Loading... %r" % filename)
+
+    def is_loading(self):
+        return self._loading
 
     def show_pickle_pdb(self):
         if self.widget is None:
@@ -176,46 +265,7 @@ class LoadPdb(Plugin):
                 "Not loaded",
             )
 
-    def _shift_addr(self, s: dict, shift: int=0):
-        s["address"] = s["address"] + shift
-        if isinstance(s["fields"], dict):
-            for c in s["fields"].values():
-                self._shift_addr(c, shift)
-        elif isinstance(s["fields"], list):
-            for c in s["fields"]:
-                self._shift_addr(c, shift)
-
-    def _add_expr(self, s, expr: str):
-        s["expr"] = expr
-        if isinstance(s["fields"], dict):
-            if expr.endswith("->") or expr.endswith("."):
-                notation = ""
-            else:
-                notation = "->" if s.get("is_pointer", False) else "."
-            for c in s["fields"].values():
-                self._add_expr(c, expr + notation + c["levelname"])
-        elif isinstance(s["fields"], list):
-            for c in s["fields"]:
-                self._add_expr(c, expr + c["levelname"])
-
-    def parse_struct(self, structname: str, expr: str="", addr=0, count=1, recursive=True, add_dummy_root=False) -> pdb.StructRecord:
-        if structname == "":
-            return pdb.new_struct()
-
-        expr = expr or structname
-        tpi = self._pdb.streams[2]
-        dbi = self._pdb.streams[3]
-        glb = self._pdb.streams[dbi.header.symrecStream]
-        if structname in glb.s_udt:
-            user_defined_type = glb.s_udt[structname]
-            lf = tpi.get_type_lf(user_defined_type.typind)
-        else:
-            try:
-                lf = tpi.get_type_lf_from_name(structname)
-            except KeyError:
-                raise InvalidExpression(structname)
-
-        s = tpi.form_structs(lf, addr, recursive)
+    def _duplicate_as_array(self, expr: str, s: pdb.StructRecord, count: int) -> ViewStruct:
         if count > 1:
             s["levelname"] = "[0]"
             childs = [s]
@@ -223,202 +273,98 @@ class LoadPdb(Plugin):
             for n in range(1, count):
                 copied = pickle.loads(backup)
                 copied["levelname"] = "[%d]" % n
-                self._shift_addr(copied, n * s["size"])
+                _shift_addr(copied, n * s["size"])
                 childs.append(copied)
             s = pdb.new_struct(
                 levelname="%s[%d]" % (expr, count),
                 type="LF_ARRAY",
-                address=addr,
+                address=s["address"],
                 size=count * s["size"],
                 fields=childs,
             )
-            self._add_expr(s, expr)
         else:
             s["levelname"] = expr
-            self._add_expr(s, expr)
+        _add_expr(s, expr)
+        return s
+
+    def parse_expr_to_struct(self, expr: str, addr=0, count=1, add_dummy_root=False) -> pdb.StructRecord:
+        if expr == "":
+            return pdb.new_struct()
+
+        s = query_struct_from_expr(self._pdb, expr, addr)
+        s = self._duplicate_as_array(expr, s, count)
+
         if add_dummy_root:
             s = pdb.new_struct(
                 fields=[s],
             )
         return s
 
-    def _iter_fields(self, expr: str) -> Iterable[str | int]:
-        _expr = expr.replace("->", ".")
-        _expr = _expr.replace("[", ".")
-        _expr = _expr.replace("]", ".")
-        for f in _expr.split("."):
-            if f == "":
-                continue
-            try:
-                yield eval(f)
-            except:
-                yield f
-
-    def _flatten_dict(self, s: dict, out: list):
-        childs = s.get("fields", None)
-        s["fields"] = None
-        if isinstance(childs, dict):
-            for c in childs.values():
-                self._flatten_dict(c, out)
-        elif isinstance(childs, list):
-            for c in childs:
-                self._flatten_dict(c, out)
-        else:
-            out.append(s)
-
-    def parse_array(self, struct: str, expr: str="", addr=0, count=1):
-        tpi = self._pdb.streams[2]
-
-        subfields = list(self._iter_fields(struct))
-        structname = subfields.pop(0)
-        if not isinstance(structname, str):
-            return
-
-        has_childs = subfields == []
-        out_struct = self.parse_struct(structname, expr, addr, recursive=has_childs)
-
-        while subfields:
-            f = subfields.pop(0)
-            try:
-                out_struct = out_struct["fields"][f]
-            except:
-                return
-
-            if out_struct["is_pointer"]:
-                return
-
-            last_field = subfields == []
-            lvlname = out_struct["levelname"]
-            out_struct = tpi.form_structs(out_struct["lf"], addr=out_struct["address"], recursive=last_field)
-            out_struct["levelname"] = lvlname
-            self._add_expr(out_struct, "")
-
-        if isinstance(out_struct["fields"], list):
+    def _tabulate_a_struct(self, struct: pdb.StructRecord, count: int) -> list[ViewStruct]:
+        if isinstance(struct["fields"], list):
             array = []
-            _take_count = len(out_struct["fields"]) if count == 0 else count
-            for x in out_struct["fields"][: _take_count]:
+            _take_count = len(struct["fields"]) if count == 0 else count
+            for x in struct["fields"][: _take_count]:
                 cut_pos = len(x["levelname"])
                 row = []
-                self._flatten_dict(x, row)
+                _flatten_dict(x, row)
                 for c in row:
                     c["expr"] = c["expr"][cut_pos:]
                 array.append(row)
         else:
-            backup = pickle.dumps(out_struct)
+            backup = pickle.dumps(struct)
 
             array = []
             for n in range(max(1, count)):
                 copied = pickle.loads(backup)
                 copied["levelname"] = "[%d]" % n
-                self._shift_addr(copied, n * out_struct["size"])
-                self._add_expr(copied, "")
+                _shift_addr(copied, n * struct["size"])
+                _add_expr(copied, "")
                 row = []
-                self._flatten_dict(copied, row)
+                _flatten_dict(copied, row)
                 array.append(row)
-
         return array
 
-    def deref_record_struct(self, struct: dict, io_stream, count=1):
-        if io_stream is None:
-            return
-        assert struct["is_pointer"]
-        io_stream.seek(struct["address"])
-        addr = int.from_bytes(io_stream.read(struct["size"]), "little")
-        notation = "->" if count == 1 else ""
-        return self.parse_struct(
-            structname=struct["lf"].utypeRef.name,
-            expr=struct["expr"] + notation,
-            addr=addr,
-            count=count,
-            recursive=False,
-        )
+    def parse_expr_to_table(self, expr: str, addr=0, count=1) -> list[ViewStruct]:
+        out_struct = query_struct_from_expr(self._pdb, expr, addr)
+        _add_expr(out_struct, "")
+        array = self._tabulate_a_struct(out_struct, count)
+        return array
 
-    def query_expression(self, expr: str, virtual_base: int=0, io_stream=None) -> dict | None:
-        tpi = self._pdb.streams[2]
-        dbi = self._pdb.streams[3]
-        glb = self._pdb.streams[dbi.header.symrecStream]
+    def query_struct(self, expr: str, virtual_base: int | None=0, io_stream=None) -> ViewStruct:
+        if virtual_base is None:
+            raise ValueError(tr("`virtual_base` is None! Maybe forgot to attach to a live process?"))
+        struct = query_struct_from_expr(self._pdb, expr, virtual_base, io_stream)
+        struct["levelname"] = expr
+        _add_expr(struct, expr)
+        return struct
 
-        subfields = list(self._iter_fields(expr))
-        top_expr = subfields.pop(0)
-        if not isinstance(top_expr, str):
-            return
+    def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1) -> ViewStruct:
+        if count == 0:
+            raise ValueError("Deref count at least 1, got: %d" % count)
+        _type = _remove_extra_paren(struct["type"])
+        addr = struct["value"] or _read_value(struct, io_stream)
+        expr = "*((%s)%d)" % (_type, addr)
+        out_struct = query_struct_from_expr(self._pdb, expr, io_stream=io_stream)
 
-        has_subfields = len(subfields)
-        glb_info = None
-        with suppress(KeyError):
-            glb_info = glb.s_gdata32[top_expr]
-        with suppress(KeyError):
-            glb_info = glb.s_ldata32[top_expr]
-        if glb_info:
-            # remap global address
-            try:
-                sects = self._pdb.streams[dbi.dbgheader.snSectionHdrOrig].sections
-                omap = self._pdb.streams[dbi.dbgheader.snOmapFromSrc]
-            except AttributeError:
-                sects = self._pdb.streams[dbi.dbgheader.snSectionHdr].sections
-                omap = DummyOmap()
-            section_offset = sects[glb_info.section - 1].VirtualAddress
-            glb_addr = virtual_base + omap.remap(glb_info.offset + section_offset)
-
-            lf = tpi.get_type_lf(glb_info.typind)
-            out_struct = tpi.form_structs(lf, addr=glb_addr, recursive=not has_subfields)
-            out_struct["levelname"] = top_expr
-            self._add_expr(out_struct, top_expr)
-        elif match := re.match(r"\((?P<STRUCT>.+)\*\s*\)(?P<ADDR>.+)", top_expr):
-            # TODO: use C syntax parser for better commpatibility
-            structname = match["STRUCT"].strip()
-            addr = match["ADDR"]
-            if structname not in tpi.structs:
-                return
-            try:
-                glb_addr = eval(addr)
-            except:
-                return
-            if top_expr[-1] != ")":
-                top_expr = "(*(%s))" % top_expr
+        _expr = _remove_extra_paren(struct.get("expr", "") or "")
+        if count == 1:
+            if _expr.startswith("("):
+                _expr = "(%s)->" % _expr
             else:
-                top_expr = "*(%s)" % top_expr
-            out_struct = self.parse_struct(structname, top_expr, addr=glb_addr, recursive=not has_subfields)
+                _expr = "%s->" % _expr
         else:
-            return
+            _expr = "(%s)" % _expr
+        out_struct = self._duplicate_as_array(_expr, out_struct, count)
 
-        if out_struct["is_pointer"] and has_subfields:
-            out_struct = self.deref_record_struct(out_struct, io_stream)
-
-        while subfields:
-            f = subfields.pop(0)
-            try:
-                out_struct = out_struct["fields"][f]
-            except:
-                return
-
-            last_field = subfields == []
-            if not out_struct["is_pointer"]:
-                lvlname = out_struct["levelname"]
-                _expr = out_struct["expr"]
-                out_struct = tpi.form_structs(out_struct["lf"], addr=out_struct["address"], recursive=last_field)
-                out_struct["levelname"] = lvlname
-                self._add_expr(out_struct, _expr)
-            else:
-                if last_field:
-                    break
-                count = subfields[0] + 1 if isinstance(subfields[0], int) else 1
-                out_struct = self.deref_record_struct(out_struct, io_stream, count)
-
-        out_struct["levelname"] = out_struct["expr"]
         return out_struct
 
-    def deref_cstruct(self, cs: CStruct, addr: int=0, count=1) -> CStruct:
-        # TODO: just use real c parser for derefence struct pointer
-        item = cs._record
-        if not hasattr(item["lf"], "utypeRef"):
-            return None
+    # for scripting
 
-        addr = addr or int(cs) or item.get("value", 0) or 0
+    def query_cstruct(self, expr: str, virtual_base: int=0, io_stream=None) -> CStruct:
+        s = self.query_struct(expr, virtual_base, io_stream)
+        return CStruct(s, io_stream)
 
-        struct = item["lf"].utypeRef.name
-
-        notation = "->" if count == 1 else ""
-        expr = item.get("expr", "") + notation
-
-        return CStruct(self.parse_struct(struct, expr, addr=addr, count=count), cs._stream)
+    def deref_cstruct(self, cs: CStruct, count=1):
+        s = self.deref_struct(cs._record, cs._stream, count)
+        return CStruct(s, cs._stream)

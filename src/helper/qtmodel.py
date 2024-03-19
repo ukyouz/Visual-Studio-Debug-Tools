@@ -4,16 +4,17 @@ import math
 import os
 from collections import defaultdict
 from contextlib import suppress
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from typing import Protocol
 from typing import Sequence
 from typing import Union
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
+
+from modules.utils.myfunc import BITMASK
+from modules.utils.typ import Stream
 
 
 def bytes_to_ascii(data: bytes):
@@ -25,20 +26,6 @@ def is_cstring(data: bytes):
     if 0 in data:
         data = data[: data.index(0)]
     return all(32 <= x <= 126 for x in data)
-
-
-class Stream(Protocol):
-    def seek(self, offset: int, pos: int=os.SEEK_SET, /) -> int:
-        ...
-
-    def read(self, size: int) -> bytes:
-        ...
-
-    def write(self, buf: bytes, /) -> int:
-        ...
-
-    def tell(self) -> int:
-        ...
 
 
 class HexTable(QtCore.QAbstractTableModel):
@@ -99,12 +86,21 @@ class HexTable(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ItemDataRole.BackgroundRole:
             if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
                 return QtGui.QColor("#f0d6d5")
+        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            return QtCore.Qt.AlignmentFlag.AlignCenter
 
     def rowCount(self, _=QtCore.QModelIndex()):
         return math.ceil((self.streamSize - self.viewOffset) / self._bytesPerRow)
 
     def columnCount(self, index=QtCore.QModelIndex()):
         return self.column + self.show_preview
+
+    @property
+    def addrPrefix(self) -> tuple[str, int]:
+        last_addr = "{:#010x}".format((self.rowCount() - 1) * self._bytesPerRow + self.viewOffset + self.viewAddress)
+        base = ("{:#0%dx}" % len(last_addr)).format(self.viewAddress)
+        prefix = os.path.commonprefix((last_addr, base))
+        return prefix + "x" * (len(last_addr) - len(prefix)), len(prefix)
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int) -> Any:
         if orientation == QtCore.Qt.Orientation.Horizontal:
@@ -119,9 +115,13 @@ class HexTable(QtCore.QAbstractTableModel):
         elif orientation == QtCore.Qt.Orientation.Vertical:
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
-                    return hex(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
+                    _, prefix_cnt = self.addrPrefix
+                    now = "{:#010x}".format(section * self._bytesPerRow + self.viewOffset + self.viewAddress)
+                    return "..." + now[prefix_cnt:]
                 case QtCore.Qt.ItemDataRole.FontRole:
                     return QtGui.QFont("Consolas")
+                case QtCore.Qt.ItemDataRole.TextAlignmentRole:
+                    return QtCore.Qt.AlignmentFlag.AlignCenter
 
     def flags(self, index):
         flags = super().flags(index)
@@ -239,11 +239,6 @@ def iter_children(data: Any):
         yield x
 
 
-@lru_cache
-def bitmask(bitcnt):
-    return (1 << bitcnt) - 1
-
-
 def _calc_val(fileio: Stream, item: dict) -> Any:
     if not item.get("_refresh_requested", False) and item.get("value", None):
         # return cached value unless _refresh_requested set to True
@@ -264,7 +259,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
         item["_is_invalid"] = True
         return 0
     if boff is not None and bsize is not None:
-        val = (val >> boff) & bitmask(bsize)
+        val = (val >> boff) & BITMASK(bsize)
 
     old_value = item.get("value", None)
     item["_changed_since_prev"] = old_value is not None and old_value != val
@@ -275,8 +270,8 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
 
 
 class StructTreeModel(AbstractTreeModel):
-    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, object, int)
-    pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, object, int, str)
+    pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int)
+    exprChanged = QtCore.pyqtSignal(QtCore.QModelIndex)
 
     headers = [
         "Levelname",
@@ -291,6 +286,7 @@ class StructTreeModel(AbstractTreeModel):
         self.fileio = io.BytesIO()
         self.hex_mode = True
         self.allow_dereferece_pointer = False
+        self.allow_edit_top_expr = True
         self._value_version = 0
 
     def child(self, row, parent):
@@ -304,6 +300,8 @@ class StructTreeModel(AbstractTreeModel):
         if index.column() > 0:
             return 0
         item = self.itemFromIndex(index)
+        if item is None:
+            return 0
         if self.canFetchMore(index):
             return 1
 
@@ -334,7 +332,13 @@ class StructTreeModel(AbstractTreeModel):
         if item is None:
             return flags
 
-        if tag == "value":
+        is_top_editable_item = self.allow_edit_top_expr and not self.parent(index).isValid()
+
+        if tag == "levelname":
+            if is_top_editable_item:
+                # can only edit root item
+                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+        elif tag == "value":
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "count":
             p_item = self.itemFromIndex(self.parent(index))
@@ -345,12 +349,15 @@ class StructTreeModel(AbstractTreeModel):
                         # only allow non-pvoid pointer be editable
                         flags |= QtCore.Qt.ItemFlag.ItemIsEditable
         elif tag == "type" and self.allow_dereferece_pointer:
-            if item[tag].lower().endswith("pvoid") or item.get("_is_pvoid", False):
-                flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+            if item["is_pointer"] and self.allow_dereferece_pointer:
+                tpname = item[tag].lower()
+                if tpname.endswith("pvoid") or tpname.endswith("t_void *") or item.get("_is_pvoid", False):
+                    flags |= QtCore.Qt.ItemFlag.ItemIsEditable
 
         if flags & QtCore.Qt.ItemFlag.ItemIsEditable:
             if item.get("_is_invalid", False):
-                flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
+                if not is_top_editable_item:
+                    flags &= ~QtCore.Qt.ItemFlag.ItemIsEnabled
 
         return flags
 
@@ -396,24 +403,22 @@ class StructTreeModel(AbstractTreeModel):
                             return str(val)
             case QtCore.Qt.ItemDataRole.ToolTipRole:
                 return item.get("expr", None)
-            case QtCore.Qt.ItemDataRole.FontRole:
-                if tag in {"value", "count", "address"}:
-                    return QtGui.QFont("Consolas")
             case QtCore.Qt.ItemDataRole.ForegroundRole:
                 # QTreeView request order:
                 #   - ForegroundRole
                 #   - DisplayRole, if we _calc_val here, ForegroundRole will be updated in the next cycle
                 #   - BackgroundRole
                 _calc_val(self.fileio, item)  # update value in advanced to render correct color
-                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                if item.get("_is_invalid", False):
                     return
                 if tag == "value":
                     if item.get("_changed_since_prev", False):
                         return QtGui.QColor("red")
                 if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
-                    return QtGui.QColor("blue")
+                    if index.column() != 0:
+                        return QtGui.QColor("blue")
             case QtCore.Qt.ItemDataRole.BackgroundRole:
-                if not (self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEnabled):
+                if item.get("_is_invalid", False):
                     return QtGui.QColor("#f0d6d5")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
@@ -422,7 +427,14 @@ class StructTreeModel(AbstractTreeModel):
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
-        if tag == "value":
+        if tag == "levelname":
+            if value == item["expr"] or value == "":
+                return False
+            item["expr"] = value
+            item["levelname"] = value
+            self.exprChanged.emit(index)
+            return True
+        elif tag == "value":
             try:
                 val = eval(value)
             except:
@@ -435,8 +447,8 @@ class StructTreeModel(AbstractTreeModel):
             self.fileio.seek(base)
             old_val = self.fileio.read(size)
             if boff and bsize:
-                val = (val & bitmask(bsize))
-                new_val = old_val & ~(bitmask(bsize) << boff)
+                val = (val & BITMASK(bsize))
+                new_val = old_val & ~(BITMASK(bsize) << boff)
                 new_val |= val << boff
             else:
                 new_val = val
@@ -457,14 +469,14 @@ class StructTreeModel(AbstractTreeModel):
             item["_is_pvoid"] = True
             item[tag] = value
             count = item.get("_count", 1)
-            self.pvoidStructChanged.emit(index, _calc_val(self.fileio, item), count, value)
+            self.pointerDereferenced.emit(index, count)
             return True
         elif tag == "count":
             old_value = item.get("_count", 1)
             if value == old_value or value <= 0:
                 return False
             item["_count"] = value
-            self.pointerDereferenced.emit(index, _calc_val(self.fileio, item), value)
+            self.pointerDereferenced.emit(index, value)
             return True
         return False
 
@@ -505,6 +517,8 @@ class StructTreeModel(AbstractTreeModel):
         if not self.allow_dereferece_pointer:
             return False
         item = self.itemFromIndex(parent)
+        if item is None:
+            return False
         return (
             not item["type"].lower().endswith("pvoid")
             and item.get("is_pointer", False)
@@ -520,7 +534,7 @@ class StructTreeModel(AbstractTreeModel):
         item["is_pointer"] = False  # psuedo node is not real pointer
         item["fields"] = None
         self.dataChanged.emit(index, index)
-        self.pointerDereferenced.emit(parent, _calc_val(self.fileio, item), item.get("_count", 1))
+        self.pointerDereferenced.emit(parent, item.get("_count", 1))
 
     def appendItem(self, record: dict, parent=QtCore.QModelIndex()):
         last_row = self.rowCount()
@@ -531,6 +545,7 @@ class StructTreeModel(AbstractTreeModel):
     def setItem(self, record: dict, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
         new_count = len(record["fields"]) if record["fields"] else 0
+        parent = index.parent()
         if row_count := self.rowCount(index):
             self.removeRows(0, row_count - 1, index)
         if new_count:
@@ -539,6 +554,9 @@ class StructTreeModel(AbstractTreeModel):
             item.update(record)
             self.endInsertRows()
             self.layoutChanged.emit()
+        else:
+            item.update(record)
+        self.dataChanged.emit(index, index)
 
     def refreshIndex(self, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)

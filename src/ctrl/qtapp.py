@@ -100,10 +100,18 @@ class AppCtrl(QtWidgets.QMainWindow):
     def _print_error_thread(self, expt, tb):
         logger.error(tb)
 
-    def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, **kwargs):
+    def exec_async(self, fn, *args, finished_cb=None, errored_cb=None, block_UIs=None, **kwargs):
+        block_UIs = block_UIs or []
+        for ui in block_UIs:
+            ui.setEnabled(False)
+        def _enable_ui(*_):
+            for ui in block_UIs:
+                ui.setEnabled(True)
+
         worker = Runnable(fn, *args, **kwargs)
         if finished_cb:
             worker.finished.connect(finished_cb)
+        worker.finished.connect(_enable_ui)
         worker.errored.connect(self._print_error_thread)
         if errored_cb:
             worker.errored.connect(errored_cb)
@@ -147,7 +155,7 @@ class AppCtrl(QtWidgets.QMainWindow):
             except IndexError:
                 return None
 
-        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu, ag: QtGui.QActionGroup=None):
+        def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu, ag: QtGui.QActionGroup | None=None):
             prev_pos = None
             for act in actions:
                 if act["name"] == "---":
@@ -157,11 +165,12 @@ class AppCtrl(QtWidgets.QMainWindow):
                     else:
                         menu.addSeparator()
                     continue
-                if submenus := act.get("submenus", []):
-                    submenu = self._addMenu(menu, i18n("MainWindow", act["name"]))
+                submenus = act.get("submenus", None)
+                if isinstance(submenus, list):
+                    submenu = self._addMenu(menu, act["name"])
                     ag = QtGui.QActionGroup(submenu) if act.get("actionGroup", False) else None
                     _make_menu(submenus, submenu, ag)
-                    menu.addAction(submenu.menuAction())
+                    menu.addMenu(submenu)
                 else:
                     action = self._makeAction(
                         self,
@@ -250,31 +259,50 @@ class Plugin:
 
 class HistoryMenu(QtCore.QObject):
     actionTriggered = QtCore.pyqtSignal(object)
+    cleared = QtCore.pyqtSignal()
 
-    def __init__(self, btn: QtWidgets.QToolButton) -> None:
+    def __init__(self, menu: QtWidgets.QMenu, options: list=None, default=None) -> None:
         super().__init__()
-        self.btn = btn
-        self.data_list = DequeList()
+        options = options or []
+        self.menu = menu
+        self.data_list = DequeList(options)
+        self.recently_used_on_top = False
+        self._current = default
+        self._update_menu()
 
     def _update_menu(self):
-        menu = QtWidgets.QMenu()
-        actgroup = QtGui.QActionGroup(menu)
+        self.menu.clear()
+        actgroup = QtGui.QActionGroup(self.menu)
         actgroup.setExclusive(True)
-        def _add_action(menu, data):
+        current = self.stringify(self._current) if self._current else None
+        def _add_action(menu, _data):
+            title = self.stringify(_data)
             action = menu.addAction(title)
             action.setCheckable(True)
-            action.triggered.connect(lambda: self.actionTriggered.emit(data))
+            action.triggered.connect(lambda: self._selected(_data))
+            action.triggered.connect(lambda: self.actionTriggered.emit(_data))
+            if title == current:
+                action.setChecked(True)
             actgroup.addAction(action)
 
         for data in self.data_list:
-            title = self.stringify(data)
-            _add_action(menu, data)
+            _add_action(self.menu, data)
 
-        menu.addSeparator()
-        action = menu.addAction("Clear History")
-        action.triggered.connect(lambda: self.btn.menu().clear())
+        if self.data_list:
+            self.menu.addSeparator()
+            action = self.menu.addAction("Clear History")
+            action.triggered.connect(self._clear)
 
-        self.btn.setMenu(menu)
+    def _selected(self, data):
+        self._current = data
+        if self.recently_used_on_top:
+            self._update_menu()
+
+    def _clear(self):
+        self.menu.clear()
+        self.data_list = DequeList()
+        self._current = None
+        self.cleared.emit()
 
     def stringify(self, data) -> str:
         return str(data)
@@ -286,7 +314,14 @@ class HistoryMenu(QtCore.QObject):
             if self.stringify(d) == data_str:
                 found_pos = i
                 break
-        if found_pos >= 0:
+        need_pop_existance = self.recently_used_on_top and found_pos >= 0
+        need_insert_front = self.recently_used_on_top or found_pos == -1
+
+        if need_pop_existance:
             data = self.data_list.pop(found_pos)
-        self.data_list.insert(0, data)
-        self._update_menu()
+        if need_insert_front:
+            self.data_list.insert(0, data)
+
+        if need_insert_front or self.stringify(self._current) != self.stringify(data):
+            self._current = data
+            self._update_menu()

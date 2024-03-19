@@ -85,6 +85,11 @@
         </item>
         <item>
          <widget class="QLineEdit" name="lineStruct">
+          <property name="font">
+           <font>
+            <family>Consolas</family>
+           </font>
+          </property>
           <property name="placeholderText">
            <string>watch expression</string>
           </property>
@@ -137,11 +142,11 @@
     <widget class="QTreeView" name="treeView">
      <property name="font">
       <font>
-       <family>Calibri</family>
+       <family>Consolas</family>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}
+      <string notr="true">QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8; padding: 0px 3px;}
 QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
 QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}
 QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}
@@ -151,7 +156,7 @@ QTreeView::branch:closed:has-children:!has-siblings{border-image: url(:/icon/ima
 QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}
 QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}
 QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}
-</string>
+QTreeView::item{  padding: 0px 6px; }</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Panel</enum>

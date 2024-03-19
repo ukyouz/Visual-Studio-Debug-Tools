@@ -13,12 +13,12 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import ClsType
-from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
 from ctrl.WidgetBinParser import BinParser
 from helper import qtmodel
+from plugins import help_menu
 from plugins import loadpdb
 from plugins import run_script
 from plugins import translator
@@ -53,6 +53,7 @@ class BinViewer(AppCtrl):
             run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             translator.Translator(self),
+            help_menu.AboutMe(self),
         ])
 
         self.cmd.register("ExportParsingResultAsCsvFile", self._export_active_window)

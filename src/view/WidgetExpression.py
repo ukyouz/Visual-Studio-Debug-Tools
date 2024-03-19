@@ -40,6 +40,9 @@ class Ui_Form(object):
         self.btnHistory.setObjectName("btnHistory")
         self.horizontalLayout.addWidget(self.btnHistory)
         self.lineStruct = QtWidgets.QLineEdit(parent=self.frame_2)
+        font = QtGui.QFont()
+        font.setFamily("Consolas")
+        self.lineStruct.setFont(font)
         self.lineStruct.setObjectName("lineStruct")
         self.horizontalLayout.addWidget(self.lineStruct)
         self.btnParse = QtWidgets.QToolButton(parent=self.frame_2)
@@ -66,9 +69,9 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.frame_2)
         self.treeView = QtWidgets.QTreeView(parent=Form)
         font = QtGui.QFont()
-        font.setFamily("Calibri")
+        font.setFamily("Consolas")
         self.treeView.setFont(font)
-        self.treeView.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8;}\n"
+        self.treeView.setStyleSheet("QHeaderView::section {border: 0; border-right: 1px solid #d8d8d8; border-bottom: 1px solid #d8d8d8; padding: 0px 3px;}\n"
 "QTreeView::branch:open:has-children{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
 "QTreeView::branch:closed:has-children{border-image: url(:/icon/images/treeview/border-collapse.png) 0;}\n"
 "QTreeView::branch:has-siblings:!adjoins-item{border-image:url(:/icon/images/treeview/border-line.png) 0;}\n"
@@ -78,7 +81,7 @@ class Ui_Form(object):
 "QTreeView::branch:closed:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-collapse-more.png) 0;}\n"
 "QTreeView::branch:open:has-children:!has-siblings{border-image: url(:/icon/images/treeview/border-expand.png) 0;}\n"
 "QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images/treeview/border-expand-more.png) 0;}\n"
-"")
+"QTreeView::item{  padding: 0px 6px; }")
         self.treeView.setFrameShape(QtWidgets.QFrame.Shape.Panel)
         self.treeView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView.setIconSize(QtCore.QSize(16, 22))

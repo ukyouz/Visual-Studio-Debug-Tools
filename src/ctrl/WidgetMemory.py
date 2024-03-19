@@ -1,4 +1,5 @@
 import io
+import logging
 import sys
 
 from PyQt6 import QtWidgets
@@ -8,10 +9,13 @@ from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
+from plugins import loadpdb
 from view import WidgetMemory
 
 tr = lambda txt: i18n("Memory", txt)
+logger = logging.getLogger(__name__)
 
 
 class MemoryHistory(HistoryMenu):
@@ -27,7 +31,8 @@ class Memory(QtWidgets.QWidget):
         set_app_title(self, "")
 
         self.app = app
-        self.parse_hist = MemoryHistory(self.ui.btnHistory)
+        self.ui.btnHistory.setMenu(QtWidgets.QMenu())
+        self.parse_hist = MemoryHistory(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
 
         # attributes
@@ -37,18 +42,42 @@ class Memory(QtWidgets.QWidget):
         self.ui.lineSize.returnPressed.connect(self._loadMemory)
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
 
-    @property
-    def requestAddress(self):
+    def requestAddress(self) -> int:
         try:
-            return eval(self.ui.lineAddress.text())
-        except:
+            pdb = self.app.plugin(loadpdb.LoadPdb)
+            dbg = self.app.plugin(debugger.Debugger)
+            virt_base = dbg.get_virtual_base()
+            stream = dbg.get_memory_stream()
+            return int(pdb.query_cstruct(self.ui.lineAddress.text(), virt_base, stream))
+        except InvalidExpression as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("Invalid Expression: %s") % str(e),
+            )
+            logger.warning(e)
+            return 0
+        except Exception as e:
+            logger.warning(e)
             return 0
 
-    @property
-    def requestSize(self):
+    def requestSize(self) -> int:
         try:
-            return eval(self.ui.lineSize.text())
-        except:
+            pdb = self.app.plugin(loadpdb.LoadPdb)
+            dbg = self.app.plugin(debugger.Debugger)
+            virt_base = dbg.get_virtual_base()
+            stream = dbg.get_memory_stream()
+            return int(pdb.query_cstruct(self.ui.lineSize.text(), virt_base, stream))
+        except InvalidExpression as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("Invalid Expression: %s! Use default size: 1024.") % str(e),
+            )
+            logger.warning(e)
+            return 1024
+        except Exception as e:
+            logger.warning(e)
             return 1024
 
     def _onHistoryClicked(self, val):
@@ -87,11 +116,11 @@ class Memory(QtWidgets.QWidget):
 
         mem = dbg.get_memory_stream()
         model = qtmodel.HexTable(mem)
-        model.viewAddress = self.requestAddress
-        model.viewSize = self.requestSize
+        model.viewAddress = self.requestAddress()
+        model.viewSize = self.requestSize()
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
-        self.ui.labelAddress.setText(hex(self.requestAddress))
+        self.ui.labelAddress.setText("Address: {}".format(model.addrPrefix[0]))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
     def dumpBuffer(self):
