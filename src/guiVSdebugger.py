@@ -13,6 +13,7 @@ from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
 from ctrl.WidgetProcessSelector import ProcessSelector
 from plugins import dock
+from plugins import help_menu
 from plugins import loadpdb
 from plugins import run_script
 from plugins import translator
@@ -47,6 +48,7 @@ class VisualStudioDebugger(AppCtrl):
             loadpdb.LoadPdb(self),
             dock.Dock(self),
             translator.Translator(self),
+            help_menu.AboutMe(self),
         ])
 
         editToolBar = QtWidgets.QToolBar("Process", self)
