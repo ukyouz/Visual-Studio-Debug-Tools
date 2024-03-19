@@ -50,10 +50,11 @@ class Expression(QtWidgets.QWidget):
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
 
         # event bindingd
+        self.installEventFilter(self)
         self.ui.lineStruct.returnPressed.connect(self._addExpression)
         self.ui.btnParse.clicked.connect(self._addExpression)
         # self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
-        self.ui.btnToggleHex.clicked.connect(self._onBtnToggleHexClicked)
+        self.ui.btnToggleHex.toggled.connect(self._onBtnToggleHexClicked)
         self.ui.treeView.installEventFilter(self)
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.treeView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
@@ -71,17 +72,35 @@ class Expression(QtWidgets.QWidget):
         self.ui.treeView.setModel(model)
 
     def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
+        if evt.type() != QtCore.QEvent.Type.KeyPress:
+            return False
+
+        key = evt.key()
+        modifiers = evt.modifiers()
+        NO = QtCore.Qt.KeyboardModifier.NoModifier
+        CTRL = QtCore.Qt.KeyboardModifier.ControlModifier
+        ALT = QtCore.Qt.KeyboardModifier.AltModifier
+
         if obj == self.ui.treeView:
-            if evt.type() == QtCore.QEvent.Type.KeyPress:
-                key = evt.key()
-                indexes = [x for x in self.ui.treeView.selectedIndexes() if x.column() == 0]
-                if key == QtCore.Qt.Key.Key_Delete:
+            indexes = [x for x in self.ui.treeView.selectedIndexes() if x.column() == 0]
+            match (modifiers, key):
+                case (NO, QtCore.Qt.Key.Key_Delete):
                     if len(indexes) == 1:
                         # can only the delete top level structrue
                         if indexes[0].parent().isValid():
                             return False
                         model = self.ui.treeView.model()
                         model.removeRow(indexes[0].row(), indexes[0].parent())
+                        return True
+        else:
+            match (modifiers, key):
+                case (CTRL, QtCore.Qt.Key.Key_L):
+                    self.ui.lineStruct.setFocus()
+                    return True
+                case (ALT, QtCore.Qt.Key.Key_X):
+                    checked = self.ui.btnToggleHex.isChecked()
+                    self.ui.btnToggleHex.setChecked(not checked)
+
         return False
 
     def _onHistoryClicked(self, val):
@@ -205,10 +224,9 @@ class Expression(QtWidgets.QWidget):
             ],
         )
 
-    def _onBtnToggleHexClicked(self):
+    def _onBtnToggleHexClicked(self, checked: bool):
         model = self.ui.treeView.model()
         if isinstance(model, qtmodel.StructTreeModel):
-            checked = self.ui.btnToggleHex.isChecked()
             model.toggleHexMode(checked)
 
     def _onContextMenuOpened(self, position):
