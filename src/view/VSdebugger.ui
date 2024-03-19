@@ -56,6 +56,9 @@
         </property>
         <item>
          <widget class="QPlainTextEdit" name="plainTextEdit">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
           <property name="plainText">
            <string>1. Generate a Debug Info file。
 →Tag[PDBIN]
@@ -89,6 +92,9 @@
         </property>
         <item>
          <widget class="QPlainTextEdit" name="plainTextEdit_2">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
           <property name="plainText">
            <string>1. From menu [PDB], click [Generate PDB...].
 
@@ -121,6 +127,9 @@
         </property>
         <item>
          <widget class="QPlainTextEdit" name="plainTextEdit_3">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
           <property name="plainText">
            <string>1. Input an address, then press Enter to vew memory.
 
@@ -151,6 +160,9 @@
         </property>
         <item>
          <widget class="QPlainTextEdit" name="plainTextEdit_4">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
           <property name="plainText">
            <string>1. Input an expression, then press Enter to view the structure.
 * Current limitations for expression:
