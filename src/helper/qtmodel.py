@@ -300,6 +300,8 @@ class StructTreeModel(AbstractTreeModel):
         if index.column() > 0:
             return 0
         item = self.itemFromIndex(index)
+        if item is None:
+            return 0
         if self.canFetchMore(index):
             return 1
 
@@ -515,6 +517,8 @@ class StructTreeModel(AbstractTreeModel):
         if not self.allow_dereferece_pointer:
             return False
         item = self.itemFromIndex(parent)
+        if item is None:
+            return False
         return (
             not item["type"].lower().endswith("pvoid")
             and item.get("is_pointer", False)
