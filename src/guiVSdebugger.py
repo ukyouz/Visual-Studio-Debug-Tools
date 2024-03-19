@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 from typing import Type
@@ -17,6 +18,18 @@ from plugins import run_script
 from plugins import translator
 from view import VSdebugger
 from view import resource
+
+logger = logging.getLogger(__name__)
+
+_log_file = Path(__file__).parent / "log/VSdebugger.txt"
+_log_file.parent.mkdir(parents=True, exist_ok=True)
+_handler = logging.FileHandler(_log_file)
+_fmt = logging.Formatter(
+    "[%(asctime)s][%(name)-5s][%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+_handler.setFormatter(_fmt)
+logging.getLogger().addHandler(_handler)
 
 
 class VisualStudioDebugger(AppCtrl):
