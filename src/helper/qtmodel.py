@@ -107,7 +107,7 @@ class HexTable(QtCore.QAbstractTableModel):
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
                     if section < self.column:
-                        return hex(section * self.itembyte + self.viewOffset % self._bytesPerRow)
+                        return hex(section * self.itembyte + (self.viewOffset + self.viewAddress) % self._bytesPerRow)
                     else:
                         return "Preview"
                 case QtCore.Qt.ItemDataRole.FontRole:
