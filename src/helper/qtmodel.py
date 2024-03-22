@@ -14,6 +14,7 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from modules.utils.myfunc import BITMASK
+from modules.utils.myfunc import hex2
 from modules.utils.typ import Stream
 
 
@@ -107,7 +108,7 @@ class HexTable(QtCore.QAbstractTableModel):
             match role:
                 case QtCore.Qt.ItemDataRole.DisplayRole:
                     if section < self.column:
-                        return hex(section * self.itembyte + self.viewOffset % self._bytesPerRow)
+                        return hex(section * self.itembyte + (self.viewOffset + self.viewAddress) % self._bytesPerRow)
                     else:
                         return "Preview"
                 case QtCore.Qt.ItemDataRole.FontRole:
@@ -384,8 +385,7 @@ class StructTreeModel(AbstractTreeModel):
                         if val is not None:
                             if self.hex_mode:
                                 bitsz = item.get("bitsize", None) or item["size"] * 8
-                                size = min(item["size"], math.ceil(bitsz / 8))
-                                return f"{{:#0{size * 2 + 2}x}}".format(val)
+                                return hex2(val, bitsz, pad_zero=True)
                             else:
                                 return str(val)
                         else:

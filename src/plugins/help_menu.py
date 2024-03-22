@@ -28,8 +28,10 @@ class AboutMe(Plugin):
         with open("about_me.txt", "r") as fs:
             txt = fs.read()
 
+        header = "<h2>%s</h2>" % self.app.__class__.__name__
+        body = "".join("<p style='margin: 0;'>%s</p>" % x for x in txt.split("\n"))
         QtWidgets.QMessageBox.about(
             self.app,
             self.__class__.__name__,
-            txt,
+            header + body,
         )
