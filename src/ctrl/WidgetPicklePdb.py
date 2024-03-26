@@ -28,9 +28,10 @@ class PicklePdb(QtWidgets.QWidget):
         self.ui.btnGenerateSelected.clicked.connect(self._generate_pdbin)
         self.ui.btnLoadSelected.clicked.connect(self._load_pdbin)
 
-        if val := self.app.app_setting.value("LoadPdb/lastGeneratedFolder", ""):
+        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
             self.setEnabled(False)
-            QtCore.QTimer.singleShot(0, lambda: self._open_folder(val))
+            loaded_db_folder = Path(val).parent.parent  # TARGET/vsdbg/xx.pdbin
+            QtCore.QTimer.singleShot(0, lambda: self._open_folder(loaded_db_folder))
 
     def _open_folder(self, folder=""):
         if not folder:
@@ -63,7 +64,7 @@ class PicklePdb(QtWidgets.QWidget):
 
             def progressing():
                 val = self.ui.progressBar.value()
-                self.ui.progressBar.setValue(val + 1)
+                self.ui.progressBar.setValue(val + 0.5)
 
             timer = QtCore.QTimer()
             timer.timeout.connect(progressing)

@@ -219,11 +219,22 @@ class LoadPdb(Plugin):
             self.app.app_setting.setValue("LoadPdb/recent_used", list(self._hist_pdbs.data_list))
 
             def _cb(_pdb):
+                if _pdb is None:
+                    self.app.statusBar().showMessage("Pdbin load failed!")
+                    return
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
                 self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
+
+            def _err(expt, tb):
+                self._hist_pdbs.remove_data(filename)
+                QtWidgets.QMessageBox.warning(
+                    self.app,
+                    self.__class__.__name__,
+                    str(expt),
+                )
 
             path = Path(filename)
             if path.suffix == ".pdbin":
@@ -231,12 +242,14 @@ class LoadPdb(Plugin):
                     picklepdb.load_pdbin,
                     filename,
                     finished_cb=_cb,
+                    errored_cb=_err,
                 )
             elif path.suffix == ".pdb":
                 self.app.exec_async(
                     pdb.parse,
                     filename,
                     finished_cb=_cb,
+                    errored_cb=_err,
                 )
             self._loading = True
             self.app.statusBar().showMessage("Loading... %r" % filename)

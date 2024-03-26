@@ -325,3 +325,8 @@ class HistoryMenu(QtCore.QObject):
         if need_insert_front or self.stringify(self._current) != self.stringify(data):
             self._current = data
             self._update_menu()
+
+    def remove_data(self, data):
+        self.data_list.remove(data)
+        self._current = None
+        self._update_menu()
