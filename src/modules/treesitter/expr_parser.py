@@ -127,13 +127,13 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
             case "cast_expression":
                 # assert childs[0].type == '(' and childs[2].type == ')'
                 structname = childs[1].text.decode()
-                lf, _ = p.get_type_lf_from_name(structname)
+                lf, _ = p.get_lf_from_name(structname)
                 pointer_literal = False
                 if lf is None:
                     pointer_literal = True
                     # ie: xxx_def *
                     if match := re.match(r"(?:struct\s*)?(?P<STRUCT>.+)\s+\*", structname):
-                        lf, _ = p.get_type_lf_from_name(match.group("STRUCT"))
+                        lf, _ = p.get_lf_from_name(match.group("STRUCT"))
                 if lf is None:
                     raise InvalidExpression("Bad struct casting: b%r" % structname)
 
@@ -203,13 +203,13 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 )
             case "identifier":
                 structname = node.text.decode()
-                lf, offset = p.get_type_lf_from_name(structname)
+                lf, offset = p.get_lf_from_name(structname)
                 _assert(lf is not None, "Identifier not found: %r" % structname)
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
             case "type_identifier":
                 structname = node.text.decode()
-                lf, offset = p.get_type_lf_from_name(structname)
+                lf, offset = p.get_lf_from_name(structname)
                 _assert(lf is not None, "Identifier not found: %r" % structname)
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
