@@ -750,42 +750,37 @@ class FileExplorerModel(AbstractTreeModel):
 
         return True
 
-    def _insert_folder(self, folder: Path):
+    def _insert_folder(self, folder: Path) -> QtCore.QModelIndex:
         with suppress(KeyError):
             return self.pathIndexes[folder]
 
-        root = self.itemFromIndex(QtCore.QModelIndex())
-        most_common_path = Path(".")
-        for f in self.folders.keys():
-            if f == root:
-                continue
-            comm_path = os.path.commonpath((f, folder))
-            if comm_path > str(most_common_path):
-                most_common_path = Path(comm_path)
+        # ff is the folder of the `folder`
+        ffi = QtCore.QModelIndex()
+        for f in folder.parents:
+            with suppress(KeyError):
+                ffi = self.pathIndexes[f]
+        ff = self.itemFromIndex(ffi)
 
-        # insert new common folder node
-        self.layoutAboutToBeChanged.emit()
-        try:
-            parent = self.pathIndexes[most_common_path]
-            closest_folder = most_common_path
-        except:
-            parent = QtCore.QModelIndex()
-            for f in most_common_path.parents:
-                with suppress(KeyError):
-                    parent = self.pathIndexes[f]
-                    break
-            closest_folder = self.itemFromIndex(parent)
-            r = self.rowCount(parent)
-            for child in self.folders[closest_folder]:
-                self.folders[folder].append(child)
-            self.folders[closest_folder] = []
+        most_common_path = Path(os.path.commonpath([folder] + self.folders[ff]))
+        if not ffi.isValid() and self.rowCount(ffi):
+            if most_common_path != folder:
+                ffi = self._insert_folder(most_common_path)
+                ff = most_common_path
 
-        r = self.rowCount(parent)
-        self.folders[closest_folder].append(folder)
-        parent = self.index(r, 0, parent)
-        self.layoutChanged.emit()
+        for r, subf in enumerate(list(self.folders[ff])):
+            with suppress(ValueError):
+                subf.relative_to(folder)
+                self.folders[folder].append(subf)
+                self.beginRemoveRows(ffi, r, r)
+                self.folders[ff].remove(subf)
+                self.endRemoveRows()
 
-        return parent
+        r = self.rowCount(ffi)
+        self.beginInsertRows(ffi, r, r)
+        self.folders[ff].append(folder)
+        self.endInsertRows()
+
+        return self.index(r, 0, ffi)
 
     def _insert_file(self, file: Path):
         if file in self.requestPaths:
