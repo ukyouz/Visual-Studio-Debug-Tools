@@ -37,6 +37,7 @@ class ViewStruct(TypedDict):
     bitsize: int | None
     fields: list[Self] | dict[str, Self] | None
     is_pointer: bool
+    is_funcptr: bool
     has_sign: bool
     lf: Struct | None
 
@@ -371,6 +372,28 @@ class LoadPdb(Plugin):
         out_struct = self._duplicate_as_array(_expr, out_struct, count)
 
         return out_struct
+
+    def deref_function_pointer(self, struct: ViewStruct, io_stream: Stream, virtual_base=0) -> ViewStruct | None:
+        if not struct["is_funcptr"]:
+            raise ValueError("Can only deref a function pointer")
+        addr = struct["value"] or _read_value(struct, io_stream)
+        if addr == 0:
+            return
+        name = self._pdb.get_refname_from_offset(addr - virtual_base)
+        if name is None:
+            return
+        x = struct.copy()
+        y = struct.copy()
+        y["levelname"] = name
+        y["is_pointer"] = False
+        y["fields"] = None
+        y["address"] = addr
+        y["size"] = 0
+
+        x["fields"] = {
+            name: y,
+        }
+        return x
 
     # for scripting
 

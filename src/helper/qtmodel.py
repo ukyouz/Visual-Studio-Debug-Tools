@@ -422,7 +422,10 @@ class StructTreeModel(AbstractTreeModel):
                     return QtGui.QColor("#f0d6d5")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
-                    return QtGui.QIcon(":icon/images/vswin2019/Field_left_16x.svg")
+                    if item.get("is_funcptr", False):
+                        return QtGui.QIcon(":icon/images/vswin2019/CallReturnInstructionPointer_16x.svg")
+                    else:
+                        return QtGui.QIcon(":icon/images/vswin2019/Field_left_16x.svg")
 
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         tag = self.headers[index.column()].lower()
@@ -519,8 +522,10 @@ class StructTreeModel(AbstractTreeModel):
         item = self.itemFromIndex(parent)
         if item is None:
             return False
+        addr = _calc_val(self.fileio, item) or 0
         return (
-            not item["type"].lower().endswith("pvoid")
+            addr > 0
+            and not item["type"].lower().endswith("pvoid")
             and item.get("is_pointer", False)
             and (item["fields"] is None or item["fields"] == "")
         )
@@ -545,7 +550,6 @@ class StructTreeModel(AbstractTreeModel):
     def setItem(self, record: dict, index=QtCore.QModelIndex()):
         item = self.itemFromIndex(index)
         new_count = len(record["fields"]) if record["fields"] else 0
-        parent = index.parent()
         if row_count := self.rowCount(index):
             self.removeRows(0, row_count - 1, index)
         if new_count:
@@ -754,7 +758,6 @@ class FileExplorerModel(AbstractTreeModel):
         with suppress(KeyError):
             return self.pathIndexes[folder]
 
-        # ff is the folder of the `folder`
         ffi = QtCore.QModelIndex()
         for f in folder.parents:
             with suppress(KeyError):

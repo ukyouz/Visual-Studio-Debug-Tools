@@ -212,17 +212,30 @@ class Expression(QtWidgets.QWidget):
 
         logger.debug("Expand: '(%s)%s', Count = %d" % (item["type"], item["expr"], count))
 
-        self.app.exec_async(
-            pdb.deref_struct,
-            struct=item,
-            count=count,
-            io_stream=dbg.get_memory_stream(),
-            finished_cb=_cb,
-            errored_cb=functools.partial(_err, self),
-            block_UIs=[
-                self.ui.treeView,
-            ],
-        )
+        if item.get("is_funcptr", False):
+            self.app.exec_async(
+                pdb.deref_function_pointer,
+                struct=item,
+                io_stream=dbg.get_memory_stream(),
+                virtual_base=dbg.get_virtual_base(),
+                finished_cb=_cb,
+                errored_cb=functools.partial(_err, self),
+                block_UIs=[
+                    self.ui.treeView,
+                ],
+            )
+        else:
+            self.app.exec_async(
+                pdb.deref_struct,
+                struct=item,
+                count=count,
+                io_stream=dbg.get_memory_stream(),
+                finished_cb=_cb,
+                errored_cb=functools.partial(_err, self),
+                block_UIs=[
+                    self.ui.treeView,
+                ],
+            )
 
     def _onBtnToggleHexClicked(self, checked: bool):
         model = self.ui.treeView.model()
