@@ -64,15 +64,16 @@ class PicklePdb(QtWidgets.QWidget):
 
             def progressing():
                 val = self.ui.progressBar.value()
-                self.ui.progressBar.setValue(val + 0.5)
+                self.ui.progressBar.setValue(val + 1)
 
             timer = QtCore.QTimer()
             timer.timeout.connect(progressing)
             timer.start(1000)
 
+            self.ui.progressBar.setMaximum(200)
             def cb(res):
                 timer.stop()
-                self.ui.progressBar.setValue(100)
+                self.ui.progressBar.setValue(200)
                 if res is None:
                     return
                 QtWidgets.QMessageBox.information(
@@ -87,7 +88,7 @@ class PicklePdb(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
-                    str(e),
+                    tb + str(e),
                 )
 
             self.ui.progressBar.setValue(0)
