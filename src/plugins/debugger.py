@@ -35,6 +35,10 @@ class DebuggerStream:
         return self._offset
 
 
+class ProcessNotConnected(Exception):
+    ...
+
+
 class Debugger(Plugin):
 
     def post_init(self):
@@ -59,8 +63,8 @@ class Debugger(Plugin):
     def get_memory_stream(self) -> DebuggerStream:
         return DebuggerStream(self.pd)
 
-    def get_virtual_base(self) -> int | None:
+    def get_virtual_base(self) -> int:
         if self.pd is None:
-            return None
+            raise ProcessNotConnected("No process is connected.")
         return self.pd.proc.get_main_module().get_base()
 

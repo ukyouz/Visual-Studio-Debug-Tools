@@ -89,7 +89,8 @@ class Memory(QtWidgets.QWidget):
         dbg = self.app.plugin(debugger.Debugger)
 
         try:
-            virt_base = dbg.get_virtual_base()
+            # test connection
+            dbg.get_virtual_base()
         except PermissionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -97,7 +98,7 @@ class Memory(QtWidgets.QWidget):
                 str(e),
             )
             return
-        if virt_base is None:
+        except debugger.ProcessNotConnected:
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,

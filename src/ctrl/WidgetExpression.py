@@ -106,20 +106,20 @@ class Expression(QtWidgets.QWidget):
     def _onHistoryClicked(self, val):
         self.ui.lineStruct.setText(val)
 
-    def _addExpression(self):
+    def _try_get_virtual_base(self, cb=None) -> int | None:
         dbg = self.app.plugin(debugger.Debugger)
-        pdb = self.app.plugin(loadpdb.LoadPdb)
-
         try:
-            virt_base = dbg.get_virtual_base()
+            return dbg.get_virtual_base()
         except PermissionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
                 str(e),
             )
-            return
-        if virt_base is None:
+        except debugger.ProcessNotConnected:
+            if not callable(cb):
+                return
+
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
@@ -130,11 +130,20 @@ class Expression(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.StandardButton.Yes,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
-            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
-                return
-            else:
-                self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
-                return
+            if rtn == QtWidgets.QMessageBox.StandardButton.Yes:
+                cb()
+
+    def _addExpression(self):
+        dbg = self.app.plugin(debugger.Debugger)
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+
+        def cb():
+            self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
+
+        virt_base = self._try_get_virtual_base(cb)
+        if virt_base is None:
+            return
+
         expr = self.ui.lineStruct.text()
         logger.debug("Add: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
 
@@ -169,6 +178,10 @@ class Expression(QtWidgets.QWidget):
         model = self.ui.treeView.model()
         item = parent.internalPointer()
 
+        virt_base = self._try_get_virtual_base()
+        if virt_base is None:
+            return
+
         def _cb(struct_record):
             if struct_record is None:
                 item["_is_invalid"] = True
@@ -183,7 +196,7 @@ class Expression(QtWidgets.QWidget):
         self.app.exec_async(
             pdb.query_struct,
             expr=item["expr"],
-            virtual_base = dbg.get_virtual_base(),
+            virtual_base=virt_base,
             io_stream=dbg.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=functools.partial(_err, self),
@@ -197,13 +210,19 @@ class Expression(QtWidgets.QWidget):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         item = parent.internalPointer().copy()
 
+        virt_base = self._try_get_virtual_base()
+        if virt_base is None:
+            return
+
         def _cb(struct_record):
             model = self.ui.treeView.model()
             assert isinstance(model, qtmodel.StructTreeModel), "Only StructTreeModel available here"
             if struct_record is None:
-                item["fields"][0]["_is_invalid"] = True
-                item["fields"][0]["is_pointer"] = False
-                item["fields"][0]["levelname"] = "> err: load failed!"
+                empty_struct = pdb.parse_expr_to_struct("")
+                empty_struct["_is_invalid"] = True
+                empty_struct["is_pointer"] = False
+                empty_struct["levelname"] = "> err: load failed!"
+                item["fields"] = [empty_struct]
                 model.setItem(item, parent)
                 return
             model.loadStream(dbg.get_memory_stream())
@@ -217,7 +236,7 @@ class Expression(QtWidgets.QWidget):
                 pdb.deref_function_pointer,
                 struct=item,
                 io_stream=dbg.get_memory_stream(),
-                virtual_base=dbg.get_virtual_base(),
+                virtual_base=virt_base,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
                 block_UIs=[
