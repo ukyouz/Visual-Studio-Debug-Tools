@@ -14,7 +14,9 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from modules.utils.myfunc import BITMASK
+from modules.utils.myfunc import float_from_int
 from modules.utils.myfunc import hex2
+from modules.utils.myfunc import int_from_float
 from modules.utils.typ import Stream
 
 
@@ -386,6 +388,8 @@ class StructTreeModel(AbstractTreeModel):
                             if self.hex_mode:
                                 bitsz = item.get("bitsize", None) or item["size"] * 8
                                 return hex2(val, bitsz, pad_zero=True)
+                            elif item.get("is_real", False):
+                                return str(float_from_int(val))
                             else:
                                 return str(val)
                         else:
@@ -442,6 +446,10 @@ class StructTreeModel(AbstractTreeModel):
                 val = eval(value)
             except:
                 return False
+
+            if isinstance(val, float):
+                val = int_from_float(val)
+
             base = item["address"]
             size = item["size"]
             boff = item["bitoff"]
