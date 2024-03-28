@@ -31,6 +31,10 @@ def is_cstring(data: bytes):
     return all(32 <= x <= 126 for x in data)
 
 
+class ModelNotSupportError(Exception):
+    ...
+
+
 class HexTable(QtCore.QAbstractTableModel):
     show_preview = True
 

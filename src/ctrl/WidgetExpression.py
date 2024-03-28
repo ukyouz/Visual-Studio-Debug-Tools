@@ -1,7 +1,6 @@
 import functools
 import logging
 import sys
-from contextlib import contextmanager
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -14,6 +13,7 @@ from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
+from plugins import dock
 from plugins import loadpdb
 from view import WidgetExpression
 
@@ -282,7 +282,35 @@ class Expression(QtWidgets.QWidget):
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
 
+        menu.addSeparator()
+
+        if len(indexes) == 1:
+            action = menu.addAction(tr("Show in BinParser"))
+            # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            item = model.itemFromIndex(indexes[0])
+            action.triggered.connect(functools.partial(self._openBinParserFromExpression, item))
+
         menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
+
+    def _openBinParserFromExpression(self, item):
+        _d = self.app.plugin(dock.Dock)
+        try:
+            data = self.readBuffer(item)
+        except Exception as err:
+            QtWidgets.QMessageBox.warning(
+                self.app,
+                self.__class__.__name__,
+                str(err),
+            )
+            return
+        b = _d.addBinParserView(data)
+        b.setWindowTitle(item["expr"])
+
+    def readBuffer(self, item: loadpdb.ViewStruct) -> bytes:
+        dbg = self.app.plugin(debugger.Debugger)
+        stream = dbg.get_memory_stream()
+        stream.seek(item["address"])
+        return stream.read(item["size"])
 
     def refreshTree(self, index: QtCore.QModelIndex):
         index = index or QtCore.QModelIndex()

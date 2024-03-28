@@ -1,4 +1,6 @@
+import io
 from collections import defaultdict
+from functools import partial
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -6,11 +8,14 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
+from ctrl.qtapp import i18n
+from ctrl.WidgetBinParser import BinParser
 from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
 from helper import qtmodel
 
+tr = lambda txt: i18n("Dock", txt)
 
 class Dock(Plugin):
     def registerMenues(self) -> list[MenuAction]:
@@ -49,12 +54,20 @@ class Dock(Plugin):
         self.app.resizeDocks([dm], [width * 2 // 3], QtCore.Qt.Orientation.Horizontal)
         self.app.tabifyDockWidget(dm, de)
 
+        self.app.evt.add_hook("ApplicationClosed", self._onClosed)
+
+    def _onClosed(self, evt):
+        for widgets in self.docks.values():
+            for d in widgets.keys():
+                d.close()
+
     def generate_dockwidget(self):
         dockWidget = QtWidgets.QDockWidget(parent=self.app)
         dockWidget.setObjectName("dockWidget")
         dockWidget.setFeatures(
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
             |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
+            |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
         titelbar = DockTitleBar(dockWidget)
         dockWidget.setTitleBarWidget(titelbar)
@@ -73,7 +86,7 @@ class Dock(Plugin):
         self.app.removeDockWidget(dockWidget)
         del widget_dict[dockWidget]
 
-    def addExpressionView(self):
+    def addExpressionView(self) -> QtWidgets.QDockWidget:
         dockWidget = self.generate_dockwidget()
         dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
         expr = Expression(self.app)
@@ -111,7 +124,7 @@ class Dock(Plugin):
 
         return dockWidget
 
-    def addMemoryView(self):
+    def addMemoryView(self) -> QtWidgets.QDockWidget:
         dockWidget = self.generate_dockwidget()
         dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
         mem = Memory(self.app)
@@ -125,8 +138,43 @@ class Dock(Plugin):
             menu = titlebar.ui.btnMore.menu()
             self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["memory"]))
             menu.addSeparator()
+            action = self._addAction(menu, tr("Show in BinParser"), partial(self._openBinParserFromMemory, mem))
+            # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
+            menu.addSeparator()
             self._addAction(menu, "Dump Memory...", mem.dumpBuffer)
             action = self._addAction(menu, "Add Memory View", self.addMemoryView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
+
+        return dockWidget
+
+    def _openBinParserFromMemory(self, mem):
+        try:
+            addr = mem.requestedAddress()
+            size = mem.requestedSize()
+            data = mem.readBuffer()
+        except Exception as err:
+            QtWidgets.QMessageBox.warning(
+                self.app,
+                self.__class__.__name__,
+                str(err),
+            )
+            return
+        b = self.addBinParserView(data)
+        b.setWindowTitle("{:#08x} +{}".format(addr, size))
+
+    def addBinParserView(self, data: bytes) -> QtWidgets.QDockWidget:
+        dockWidget = self.generate_dockwidget()
+        # dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
+        bp = BinParser(self.app, fileio=io.BytesIO(data))
+        self.docks["binparser"][dockWidget] = bp
+        dockWidget.setWidget(bp)
+        dockWidget.setWindowTitle("BinParser-%d" % len(self.docks["binparser"]))
+        self.app.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, dockWidget)
+
+        titlebar = dockWidget.titleBarWidget()
+        if isinstance(titlebar, DockTitleBar):
+            menu = titlebar.ui.btnMore.menu()
+            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["binparser"]))
+            self._addAction(menu, "Export Parsing Result...", bp.export_as_csv)
 
         return dockWidget

@@ -90,7 +90,8 @@ class BinParser(QtWidgets.QWidget):
 
     def export_as_csv(self):
         if self.fileio:
-            bin_fname = "/" + str(Path(self.fileio.name).with_suffix(".csv"))
+            filename = getattr(self.fileio, "name", "noname")
+            bin_fname = "/" + str(Path(filename).with_suffix(".csv"))
         else:
             bin_fname = ""
         dialog = QtWidgets.QFileDialog(self)
@@ -129,19 +130,6 @@ class BinParser(QtWidgets.QWidget):
         except Exception as e:
             logger.warning(e)
             return 0
-
-    def _onFileOpened(self, filename=False):
-        if not filename:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                caption="Open File",
-                filter="Any (*.*)"
-            )
-        if filename:
-            with open(filename, "rb") as fs:
-                self.fileio = io.BytesIO(fs.read())
-                self.fileio.name = filename
-                self._loadFile(self.fileio)
 
     def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self, getattr(fileio, "name", "noname"))
