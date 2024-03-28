@@ -24,17 +24,50 @@ def hex2(val: int, nbits: int, pad_zero=False) -> str:
 
 
 # https://stackoverflow.com/questions/30124608/convert-unsigned-integer-to-float-in-python
+# https://stackoverflow.com/questions/8341395/what-is-a-subnormal-floating-point-number
 def float_from_int(val: int) -> float:
+    # TODO: support real64, real128
     # method 1
-    return struct.unpack('f', struct.pack('I', val))[0]
+    fp = struct.unpack("f", struct.pack("I", val))[0]
 
+    # remove fractions under precision
+    precision = len(str(fp)) - 2
+    for pos in range(precision, 0, -1):
+        check = float(f"{{:.{pos}f}}".format(fp))
+        if int_from_float(check) != val:
+            break
+        if len(str(check)) < pos:
+            # stop when the precision changes more than 3 digits
+            break
+        fp = check
+    return fp
+
+
+def float_from_ieee754(val: int) -> float:
     # method 2
+    if val > 0xFFFFFFFF:
+        raise NotImplementedError("Value too big: %09x" % val)
     sign = val >> 31
     exp = (val & 0x7F800000) >> 23
-    frac = float((val & 0x007FFFFF) + 0x8000000) / 0x1000000
-    return math.ldexp(frac, -126 + exp)
+    frac = val & 0x007FFFFF
+    if exp == 0 and frac == 0:
+        return ((-1) ** sign) * 0.0
+    if exp == 0xFF:
+        if frac == 0:
+            return ((-1) ** sign) * math.inf
+        else:
+            return math.nan
+    if exp == 0:
+        # subnormal number, leading zero
+        frac = float(frac) / 0x800000
+        return ((-1) ** sign) * math.ldexp(frac, -126)
+    else:
+        # normal number, leading one
+        frac = float(frac + 0x8000000) / 0x1000000
+        return ((-1) ** sign) * math.ldexp(frac, -127 + exp)
 
 
 def int_from_float(val: float) -> int:
-    m, e = math.frexp(val)
-    return int((2 * m + (e + 125)) * 0x800000)
+    # TODO: support real64, real128
+    # method 1
+    return struct.unpack("I", struct.pack("f", val))[0]
