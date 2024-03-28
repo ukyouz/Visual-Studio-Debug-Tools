@@ -274,6 +274,7 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
 
 class StructTreeModel(AbstractTreeModel):
     pointerDereferenced = QtCore.pyqtSignal(QtCore.QModelIndex, int)
+    pvoidStructChanged = QtCore.pyqtSignal(QtCore.QModelIndex, int)
     exprChanged = QtCore.pyqtSignal(QtCore.QModelIndex)
 
     headers = [
@@ -480,7 +481,7 @@ class StructTreeModel(AbstractTreeModel):
             item["_is_pvoid"] = True
             item[tag] = value
             count = item.get("_count", 1)
-            self.pointerDereferenced.emit(index, count)
+            self.pvoidStructChanged.emit(index, count)
             return True
         elif tag == "count":
             old_value = item.get("_count", 1)

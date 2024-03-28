@@ -353,7 +353,7 @@ class LoadPdb(Plugin):
         _add_expr(struct, expr)
         return struct
 
-    def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1) -> ViewStruct:
+    def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1, casting=False) -> ViewStruct:
         if count == 0:
             raise ValueError("Deref count at least 1, got: %d" % count)
         _type = _remove_extra_paren(struct["type"])
@@ -362,6 +362,8 @@ class LoadPdb(Plugin):
         out_struct = query_struct_from_expr(self._pdb, expr, io_stream=io_stream)
 
         _expr = _remove_extra_paren(struct.get("expr", "") or "")
+        if casting:
+            _expr = "(%s)%s" % (_type, _expr)
         if count == 1:
             if _expr.startswith("("):
                 _expr = "(%s)->" % _expr

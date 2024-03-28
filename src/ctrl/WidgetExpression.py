@@ -68,6 +68,7 @@ class Expression(QtWidgets.QWidget):
         model = qtmodel.StructTreeModel(empty_struct)
         model.allow_dereferece_pointer = True
         model.pointerDereferenced.connect(self._lazy_load_pointer)
+        model.pvoidStructChanged.connect(functools.partial(self._lazy_load_pointer, casting=True))
         model.exprChanged.connect(self._change_expr)
         self.ui.treeView.setModel(model)
 
@@ -205,7 +206,7 @@ class Expression(QtWidgets.QWidget):
             ],
         )
 
-    def _lazy_load_pointer(self, parent, count):
+    def _lazy_load_pointer(self, parent, count, casting=False):
         dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         item = parent.internalPointer().copy()
@@ -249,6 +250,7 @@ class Expression(QtWidgets.QWidget):
                 struct=item,
                 count=count,
                 io_stream=dbg.get_memory_stream(),
+                casting=casting,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
                 block_UIs=[
