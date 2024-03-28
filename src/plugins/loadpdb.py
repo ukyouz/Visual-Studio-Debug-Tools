@@ -301,11 +301,13 @@ class LoadPdb(Plugin):
         _add_expr(s, expr)
         return s
 
-    def parse_expr_to_struct(self, expr: str, addr=0, count=1, add_dummy_root=False) -> pdb.StructRecord:
+    def parse_expr_to_struct(self, expr: str, addr=0, count=0, data_size=0, add_dummy_root=False) -> pdb.StructRecord:
         if expr == "":
             return pdb.new_struct()
 
         s = query_struct_from_expr(self._pdb, expr, addr)
+        if count == 0:
+            count = data_size // s["size"]
         s = self._duplicate_as_array(expr, s, count)
 
         if add_dummy_root:
@@ -314,11 +316,12 @@ class LoadPdb(Plugin):
             )
         return s
 
-    def _tabulate_a_struct(self, struct: pdb.StructRecord, count: int) -> list[ViewStruct]:
+    def _tabulate_a_struct(self, struct: pdb.StructRecord, count: int, total_byte: int) -> list[ViewStruct]:
         if isinstance(struct["fields"], list):
             array = []
-            _take_count = len(struct["fields"]) if count == 0 else count
-            for x in struct["fields"][: _take_count]:
+            if count == 0:
+                count = len(struct["fields"])
+            for x in struct["fields"][: count]:
                 cut_pos = len(x["levelname"])
                 row = []
                 _flatten_dict(x, row)
@@ -327,7 +330,8 @@ class LoadPdb(Plugin):
                 array.append(row)
         else:
             backup = pickle.dumps(struct)
-
+            if count == 0:
+                count = total_byte // struct["size"]
             array = []
             for n in range(max(1, count)):
                 copied = pickle.loads(backup)
@@ -339,10 +343,10 @@ class LoadPdb(Plugin):
                 array.append(row)
         return array
 
-    def parse_expr_to_table(self, expr: str, addr=0, count=1) -> list[ViewStruct]:
+    def parse_expr_to_table(self, expr: str, addr=0, count=0, data_size=0) -> list[ViewStruct]:
         out_struct = query_struct_from_expr(self._pdb, expr, addr)
         _add_expr(out_struct, "")
-        array = self._tabulate_a_struct(out_struct, count)
+        array = self._tabulate_a_struct(out_struct, count, data_size)
         return array
 
     def query_struct(self, expr: str, virtual_base: int | None=0, io_stream=None) -> ViewStruct:

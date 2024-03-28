@@ -231,12 +231,19 @@ class BinParser(QtWidgets.QWidget):
                 )
 
         count = self.ui.spinParseCount.value()
+        if self.fileio:
+            self.fileio.seek(0, io.SEEK_END)
+            total_byte = self.fileio.tell()
+        else:
+            total_byte = 0
+
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_expr_to_table,
                 structname,
                 addr=self.parse_offset,
                 count=count,
+                data_size=total_byte,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
@@ -246,6 +253,7 @@ class BinParser(QtWidgets.QWidget):
                 structname,
                 addr=self.parse_offset,
                 count=count,
+                data_size=total_byte,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
                 errored_cb=_err,
