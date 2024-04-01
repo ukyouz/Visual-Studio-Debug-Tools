@@ -32,6 +32,14 @@ class WidgetLogger:
         ...
 
 
+def default_script_folder() -> str:
+    if hasattr(sys, "frozen"):
+        # for pyinstaller bundled
+        return "../scripts"
+    else:
+        return "scripts"
+
+
 class Script(QtWidgets.QWidget):
     printed = QtCore.pyqtSignal(str)
     errored = QtCore.pyqtSignal(str)
@@ -55,22 +63,22 @@ class Script(QtWidgets.QWidget):
         self.ui.btnReset.clicked.connect(self._clear_screen)
         self.ui.plaintextSource.modificationChanged.connect(self._update_window_title)
         self.ui.plaintextSource.installEventFilter(self)
+        self.scriptFolderWatcher = QtCore.QFileSystemWatcher(self.app)
+        self.scriptFolderWatcher.directoryChanged.connect(self._init_explorer)
+        self.scriptFolderWatcher.addPath(str(self.app.app_dir / default_script_folder()))
 
         self.printed.connect(self._async_print_log)
         self.errored.connect(self._async_print_err)
 
-        if file := self.app.app_setting.value("Script/scriptFile", None):
-            self._load_file(file)
         if script := self.app.app_setting.value("Script/textSource", ""):
             self.ui.plaintextSource.setPlainText(script, "text/plain", "utf8")
+        elif file := self.app.app_setting.value("Script/scriptFile", None):
+            self._load_file(file)
 
     def _init_explorer(self):
         model = qtmodel.FileExplorerModel(Path(""))
-        if hasattr(sys, "frozen"):
-            # for pyinstaller bundled
-            flist = list((self.app.app_dir / "../scripts").rglob("*.py"))
-        else:
-            flist = list((self.app.app_dir / "scripts").rglob("*.py"))
+        script_dir = default_script_folder()
+        flist = list((self.app.app_dir / script_dir).rglob("*.py"))
         model.addFiles(flist)
         self.ui.treeExplorer.setModel(model)
         if len(flist):
@@ -181,7 +189,7 @@ class Script(QtWidgets.QWidget):
                 filter="Script (*.py);; Any (*.*)"
             )
         if filename:
-            self.ui.plaintextSource.file.save()
+            self.ui.plaintextSource.file.save(filename)
             self.ui.plaintextSource.document().setModified(False)
             self._init_explorer()
 
