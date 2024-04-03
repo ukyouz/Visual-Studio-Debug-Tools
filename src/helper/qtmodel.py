@@ -380,8 +380,8 @@ class StructTreeModel(AbstractTreeModel):
                     case "value":
                         if item["fields"] and item["size"] == len(item["fields"]):
                             # try display c-string
-                            values = [_calc_val(self.fileio, x) for x in item["fields"]]
-                            if all(x is not None for x in values):
+                            values = [_calc_val(self.fileio, x) for _, x in iter_children(item["fields"])]
+                            if all(x is not None and x <= 0xFF for x in values):
                                 data = bytes(values)
                                 if is_cstring(data):
                                     end = data.index(0) if 0 in data else len(data)
