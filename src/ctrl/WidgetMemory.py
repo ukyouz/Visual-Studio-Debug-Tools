@@ -21,7 +21,7 @@ class MemoryHistory(HistoryMenu):
     def stringify(self, data: tuple[str, str]) -> str:
         addr, size = data
         if size:
-            return "{:#08x} +{}".format(addr, size)
+            return "{} +{}".format(addr, size)
         else:
             return addr
 
