@@ -111,7 +111,7 @@ class Expression(QtWidgets.QWidget):
         dbg = self.app.plugin(debugger.Debugger)
         try:
             return dbg.get_virtual_base()
-        except PermissionError as e:
+        except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
@@ -146,6 +146,10 @@ class Expression(QtWidgets.QWidget):
             return
 
         expr = self.ui.lineStruct.text()
+
+        if expr == "":
+            return
+
         logger.debug("Add: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
 
         def _cb(struct_record):

@@ -103,7 +103,7 @@ class Memory(QtWidgets.QWidget):
         try:
             # test connection
             dbg.get_virtual_base()
-        except PermissionError as e:
+        except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,

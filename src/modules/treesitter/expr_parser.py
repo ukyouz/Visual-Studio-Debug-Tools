@@ -71,6 +71,9 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
     else:
         _addr = struct["value"]
 
+    if _addr == 0:
+        raise InvalidExpression("Try to access pointer at address 0 for %r" % ref_expr)
+
     if not struct.get("pointer_literal", False):
         try:
             struct = p.tpi_stream.deref_pointer(struct["lf"], _addr, recursive=False)
@@ -122,7 +125,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 _assert(len(childs) == 1, "Invalid syntax: %r" % node.text)
                 return _walk_syntax_node(childs[0])
             case "parenthesized_expression":
-                _assert(childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text)
+                # _assert(childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text)
                 return _walk_syntax_node(childs[1])
             case "cast_expression":
                 # assert childs[0].type == '(' and childs[2].type == ')'
