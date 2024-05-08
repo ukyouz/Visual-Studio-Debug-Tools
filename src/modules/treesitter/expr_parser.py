@@ -56,7 +56,7 @@ def _assert(assert_cond: bool, err_msg: str):
         raise InvalidExpression(err_msg)
 
 
-def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecord, index: int | None, ref_expr=b"") -> pdb.StructRecord:
+def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecord, index: int | None, ref_expr=b"", allow_null_pointer=False) -> pdb.StructRecord:
     """
     index:
         None: deref by notation x-> or *(x)
@@ -70,6 +70,9 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
             raise OSError("%s: 0x%x, %r" % (str(e), struct["address"], ref_expr))
     else:
         _addr = struct["value"]
+
+    if _addr == 0 and not allow_null_pointer:
+        raise InvalidExpression("Try to access pointer at address 0 for %r" % ref_expr)
 
     if not struct.get("pointer_literal", False):
         try:
@@ -100,7 +103,7 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
     return out_struct
 
 
-def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) -> pdb.StructRecord:
+def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, allow_null_pointer=False) -> pdb.StructRecord:
     tree = get_syntax_tree(expr)
 
     def _get_value_of(x: pdb.StructRecord | int) -> int:
@@ -122,18 +125,19 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 _assert(len(childs) == 1, "Invalid syntax: %r" % node.text)
                 return _walk_syntax_node(childs[0])
             case "parenthesized_expression":
-                _assert(childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text)
+                # _assert(childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text)
+                _assert(len(childs) == 3, "Invalid syntax: %r" % node.text)
                 return _walk_syntax_node(childs[1])
             case "cast_expression":
                 # assert childs[0].type == '(' and childs[2].type == ')'
                 structname = childs[1].text.decode()
-                lf, _ = p.get_type_lf_from_name(structname)
+                lf, _ = p.get_lf_from_name(structname)
                 pointer_literal = False
                 if lf is None:
                     pointer_literal = True
                     # ie: xxx_def *
                     if match := re.match(r"(?:struct\s*)?(?P<STRUCT>.+)\s+\*", structname):
-                        lf, _ = p.get_type_lf_from_name(match.group("STRUCT"))
+                        lf, _ = p.get_lf_from_name(match.group("STRUCT"))
                 if lf is None:
                     raise InvalidExpression("Bad struct casting: b%r" % structname)
 
@@ -159,7 +163,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                     else:
                         assert False, repr(node)
                 elif childs[0].type == "*":
-                    return deref_pointer(p, io_stream, struct, None, childs[1].text)
+                    return deref_pointer(p, io_stream, struct, None, childs[1].text, allow_null_pointer)
                 else:
                     assert False, repr(node)
             case "field_expression":
@@ -174,7 +178,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                     _assert(not isinstance(struct["fields"], list), "Notation error for array: b'%s%s'" % (notation, field))
                     sub_struct = struct["fields"][field]
                 elif notation == "->":
-                    struct = deref_pointer(p, io_stream, struct, None, childs[0].text)
+                    struct = deref_pointer(p, io_stream, struct, None, childs[0].text, allow_null_pointer)
                     _assert(isinstance(struct["fields"], dict), "Field not exists: b%r" % field)
                     sub_struct = struct["fields"][field]
                 else:
@@ -191,7 +195,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 _assert(isinstance(struct, dict), "Fail to get index from: %r" % childs[0].text)
                 index = _get_value_of(_walk_syntax_node(childs[2]))
                 if struct["fields"] is None:
-                    struct = deref_pointer(p, io_stream, struct, index, childs[0].text)
+                    struct = deref_pointer(p, io_stream, struct, index, childs[0].text, allow_null_pointer)
                 try:
                     sub_struct = struct["fields"][index]
                 except IndexError as e:
@@ -203,13 +207,13 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                 )
             case "identifier":
                 structname = node.text.decode()
-                lf, offset = p.get_type_lf_from_name(structname)
+                lf, offset = p.get_lf_from_name(structname)
                 _assert(lf is not None, "Identifier not found: %r" % structname)
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
             case "type_identifier":
                 structname = node.text.decode()
-                lf, offset = p.get_type_lf_from_name(structname)
+                lf, offset = p.get_lf_from_name(structname)
                 _assert(lf is not None, "Identifier not found: %r" % structname)
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
@@ -231,7 +235,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
                     # shift pointer by count
                     if operator not in "+-":
                         raise InvalidExpression("Invalid pointer movement: %r" % node.text)
-                    deref_struct = deref_pointer(p, io_stream, lhs, None, childs[0].text)
+                    deref_struct = deref_pointer(p, io_stream, lhs, None, childs[0].text, allow_null_pointer)
                     lhs["address"] = _get_value_of(lhs) + deref_struct["size"] * rhs * (-1 if operator == "-" else 1)
                     return lhs
                 elif isinstance(lhs, dict) and isinstance(lhs["fields"], list) and isinstance(rhs, int):
@@ -255,13 +259,24 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None) 
             case "update_expression":
                 # x ++
                 # x --
-                base_value = _get_value_of(_walk_syntax_node(childs[0]))
+                lhs = _walk_syntax_node(childs[0])
+                base_value = _get_value_of(lhs)
                 operator = childs[1].type
                 match operator:
                     case "--":
-                        return base_value - 1
+                        if isinstance(lhs, dict) and lhs["is_pointer"]:
+                            deref_struct = deref_pointer(p, io_stream, lhs, None, childs[0].text, allow_null_pointer)
+                            lhs["address"] = _get_value_of(lhs) - deref_struct["size"]
+                            return lhs
+                        else:
+                            return base_value - 1
                     case "++":
-                        return base_value + 1
+                        if isinstance(lhs, dict) and lhs["is_pointer"]:
+                            deref_struct = deref_pointer(p, io_stream, lhs, None, childs[0].text, allow_null_pointer)
+                            lhs["address"] = _get_value_of(lhs) + deref_struct["size"]
+                            return lhs
+                        else:
+                            return base_value + 1
                     case _:
                         raise InvalidExpression("Not support update expression: %r" % operator)
             case "conditional_expression":

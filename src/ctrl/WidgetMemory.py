@@ -1,4 +1,3 @@
-import io
 import logging
 import sys
 
@@ -20,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 class MemoryHistory(HistoryMenu):
     def stringify(self, data: tuple[str, str]) -> str:
-        return "; ".join(data)
+        addr, size = data
+        if size:
+            return "{} +{}".format(addr, size)
+        else:
+            return addr
 
 
 class Memory(QtWidgets.QWidget):
@@ -35,14 +38,11 @@ class Memory(QtWidgets.QWidget):
         self.parse_hist = MemoryHistory(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
 
-        # attributes
-        self.buffer = io.BytesIO()
-
         self.ui.lineAddress.returnPressed.connect(self._loadMemory)
         self.ui.lineSize.returnPressed.connect(self._loadMemory)
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
 
-    def requestAddress(self) -> int:
+    def inputAddress(self) -> int:
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -61,7 +61,19 @@ class Memory(QtWidgets.QWidget):
             logger.warning(e)
             return 0
 
-    def requestSize(self) -> int:
+    def requestedAddress(self) -> int:
+        model = self.ui.tableMemory.model()
+        if not isinstance(model,  qtmodel.HexTable):
+            raise qtmodel.ModelNotSupportError(tr("No memory is loaded yet!"))
+        return model.viewAddress
+
+    def requestedSize(self) -> int:
+        model = self.ui.tableMemory.model()
+        if not isinstance(model,  qtmodel.HexTable):
+            raise qtmodel.ModelNotSupportError(tr("No memory is loaded yet!"))
+        return model.viewSize
+
+    def inputSize(self) -> int:
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -89,15 +101,16 @@ class Memory(QtWidgets.QWidget):
         dbg = self.app.plugin(debugger.Debugger)
 
         try:
-            virt_base = dbg.get_virtual_base()
-        except PermissionError as e:
+            # test connection
+            dbg.get_virtual_base()
+        except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
                 str(e),
             )
             return
-        if virt_base is None:
+        except debugger.ProcessNotConnected:
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
@@ -115,53 +128,51 @@ class Memory(QtWidgets.QWidget):
                 return
 
         mem = dbg.get_memory_stream()
+        addr = self.inputAddress()
         model = qtmodel.HexTable(mem)
-        model.viewAddress = self.requestAddress()
-        model.viewSize = self.requestSize()
+        model.viewAddress = addr
+        model.viewSize = self.inputSize()
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
         self.ui.labelAddress.setText("Address: {}".format(model.addrPrefix[0]))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
-    def dumpBuffer(self):
+        set_app_title(self, "M-{:#08x}".format(addr))
+
+    def readBuffer(self) -> bytes:
         dbg = self.app.plugin(debugger.Debugger)
         mem = dbg.get_memory_stream()
         model = self.ui.tableMemory.model()
         if not isinstance(model, qtmodel.HexTable):
+            raise qtmodel.ModelNotSupportError(tr("Not support read memory from current model: %r") % model)
+
+        mem.seek(model.viewAddress)
+        return mem.read(model.viewSize)
+
+    def dumpBuffer(self):
+        try:
+            data = self.readBuffer()
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                caption="Save bin as...",
+                filter="Bin (*.bin);; Any (*.*)",
+            )
+            if filename:
+                with open(filename, "wb") as fs:
+                    fs.write(data)
+        except Exception as err:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr("Not support dump memory from current model: %r") % model,
+                str(err),
             )
-            return
-
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            caption="Save bin as...",
-            filter="Bin (*.bin);; Any (*.*)",
-        )
-        if filename:
-            mem.seek(model.viewAddress)
-            try:
-                data = mem.read(model.viewSize)
-                with open(filename, "wb") as fs:
-                    fs.write(data)
-                err = None
-            except Exception as e:
-                err = e
-            if err is None:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    self.__class__.__name__,
-                    tr("Successfully dump memory to\n%r") % filename,
-                )
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    self.__class__.__name__,
-                    str(err),
-                )
-
+        else:
+            # Successful case
+            QtWidgets.QMessageBox.information(
+                self,
+                self.__class__.__name__,
+                tr("Successfully dump memory to\n%r") % filename,
+            )
 
 if __name__ == '__main__':
     from argparse import ArgumentParser

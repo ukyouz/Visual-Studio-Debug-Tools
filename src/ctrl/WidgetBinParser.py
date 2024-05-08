@@ -90,7 +90,8 @@ class BinParser(QtWidgets.QWidget):
 
     def export_as_csv(self):
         if self.fileio:
-            bin_fname = "/" + str(Path(self.fileio.name).with_suffix(".csv"))
+            filename = getattr(self.fileio, "name", "noname")
+            bin_fname = "/" + str(Path(filename).with_suffix(".csv"))
         else:
             bin_fname = ""
         dialog = QtWidgets.QFileDialog(self)
@@ -129,19 +130,6 @@ class BinParser(QtWidgets.QWidget):
         except Exception as e:
             logger.warning(e)
             return 0
-
-    def _onFileOpened(self, filename=False):
-        if not filename:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                caption="Open File",
-                filter="Any (*.*)"
-            )
-        if filename:
-            with open(filename, "rb") as fs:
-                self.fileio = io.BytesIO(fs.read())
-                self.fileio.name = filename
-                self._loadFile(self.fileio)
 
     def _loadFile(self, fileio: io.BytesIO):
         set_app_title(self, getattr(fileio, "name", "noname"))
@@ -243,12 +231,19 @@ class BinParser(QtWidgets.QWidget):
                 )
 
         count = self.ui.spinParseCount.value()
+        if self.fileio:
+            self.fileio.seek(0, io.SEEK_END)
+            total_byte = self.fileio.tell()
+        else:
+            total_byte = 0
+
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_expr_to_table,
                 structname,
                 addr=self.parse_offset,
                 count=count,
+                data_size=total_byte,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
@@ -258,6 +253,7 @@ class BinParser(QtWidgets.QWidget):
                 structname,
                 addr=self.parse_offset,
                 count=count,
+                data_size=total_byte,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
                 errored_cb=_err,

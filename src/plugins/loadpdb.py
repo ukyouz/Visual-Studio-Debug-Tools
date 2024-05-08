@@ -37,6 +37,7 @@ class ViewStruct(TypedDict):
     bitsize: int | None
     fields: list[Self] | dict[str, Self] | None
     is_pointer: bool
+    is_funcptr: bool
     has_sign: bool
     lf: Struct | None
 
@@ -219,11 +220,22 @@ class LoadPdb(Plugin):
             self.app.app_setting.setValue("LoadPdb/recent_used", list(self._hist_pdbs.data_list))
 
             def _cb(_pdb):
+                if _pdb is None:
+                    self.app.statusBar().showMessage("Pdbin load failed!")
+                    return
                 self.app.app_setting.setValue("LoadPdb/pdbin", filename)
                 self._pdb_fname = filename
                 self._pdb = _pdb
                 self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
+
+            def _err(expt, tb):
+                self._hist_pdbs.remove_data(filename)
+                QtWidgets.QMessageBox.warning(
+                    self.app,
+                    self.__class__.__name__,
+                    str(expt),
+                )
 
             path = Path(filename)
             if path.suffix == ".pdbin":
@@ -231,12 +243,14 @@ class LoadPdb(Plugin):
                     picklepdb.load_pdbin,
                     filename,
                     finished_cb=_cb,
+                    errored_cb=_err,
                 )
             elif path.suffix == ".pdb":
                 self.app.exec_async(
                     pdb.parse,
                     filename,
                     finished_cb=_cb,
+                    errored_cb=_err,
                 )
             self._loading = True
             self.app.statusBar().showMessage("Loading... %r" % filename)
@@ -287,11 +301,13 @@ class LoadPdb(Plugin):
         _add_expr(s, expr)
         return s
 
-    def parse_expr_to_struct(self, expr: str, addr=0, count=1, add_dummy_root=False) -> pdb.StructRecord:
+    def parse_expr_to_struct(self, expr: str, addr=0, count=0, data_size=0, add_dummy_root=False) -> pdb.StructRecord:
         if expr == "":
             return pdb.new_struct()
 
         s = query_struct_from_expr(self._pdb, expr, addr)
+        if count == 0:
+            count = data_size // s["size"]
         s = self._duplicate_as_array(expr, s, count)
 
         if add_dummy_root:
@@ -300,11 +316,12 @@ class LoadPdb(Plugin):
             )
         return s
 
-    def _tabulate_a_struct(self, struct: pdb.StructRecord, count: int) -> list[ViewStruct]:
+    def _tabulate_a_struct(self, struct: pdb.StructRecord, count: int, total_byte: int) -> list[ViewStruct]:
         if isinstance(struct["fields"], list):
             array = []
-            _take_count = len(struct["fields"]) if count == 0 else count
-            for x in struct["fields"][: _take_count]:
+            if count == 0:
+                count = len(struct["fields"])
+            for x in struct["fields"][: count]:
                 cut_pos = len(x["levelname"])
                 row = []
                 _flatten_dict(x, row)
@@ -313,7 +330,8 @@ class LoadPdb(Plugin):
                 array.append(row)
         else:
             backup = pickle.dumps(struct)
-
+            if count == 0:
+                count = total_byte // struct["size"]
             array = []
             for n in range(max(1, count)):
                 copied = pickle.loads(backup)
@@ -325,10 +343,10 @@ class LoadPdb(Plugin):
                 array.append(row)
         return array
 
-    def parse_expr_to_table(self, expr: str, addr=0, count=1) -> list[ViewStruct]:
+    def parse_expr_to_table(self, expr: str, addr=0, count=0, data_size=0) -> list[ViewStruct]:
         out_struct = query_struct_from_expr(self._pdb, expr, addr)
         _add_expr(out_struct, "")
-        array = self._tabulate_a_struct(out_struct, count)
+        array = self._tabulate_a_struct(out_struct, count, data_size)
         return array
 
     def query_struct(self, expr: str, virtual_base: int | None=0, io_stream=None) -> ViewStruct:
@@ -339,7 +357,7 @@ class LoadPdb(Plugin):
         _add_expr(struct, expr)
         return struct
 
-    def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1) -> ViewStruct:
+    def deref_struct(self, struct: ViewStruct, io_stream: Stream, count=1, casting=False) -> ViewStruct:
         if count == 0:
             raise ValueError("Deref count at least 1, got: %d" % count)
         _type = _remove_extra_paren(struct["type"])
@@ -348,6 +366,8 @@ class LoadPdb(Plugin):
         out_struct = query_struct_from_expr(self._pdb, expr, io_stream=io_stream)
 
         _expr = _remove_extra_paren(struct.get("expr", "") or "")
+        if casting:
+            _expr = "(%s)%s" % (_type, _expr)
         if count == 1:
             if _expr.startswith("("):
                 _expr = "(%s)->" % _expr
@@ -358,6 +378,28 @@ class LoadPdb(Plugin):
         out_struct = self._duplicate_as_array(_expr, out_struct, count)
 
         return out_struct
+
+    def deref_function_pointer(self, struct: ViewStruct, io_stream: Stream, virtual_base=0) -> ViewStruct | None:
+        if not struct["is_funcptr"]:
+            raise ValueError("Can only deref a function pointer")
+        addr = struct["value"] or _read_value(struct, io_stream)
+        if addr == 0:
+            return
+        name = self._pdb.get_refname_from_offset(addr - virtual_base)
+        if name is None:
+            return
+        x = struct.copy()
+        y = struct.copy()
+        y["levelname"] = name
+        y["is_pointer"] = False
+        y["fields"] = None
+        y["address"] = addr
+        y["size"] = 0
+
+        x["fields"] = {
+            name: y,
+        }
+        return x
 
     # for scripting
 
