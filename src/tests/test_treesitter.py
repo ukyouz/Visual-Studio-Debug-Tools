@@ -20,7 +20,7 @@ class TestStream:
 
 @pytest.fixture
 def stream() -> TestStream:
-    return TestStream()
+    return TestStream(4)
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +39,6 @@ def p() -> pdb.PDB7:
         ("123[1]", "Fail to get index from: b'123'"),
         ("4 + (gA.attr -- 3)", "Invalid syntax: b'(gA.attr -- 3)'"),
         ("4 + (gA.attr -=2)", "Not support assignment yet: b'gA.attr -=2'"),
-        ("B.s->szBuffer[999]", "Index out of range: b'[999]'"),
         ("gA.afunc->c", "Fail to deref: b'gA.afunc'"),
         ("gA.afunc.c", "Notation error for pointer: b'.c'"),
         ("gA.afunc[1]", "Fail to deref: b'gA.afunc'"),
@@ -49,6 +48,7 @@ def p() -> pdb.PDB7:
         ("gC.bb", "Identifier not found: 'gC'"),
         ("get(gA, gB)", "Not support function call yet: b'get(gA, gB)'"),
         ("get(gA)", "Not support macro yet: b'get(gA)'"),
+        ("g_Message.szBuffer[999]", "Index out of range: b'[999]'"),
     ]
 )
 def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
@@ -71,6 +71,7 @@ def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
         ("gA", 102976),
         ("gB.s - 1", 12 - 260),
         ("gB.s + 1", 12 + 260),
+        ("gB.s ++", 12 + 260),
         ("gB.s->szBuffer - 1", 11),
         ("gB.s->szBuffer + 1", 13),
         ("gB.s->szBuffer", 12),
@@ -114,5 +115,5 @@ def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):
     ]
 )
 def test_good_expr(stream: TestStream, p: pdb.PDB7, expr: str):
-    result = query_struct_from_expr(p, expr, io_stream=stream)
+    result = query_struct_from_expr(p, expr, io_stream=stream, allow_null_pointer=True)
     assert isinstance(result, dict)
