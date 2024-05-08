@@ -200,6 +200,7 @@ class Script(QtWidgets.QWidget):
         self.ui.labelRunningTime.setText("0:00:00")
 
     def _run_script(self):
+        self.app.app_setting.setValue("Script/textSource", self.ui.plaintextSource.toPlainText())
         self.ui.plaintextLog.setPlainText("")
 
         script = self.ui.plaintextSource.toPlainText()
