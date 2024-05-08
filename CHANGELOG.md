@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.1 (2024/05/08)
+
+### Added
+
+#### VS Debugger
+
+- Support to expand function pointer as name
+- Support show floating number for REAL number type
+- Bin Parser widget support in dock
+
+### Changed
+
+- Pdb Database generation shows error reason
+- Improve file explorer view
+- Fix expression for casting structure
+
+#### VS Debugger
+
+- Fix application crashes in some corner cases
+
+#### Bin Viewer
+
+- For array data, use 0 count to parse all until the end
+
+#### Run Script
+
+- Fix new file can not be saved
+
 ## 0.1 (2024/03/22)
 
 Now support ANY valid C expression in the following fields:
