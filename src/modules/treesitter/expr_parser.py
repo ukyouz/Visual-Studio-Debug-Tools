@@ -36,7 +36,8 @@ def _calc_val(fileio: Stream, item: pdb.StructRecord) -> Any:
     bsize = item["bitsize"]
 
     fileio.seek(base)
-    val = int.from_bytes(fileio.read(size), "little", signed=item.get("has_sign", False))
+    int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
+    val = int.from_bytes(fileio.read(size), "little", signed=int_with_sign)
     if boff is not None and bsize is not None:
         val = (val >> boff) & BITMASK(bsize)
     item["value"] = val

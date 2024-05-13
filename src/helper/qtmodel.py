@@ -246,7 +246,7 @@ def iter_children(data: Any):
         yield x
 
 
-def _calc_val(fileio: Stream, item: dict) -> Any:
+def _calc_val(fileio: Stream, item: dict) -> int:
     if not item.get("_refresh_requested", False) and item.get("value", None):
         # return cached value unless _refresh_requested set to True
         return item["value"]
@@ -259,8 +259,9 @@ def _calc_val(fileio: Stream, item: dict) -> Any:
     bsize = item["bitsize"]
 
     fileio.seek(base)
+    int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
     try:
-        val = int.from_bytes(fileio.read(size), "little", signed=item.get("has_sign", False))
+        val = int.from_bytes(fileio.read(size), "little", signed=int_with_sign)
         item["_is_invalid"] = False
     except:
         item["_is_invalid"] = True
@@ -390,11 +391,11 @@ class StructTreeModel(AbstractTreeModel):
                                         return repr(cstr)
                         val = _calc_val(self.fileio, item)
                         if val is not None:
+                            bitsz = item.get("bitsize", None) or item["size"] * 8
                             if self.hex_mode:
-                                bitsz = item.get("bitsize", None) or item["size"] * 8
                                 return hex2(val, bitsz, pad_zero=True)
                             elif item.get("is_real", False):
-                                return str(float_from_int(val))
+                                return str(float_from_int(val, bitsz))
                             else:
                                 return str(val)
                         else:
@@ -452,13 +453,13 @@ class StructTreeModel(AbstractTreeModel):
             except:
                 return False
 
-            if isinstance(val, float):
-                val = int_from_float(val)
-
             base = item["address"]
             size = item["size"]
             boff = item["bitoff"]
-            bsize = item["bitsize"]
+            bsize = item.get("bitsize", size * 8)
+
+            if isinstance(val, float):
+                val = int_from_float(val, bsize)
 
             self.fileio.seek(base)
             old_val = self.fileio.read(size)
@@ -472,11 +473,12 @@ class StructTreeModel(AbstractTreeModel):
                 return False
 
             if not item.get("has_sign", False) and val < 0:
-                # cannot set a negative value to an unsigned type int
+                # cannot set a negative value to an unsigned type
                 return False
 
             item["value"] = val
-            self.fileio.write(new_val.to_bytes(size, "little", signed=item.get("has_sign", False)))
+            int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
+            self.fileio.write(new_val.to_bytes(size, "little", signed=int_with_sign))
             return True
         elif tag == "type":
             old_value = item.get(tag, "")

@@ -25,16 +25,19 @@ def hex2(val: int, nbits: int, pad_zero=False) -> str:
 
 # https://stackoverflow.com/questions/30124608/convert-unsigned-integer-to-float-in-python
 # https://stackoverflow.com/questions/8341395/what-is-a-subnormal-floating-point-number
-def float_from_int(val: int) -> float:
+def float_from_int(val: int, nbits: int) -> float:
     # TODO: support real64, real128
     # method 1
-    fp = struct.unpack("f", struct.pack("I", val))[0]
+    if nbits <= 32:
+        fp = struct.unpack("f", struct.pack("I", val))[0]
+    else:
+        fp = struct.unpack("d", struct.pack("Q", val))[0]
 
     # remove fractions under precision
     precision = len(str(fp)) - 2
     for pos in range(precision, 0, -1):
         check = float(f"{{:.{pos}f}}".format(fp))
-        if int_from_float(check) != val:
+        if int_from_float(check, nbits) != val:
             break
         if len(str(check)) < pos:
             # stop when the precision changes more than 3 digits
@@ -67,7 +70,10 @@ def float_from_ieee754(val: int) -> float:
         return ((-1) ** sign) * math.ldexp(frac, -127 + exp)
 
 
-def int_from_float(val: float) -> int:
+def int_from_float(val: float, nbits: int) -> int:
     # TODO: support real64, real128
     # method 1
-    return struct.unpack("I", struct.pack("f", val))[0]
+    if nbits <= 32:
+        return struct.unpack("I", struct.pack("f", val))[0]
+    else:
+        return struct.unpack("Q", struct.pack("d", val))[0]
