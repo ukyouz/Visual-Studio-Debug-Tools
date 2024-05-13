@@ -158,9 +158,10 @@ class HexTable(QtCore.QAbstractTableModel):
 
     def shiftOffset(self, offset: int):
         self.layoutAboutToBeChanged.emit()
-
         self.viewOffset = offset
+        self.refresh()
 
+    def refresh(self):
         tl = self.index(0, 0)
         br = self.index(self.rowCount(), self.columnCount())
         self.dataChanged.emit(tl, br)

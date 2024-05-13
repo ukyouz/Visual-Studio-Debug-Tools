@@ -1,5 +1,6 @@
 import logging
 import sys
+from contextlib import suppress
 
 from PyQt6 import QtWidgets
 
@@ -40,9 +41,15 @@ class Memory(QtWidgets.QWidget):
 
         self.ui.lineAddress.returnPressed.connect(self._loadMemory)
         self.ui.lineSize.returnPressed.connect(self._loadMemory)
+        self.ui.comboItemColumn.currentTextChanged.connect(self._onItemColumnChanged)
+        self.ui.comboItemSize.currentIndexChanged.connect(self._onItemColumnSize)
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
+        header = self.ui.tableMemory.horizontalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
     def inputAddress(self) -> int:
+        with suppress(Exception):
+            return eval(self.ui.lineAddress.text())
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -74,6 +81,8 @@ class Memory(QtWidgets.QWidget):
         return model.viewSize
 
     def inputSize(self) -> int:
+        with suppress(Exception):
+            return eval(self.ui.lineSize.text())
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             dbg = self.app.plugin(debugger.Debugger)
@@ -91,6 +100,32 @@ class Memory(QtWidgets.QWidget):
         except Exception as e:
             logger.warning(e)
             return 1024
+
+    @property
+    def itemColumn(self) -> int:
+        try:
+            return eval(self.ui.comboItemColumn.currentText())
+        except Exception:
+            return 4
+
+    @property
+    def itemSize(self) -> int:
+        current_id = self.ui.comboItemSize.currentIndex()
+        return 2 ** current_id
+
+    def _onItemColumnChanged(self, val: str):
+        model = self.ui.tableMemory.model()
+        if not isinstance(model, qtmodel.HexTable):
+            return
+        model.column = self.itemColumn
+        model.refresh()
+
+    def _onItemColumnSize(self, val: int):
+        model = self.ui.tableMemory.model()
+        if not isinstance(model, qtmodel.HexTable):
+            return
+        model.itembyte = self.itemSize
+        model.refresh()
 
     def _onHistoryClicked(self, val):
         addr, size = val
@@ -132,6 +167,8 @@ class Memory(QtWidgets.QWidget):
         model = qtmodel.HexTable(mem)
         model.viewAddress = addr
         model.viewSize = self.inputSize()
+        model.column = self.itemColumn
+        model.itembyte = self.itemSize
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
         self.ui.labelAddress.setText("Address: {}".format(model.addrPrefix[0]))
