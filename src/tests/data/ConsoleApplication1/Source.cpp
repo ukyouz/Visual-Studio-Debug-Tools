@@ -5,6 +5,7 @@
 #define MIN(a, b)   ((a) < (b) ? (a) : (b))
 
 typedef char WCHAR;
+typedef short WORD;
 typedef long DWORD;
 
 struct TextHolder {

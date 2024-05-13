@@ -375,7 +375,15 @@ class LoadPdb(Plugin):
                 _expr = "%s->" % _expr
         else:
             _expr = "(%s)" % _expr
-        out_struct = self._duplicate_as_array(_expr, out_struct, count)
+
+        if isinstance(out_struct["fields"], list):
+            _arr = self._duplicate_as_array(_expr, out_struct["fields"][0], count)
+            out_struct["fields"] = _arr["fields"]
+            out_struct["size"] = _arr["size"]
+        elif isinstance(out_struct["fields"], dict):
+            out_struct = self._duplicate_as_array(_expr, out_struct, count)
+        # else:
+        #     raise NotImplementedError(out_struct["fields"])
 
         return out_struct
 
