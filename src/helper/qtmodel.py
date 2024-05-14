@@ -459,6 +459,9 @@ class StructTreeModel(AbstractTreeModel):
             boff = item["bitoff"]
             bsize = item.get("bitsize", size * 8)
 
+            if size is None or base == 0:
+                return False
+
             if isinstance(val, float):
                 val = int_from_float(val, bsize)
 
@@ -629,7 +632,7 @@ class StructTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Orientation.Horizontal:
                 return self.titles[section]
             elif orientation == QtCore.Qt.Orientation.Vertical:
-                return str(section + 1)
+                return str(section)
         return super().headerData(section, orientation, role) # must have this line
 
     def data(self, index: QtCore.QModelIndex, role=QtCore.Qt.ItemDataRole.DisplayRole):
