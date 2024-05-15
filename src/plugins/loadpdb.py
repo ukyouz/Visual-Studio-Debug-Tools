@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
@@ -195,6 +196,7 @@ class LoadPdb(Plugin):
 
         menu = self.app.menu("Recently PDBs")
         _recently_used = self.app.app_setting.value("LoadPdb/recent_used", [])
+        _recently_used = [x for x in _recently_used if os.path.exists(x)]
         self._hist_pdbs = HistoryMenu(menu, _recently_used, default=current_pdb)
         self._hist_pdbs.actionTriggered.connect(lambda _f: self.load_pdbin(_f))
         self._hist_pdbs.cleared.connect(lambda: self.app.app_setting.remove("LoadPdb/recent_used"))
