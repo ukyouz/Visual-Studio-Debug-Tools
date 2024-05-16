@@ -376,6 +376,8 @@ class StructTreeModel(AbstractTreeModel):
             return None
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
+        if val := item.get("_role_data", {}).get(role, None):
+            return val
         match role:
             case QtCore.Qt.ItemDataRole.DisplayRole | QtCore.Qt.ItemDataRole.EditRole:
                 match tag:
@@ -441,65 +443,74 @@ class StructTreeModel(AbstractTreeModel):
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
-        if tag == "levelname":
-            if value == item["expr"] or value == "":
-                return False
-            item["expr"] = value
-            item["levelname"] = value
-            self.exprChanged.emit(index)
-            return True
-        elif tag == "value":
-            try:
-                val = eval(value)
-            except:
-                return False
+        match role:
+            case QtCore.Qt.ItemDataRole.EditRole:
+                if tag == "levelname":
+                    if value == item["expr"] or value == "":
+                        return False
+                    item["expr"] = value
+                    item["levelname"] = value
+                    self.exprChanged.emit(index)
+                    return True
+                elif tag == "value":
+                    try:
+                        val = eval(value)
+                    except:
+                        return False
 
-            base = item["address"]
-            size = item["size"]
-            boff = item["bitoff"]
-            bsize = item.get("bitsize", size * 8)
+                    base = item["address"]
+                    size = item["size"]
+                    boff = item["bitoff"]
+                    bsize = item.get("bitsize", size * 8)
 
-            if size is None or base == 0:
-                return False
+                    if size is None or base == 0:
+                        return False
 
-            if isinstance(val, float):
-                val = int_from_float(val, bsize)
+                    if isinstance(val, float):
+                        val = int_from_float(val, bsize)
 
-            self.fileio.seek(base)
-            old_val = self.fileio.read(size)
-            if boff and bsize:
-                val = (val & BITMASK(bsize))
-                new_val = old_val & ~(BITMASK(bsize) << boff)
-                new_val |= val << boff
-            else:
-                new_val = val
-            if new_val == old_val:
-                return False
+                    self.fileio.seek(base)
+                    old_val = self.fileio.read(size)
+                    if boff and bsize:
+                        val = (val & BITMASK(bsize))
+                        new_val = old_val & ~(BITMASK(bsize) << boff)
+                        new_val |= val << boff
+                    else:
+                        new_val = val
+                    if new_val == old_val:
+                        return False
 
-            if not item.get("has_sign", False) and val < 0:
-                # cannot set a negative value to an unsigned type
-                return False
+                    if not item.get("has_sign", False) and val < 0:
+                        # cannot set a negative value to an unsigned type
+                        return False
 
-            item["value"] = val
-            int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
-            self.fileio.write(new_val.to_bytes(size, "little", signed=int_with_sign))
-            return True
-        elif tag == "type":
-            old_value = item.get(tag, "")
-            if value == old_value:
-                return False
-            item["_is_pvoid"] = True
-            item[tag] = value
-            count = item.get("_count", 1)
-            self.pvoidStructChanged.emit(index, count)
-            return True
-        elif tag == "count":
-            old_value = item.get("_count", 1)
-            if value == old_value or value <= 0:
-                return False
-            item["_count"] = value
-            self.pointerDereferenced.emit(index, value)
-            return True
+                    item["value"] = val
+                    int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
+                    self.fileio.write(new_val.to_bytes(size, "little", signed=int_with_sign))
+                    return True
+                elif tag == "type":
+                    old_value = item.get(tag, "")
+                    if value == old_value:
+                        return False
+                    item["_is_pvoid"] = True
+                    item[tag] = value
+                    count = item.get("_count", 1)
+                    self.pvoidStructChanged.emit(index, count)
+                    return True
+                elif tag == "count":
+                    old_value = item.get("_count", 1)
+                    if value == old_value or value <= 0:
+                        return False
+                    item["_count"] = value
+                    self.pointerDereferenced.emit(index, value)
+                    return True
+            case _:
+                rd = item.get("_role_data")
+                if rd is None:
+                    item["_role_data"] = {}
+                changed = item["_role_data"].get(role, None) != value
+                item["_role_data"][role] = value
+                return changed
         return False
 
     def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):

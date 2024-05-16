@@ -62,6 +62,8 @@ class Expression(QtWidgets.QWidget):
 
         self._init_ui()
 
+        self.auto_refresh_timers = {}
+
     def _init_ui(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         empty_struct = pdb.parse_expr_to_struct("")
@@ -90,6 +92,17 @@ class Expression(QtWidgets.QWidget):
                         # can only the delete top level structrue
                         if indexes[0].parent().isValid():
                             return False
+                        if self.auto_refresh_timers:
+                            rtn = QtWidgets.QMessageBox.warning(
+                                self,
+                                self.__class__.__name__,
+                                tr("Deleting any item stops all the auto refresh timers, is that OK?"),
+                                QtWidgets.QMessageBox.StandardButton.Yes,
+                                QtWidgets.QMessageBox.StandardButton.Cancel,
+                            )
+                            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+                                return True
+                            self._clear_auto_refresh_index()
                         model = self.ui.treeView.model()
                         model.removeRow(indexes[0].row(), indexes[0].parent())
                         return True
@@ -286,6 +299,25 @@ class Expression(QtWidgets.QWidget):
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
 
+            submenu = QtWidgets.QMenu("Refresh Timer")
+            submenu.setIcon(QtGui.QIcon(":icon/images/vswin2019/Time_color_16x.svg"))
+            actions = {
+                500: submenu.addAction("0.5 Second", lambda: self._add_auto_refresh_index(indexes, 500)),
+                1000: submenu.addAction("1 Second", lambda: self._add_auto_refresh_index(indexes, 1000)),
+                5000: submenu.addAction("5 Seconds", lambda: self._add_auto_refresh_index(indexes, 5000)),
+                10000: submenu.addAction("10 Seconds", lambda: self._add_auto_refresh_index(indexes, 10000)),
+            }
+            for i in indexes:
+                if t := self.auto_refresh_timers.get(i, None):
+                    if act := actions.get(t.interval(), None):
+                        act.setCheckable(True)
+                        act.setChecked(True)
+            if any(i in self.auto_refresh_timers for i in indexes):
+                submenu.addSeparator()
+                plural = "s" if len(indexes) > 1 else ""
+                submenu.addAction("Stop Selected Timer%s" % plural, lambda: self._clear_auto_refresh_index(indexes))
+            menu.addMenu(submenu)
+
         menu.addSeparator()
 
         if len(indexes) == 1:
@@ -295,6 +327,47 @@ class Expression(QtWidgets.QWidget):
             action.triggered.connect(functools.partial(self._openBinParserFromExpression, item))
 
         menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
+
+    def _add_auto_refresh_index(self, indexes: list[QtCore.QModelIndex], timeout: int):
+        def _timeout(i):
+            model = self.ui.treeView.model()
+            if not isinstance(model, qtmodel.StructTreeModel):
+                self._clear_auto_refresh_index([i])
+                return
+            model.refreshIndex(i)
+
+        model = self.ui.treeView.model()
+        if not isinstance(model, qtmodel.StructTreeModel):
+            return
+
+        for i in indexes:
+            timer = self.auto_refresh_timers.get(i, None)
+            if timer is None:
+                timer = QtCore.QTimer()
+                timer.timeout.connect(lambda: _timeout(i))
+                self.auto_refresh_timers[i] = timer
+            else:
+                timer.stop()
+            model.setData(i, QtGui.QColor(QtCore.Qt.GlobalColor.yellow), QtCore.Qt.ItemDataRole.BackgroundRole)
+            model.refreshIndex(i)
+
+            timer.setInterval(timeout)
+            timer.start()
+
+    def _clear_auto_refresh_index(self, indexes: list[QtCore.QModelIndex]=None):
+        indexes = indexes or list(self.auto_refresh_timers.keys())
+        def _clear_color(index: QtCore.QModelIndex):
+            model = self.ui.treeView.model()
+            if not isinstance(model, qtmodel.StructTreeModel):
+                return
+            model.setData(index, None, QtCore.Qt.ItemDataRole.BackgroundRole)
+            model.refreshIndex(i)
+
+        for i in indexes:
+            if timer := self.auto_refresh_timers.get(i):
+                _clear_color(i)
+                timer.stop()
+                del self.auto_refresh_timers[i]
 
     def _openBinParserFromExpression(self, item):
         _d = self.app.plugin(dock.Dock)
