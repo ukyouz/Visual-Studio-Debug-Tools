@@ -82,8 +82,9 @@ class Dock(Plugin):
             action.triggered.connect(cb)
         return action
 
-    def _close_dock(self, dockWidget, widget_dict: dict):
+    def _close_dock(self, dockWidget: QtWidgets.QDockWidget, widget_dict: dict):
         self.app.removeDockWidget(dockWidget)
+        self.app.evt.apply_hook("DockWidgetClosing", dockWidget.widget())
         del widget_dict[dockWidget]
 
     def addExpressionView(self) -> QtWidgets.QDockWidget:
@@ -117,7 +118,14 @@ class Dock(Plugin):
             action = self._addAction(menu, "Refresh", expr.refreshTree)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
 
+            action = self._addAction(menu, "Stop All Auto Refresh Timers", expr.clearAutoRefresh)
+            action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
+
+            menu.addSeparator()
+
             action = self._addAction(menu, "Clear expressions", expr.clearTree)
+
+            menu.addSeparator()
 
             action = self._addAction(menu, "Add Expression View", self.addExpressionView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))

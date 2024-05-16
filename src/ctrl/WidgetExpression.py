@@ -63,6 +63,7 @@ class Expression(QtWidgets.QWidget):
         self._init_ui()
 
         self.auto_refresh_timers = {}
+        self.app.evt.add_hook("DockWidgetClosing", lambda w: w == self and self.closeEvent(None))
 
     def _init_ui(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
@@ -102,7 +103,7 @@ class Expression(QtWidgets.QWidget):
                             )
                             if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
                                 return True
-                            self._clear_auto_refresh_index()
+                            self.clearAutoRefresh()
                         model = self.ui.treeView.model()
                         model.removeRow(indexes[0].row(), indexes[0].parent())
                         return True
@@ -116,6 +117,9 @@ class Expression(QtWidgets.QWidget):
                     self.ui.btnToggleHex.setChecked(not checked)
 
         return False
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        self.clearAutoRefresh()
 
     def _onHistoryClicked(self, val):
         self.ui.lineStruct.setText(val)
@@ -315,7 +319,7 @@ class Expression(QtWidgets.QWidget):
             if any(i in self.auto_refresh_timers for i in indexes):
                 submenu.addSeparator()
                 plural = "s" if len(indexes) > 1 else ""
-                submenu.addAction("Stop Selected Timer%s" % plural, lambda: self._clear_auto_refresh_index(indexes))
+                submenu.addAction("Stop Selected Timer%s" % plural, lambda: self.clearAutoRefresh(indexes))
             menu.addMenu(submenu)
 
         menu.addSeparator()
@@ -332,7 +336,7 @@ class Expression(QtWidgets.QWidget):
         def _timeout(i):
             model = self.ui.treeView.model()
             if not isinstance(model, qtmodel.StructTreeModel):
-                self._clear_auto_refresh_index([i])
+                self.clearAutoRefresh([i])
                 return
             model.refreshIndex(i)
             if model.rowCount(i) == 0:
@@ -347,6 +351,9 @@ class Expression(QtWidgets.QWidget):
             return
 
         for i in indexes:
+            model.setData(i, QtGui.QColor(QtCore.Qt.GlobalColor.yellow), QtCore.Qt.ItemDataRole.BackgroundRole)
+            _timeout(i)
+
             timer = self.auto_refresh_timers.get(i, None)
             if timer is None:
                 timer = QtCore.QTimer()
@@ -354,13 +361,10 @@ class Expression(QtWidgets.QWidget):
                 self.auto_refresh_timers[i] = timer
             else:
                 timer.stop()
-            model.setData(i, QtGui.QColor(QtCore.Qt.GlobalColor.yellow), QtCore.Qt.ItemDataRole.BackgroundRole)
-            model.refreshIndex(i)
-
             timer.setInterval(timeout)
             timer.start()
 
-    def _clear_auto_refresh_index(self, indexes: list[QtCore.QModelIndex]=None):
+    def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None):
         indexes = indexes or list(self.auto_refresh_timers.keys())
         def _clear_color(index: QtCore.QModelIndex):
             model = self.ui.treeView.model()
