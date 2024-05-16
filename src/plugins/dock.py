@@ -51,6 +51,8 @@ class Dock(Plugin):
         dm = self.addMemoryView()
 
         width = self.app.size().width()
+        opts = self.app.dockOptions()
+        self.app.setDockOptions(opts | QtWidgets.QMainWindow.DockOption.GroupedDragging)
         self.app.resizeDocks([dm], [width * 2 // 3], QtCore.Qt.Orientation.Horizontal)
         self.app.tabifyDockWidget(dm, de)
 
@@ -63,17 +65,17 @@ class Dock(Plugin):
 
     def generate_dockwidget(self):
         dockWidget = QtWidgets.QDockWidget(parent=self.app)
-        dockWidget.setObjectName("dockWidget")
+        # dockWidget.setObjectName("dockWidget")
         dockWidget.setFeatures(
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
             |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
-            |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable
+            # |QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
-        titelbar = DockTitleBar(dockWidget)
-        dockWidget.setTitleBarWidget(titelbar)
+        titlebar = DockTitleBar(dockWidget)
+        dockWidget.setTitleBarWidget(titlebar)
         dockWidget.setContentsMargins(0, 0, 0, 0)
         menu = QtWidgets.QMenu()
-        titelbar.ui.btnMore.setMenu(menu)
+        titlebar.ui.btnMore.setMenu(menu)
         return dockWidget
 
     def _addAction(self, menu, title, cb=None):
@@ -98,11 +100,9 @@ class Dock(Plugin):
 
         titlebar = dockWidget.titleBarWidget()
         if isinstance(titlebar, DockTitleBar):
+            titlebar.ui.btnClose.clicked.connect(lambda: self._close_dock(dockWidget, self.docks["expression"]))
+
             menu = titlebar.ui.btnMore.menu()
-
-            action = self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["expression"]))
-
-            menu.addSeparator()
 
             action = self._addAction(menu, "Editable top expression")
             def _toggle_editable_top_node(checked: bool):
@@ -143,9 +143,9 @@ class Dock(Plugin):
 
         titlebar = dockWidget.titleBarWidget()
         if isinstance(titlebar, DockTitleBar):
+            titlebar.ui.btnClose.clicked.connect(lambda: self._close_dock(dockWidget, self.docks["memory"]))
+
             menu = titlebar.ui.btnMore.menu()
-            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["memory"]))
-            menu.addSeparator()
             action = self._addAction(menu, tr("Show in BinParser"), partial(self._openBinParserFromMemory, mem))
             # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
             menu.addSeparator()
@@ -181,8 +181,9 @@ class Dock(Plugin):
 
         titlebar = dockWidget.titleBarWidget()
         if isinstance(titlebar, DockTitleBar):
+            titlebar.ui.btnClose.clicked.connect(lambda: self._close_dock(dockWidget, self.docks["binparser"]))
+
             menu = titlebar.ui.btnMore.menu()
-            self._addAction(menu, "Close", lambda: self._close_dock(dockWidget, self.docks["binparser"]))
             self._addAction(menu, "Export Parsing Result...", bp.export_as_csv)
 
         return dockWidget

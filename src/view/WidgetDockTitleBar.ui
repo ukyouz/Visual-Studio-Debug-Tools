@@ -141,6 +141,20 @@
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QToolButton" name="btnClose">
+     <property name="text">
+      <string>Close</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resource.qrc">
+       <normaloff>:/action/images/vswin2019/Close_12x_16x.svg</normaloff>:/action/images/vswin2019/Close_12x_16x.svg</iconset>
+     </property>
+     <property name="autoRaise">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources>

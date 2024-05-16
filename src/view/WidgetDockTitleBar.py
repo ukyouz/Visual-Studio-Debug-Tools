@@ -62,6 +62,13 @@ class Ui_Form(object):
         self.btnMore.setAutoRaise(True)
         self.btnMore.setObjectName("btnMore")
         self.horizontalLayout.addWidget(self.btnMore)
+        self.btnClose = QtWidgets.QToolButton(parent=Form)
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap(":/action/images/vswin2019/Close_12x_16x.svg"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.btnClose.setIcon(icon1)
+        self.btnClose.setAutoRaise(True)
+        self.btnClose.setObjectName("btnClose")
+        self.horizontalLayout.addWidget(self.btnClose)
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
@@ -72,3 +79,4 @@ class Ui_Form(object):
         self.labelIcon.setText(_translate("Form", "Icon"))
         self.labelTitle.setText(_translate("Form", "Title"))
         self.btnMore.setText(_translate("Form", "..."))
+        self.btnClose.setText(_translate("Form", "Close"))

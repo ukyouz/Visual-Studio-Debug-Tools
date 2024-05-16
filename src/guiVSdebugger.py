@@ -44,6 +44,7 @@ class VisualStudioDebugger(AppCtrl):
         self.setWindowIcon(QtGui.QIcon(str(self.app_dir / "view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico")))
 
         self.ui.checkLogWrap.stateChanged.connect(lambda on: self.ui.plainTextLog.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth if on else QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap))
+        self.ui.btnClearLog.clicked.connect(lambda: self.ui.plainTextLog.clear())
 
         self._plugins = {}
         self.loadPlugins([
@@ -79,7 +80,7 @@ class VisualStudioDebugger(AppCtrl):
     def log(self, msg):
         self.ui.tabWidget.setCurrentIndex(0)
         now = datetime.now()
-        timestamp = now.strftime("%Y/%m/%d %H:%M:%S")
+        timestamp = now.isoformat(sep=" ", timespec="milliseconds")
         self.ui.plainTextLog.appendPlainText(f"[{timestamp}] {msg}")
 
 

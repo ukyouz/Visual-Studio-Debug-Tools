@@ -82,6 +82,13 @@
             <number>0</number>
            </property>
            <item>
+            <widget class="QToolButton" name="btnClearLog">
+             <property name="text">
+              <string>Clear</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>

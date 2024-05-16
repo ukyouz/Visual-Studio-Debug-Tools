@@ -40,6 +40,9 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.widget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.btnClearLog = QtWidgets.QToolButton(parent=self.widget)
+        self.btnClearLog.setObjectName("btnClearLog")
+        self.horizontalLayout.addWidget(self.btnClearLog)
         spacerItem = QtWidgets.QSpacerItem(915, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.checkLogWrap = QtWidgets.QCheckBox(parent=self.widget)
@@ -112,6 +115,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "VisualStudioDebugger"))
+        self.btnClearLog.setText(_translate("MainWindow", "Clear"))
         self.checkLogWrap.setText(_translate("MainWindow", "Wrap"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("MainWindow", "Log"))
         self.plainTextEdit.setPlainText(_translate("MainWindow", "1. Generate a Debug Info file。\n"
