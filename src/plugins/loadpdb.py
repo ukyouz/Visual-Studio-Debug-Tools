@@ -230,6 +230,7 @@ class LoadPdb(Plugin):
                 self._pdb = _pdb
                 self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
+                self.app.log("PDB is loaded!")
 
             def _err(expt, tb):
                 self._hist_pdbs.remove_data(filename)

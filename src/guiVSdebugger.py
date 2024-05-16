@@ -1,5 +1,6 @@
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Type
 
@@ -42,6 +43,8 @@ class VisualStudioDebugger(AppCtrl):
         self.app_dir = Path(__file__).parent
         self.setWindowIcon(QtGui.QIcon(str(self.app_dir / "view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico")))
 
+        self.ui.checkLogWrap.stateChanged.connect(lambda on: self.ui.plainTextLog.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth if on else QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap))
+
         self._plugins = {}
         self.loadPlugins([
             run_script.RunScript(self),
@@ -72,6 +75,12 @@ class VisualStudioDebugger(AppCtrl):
             return self._plugins[plg_cls.__name__]
         except KeyError:
             raise PluginNotLoaded(plg_cls)
+
+    def log(self, msg):
+        self.ui.tabWidget.setCurrentIndex(0)
+        now = datetime.now()
+        timestamp = now.strftime("%Y/%m/%d %H:%M:%S")
+        self.ui.plainTextLog.appendPlainText(f"[{timestamp}] {msg}")
 
 
 if __name__ == '__main__':

@@ -117,6 +117,9 @@ class AppCtrl(QtWidgets.QMainWindow):
             worker.errored.connect(errored_cb)
         self.threadpool.start(worker)
 
+    def log(self, msg: str):
+        logger.debug(msg)
+
     def loadPlugins(self, plugins: list):
         ...
 

@@ -23,6 +23,31 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.tabWidget = QtWidgets.QTabWidget(parent=self.centralwidget)
         self.tabWidget.setObjectName("tabWidget")
+        self.tab_5 = QtWidgets.QWidget()
+        self.tab_5.setObjectName("tab_5")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.tab_5)
+        self.verticalLayout_5.setContentsMargins(6, 6, 6, 6)
+        self.verticalLayout_5.setObjectName("verticalLayout_5")
+        self.plainTextLog = QtWidgets.QPlainTextEdit(parent=self.tab_5)
+        font = QtGui.QFont()
+        font.setFamily("Consolas")
+        self.plainTextLog.setFont(font)
+        self.plainTextLog.setReadOnly(True)
+        self.plainTextLog.setObjectName("plainTextLog")
+        self.verticalLayout_5.addWidget(self.plainTextLog)
+        self.widget = QtWidgets.QWidget(parent=self.tab_5)
+        self.widget.setObjectName("widget")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        spacerItem = QtWidgets.QSpacerItem(915, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.checkLogWrap = QtWidgets.QCheckBox(parent=self.widget)
+        self.checkLogWrap.setChecked(True)
+        self.checkLogWrap.setObjectName("checkLogWrap")
+        self.horizontalLayout.addWidget(self.checkLogWrap)
+        self.verticalLayout_5.addWidget(self.widget)
+        self.tabWidget.addTab(self.tab_5, "")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.tab)
@@ -80,13 +105,15 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuTool.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         self.actionQuit.triggered.connect(MainWindow.close) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "VisualStudioDebugger"))
+        self.checkLogWrap.setText(_translate("MainWindow", "Wrap"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_5), _translate("MainWindow", "Log"))
         self.plainTextEdit.setPlainText(_translate("MainWindow", "1. Generate a Debug Info file。\n"
 "→Tag[PDBIN]\n"
 "*You need to do this for the first time, but then only required when you finds some values are weird.\n"
