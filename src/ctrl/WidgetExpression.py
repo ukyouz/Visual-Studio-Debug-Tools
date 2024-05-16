@@ -335,6 +335,12 @@ class Expression(QtWidgets.QWidget):
                 self._clear_auto_refresh_index([i])
                 return
             model.refreshIndex(i)
+            if model.rowCount(i) == 0:
+                # to avoid logging too much things, only log the specific data having no children item
+                item = model.itemFromIndex(i)
+                expr = item["expr"]
+                value = item["value"]
+                self.app.log(f"{expr} = {value} ({value:#x})")
 
         model = self.ui.treeView.model()
         if not isinstance(model, qtmodel.StructTreeModel):
