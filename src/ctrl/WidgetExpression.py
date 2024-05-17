@@ -63,7 +63,6 @@ class Expression(QtWidgets.QWidget):
         self._init_ui()
 
         self.auto_refresh_timers = {}
-        self.app.evt.add_hook("DockWidgetClosing", lambda w: w == self and self.closeEvent(None))
 
     def _init_ui(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
@@ -93,17 +92,10 @@ class Expression(QtWidgets.QWidget):
                         # can only the delete top level structrue
                         if indexes[0].parent().isValid():
                             return False
-                        if self.auto_refresh_timers:
-                            rtn = QtWidgets.QMessageBox.warning(
-                                self,
-                                self.__class__.__name__,
-                                tr("Deleting any item stops all the auto refresh timers, is that OK?"),
-                                QtWidgets.QMessageBox.StandardButton.Yes,
-                                QtWidgets.QMessageBox.StandardButton.Cancel,
-                            )
-                            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
-                                return True
-                            self.clearAutoRefresh()
+                        rtn = self._check_timer_before_deleting_treeitems()
+                        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+                            return True
+                        self.clearAutoRefresh()
                         model = self.ui.treeView.model()
                         model.removeRow(indexes[0].row(), indexes[0].parent())
                         return True
@@ -118,8 +110,31 @@ class Expression(QtWidgets.QWidget):
 
         return False
 
-    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+    def closeEvent(self, e: QtGui.QCloseEvent):
+        model = self.ui.treeView.model()
+        rtn = None
+        if self.auto_refresh_timers:
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("Auto refresh timers are still running, Ok to close?"),
+                QtWidgets.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+        elif model is not None and model.rowCount():
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("View is not empty, Ok to close?"),
+                QtWidgets.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            e.ignore()
+            return
         self.clearAutoRefresh()
+        e.accept()
 
     def _onHistoryClicked(self, val):
         self.ui.lineStruct.setText(val)
@@ -303,23 +318,31 @@ class Expression(QtWidgets.QWidget):
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
 
-            submenu = QtWidgets.QMenu("Refresh Timer")
+            submenu = QtWidgets.QMenu(tr("Refresh Timer"))
             submenu.setIcon(QtGui.QIcon(":icon/images/vswin2019/Time_color_16x.svg"))
             actions = {
-                500: submenu.addAction("0.5 Second", lambda: self._add_auto_refresh_index(indexes, 500)),
-                1000: submenu.addAction("1 Second", lambda: self._add_auto_refresh_index(indexes, 1000)),
-                5000: submenu.addAction("5 Seconds", lambda: self._add_auto_refresh_index(indexes, 5000)),
-                10000: submenu.addAction("10 Seconds", lambda: self._add_auto_refresh_index(indexes, 10000)),
+                500: submenu.addAction(tr("0.5 Second"), lambda: self._add_auto_refresh_index(indexes, 500)),
+                1000: submenu.addAction(tr("1 Second"), lambda: self._add_auto_refresh_index(indexes, 1000)),
+                5000: submenu.addAction(tr("5 Seconds"), lambda: self._add_auto_refresh_index(indexes, 5000)),
             }
+            submenu.addSeparator()
+            submenu.addAction(tr("Custom Time Interval"), lambda: self._add_auto_refresh_index(indexes, None))
+            customized = set()
             for i in indexes:
                 if t := self.auto_refresh_timers.get(i, None):
                     if act := actions.get(t.interval(), None):
                         act.setCheckable(True)
                         act.setChecked(True)
+                    else:
+                        customized.add(t.interval())
+            for time in customized:
+                act = submenu.addAction("%d ms" % time, lambda: self._add_auto_refresh_index(indexes, time))
+                act.setCheckable(True)
+                act.setChecked(True)
             if any(i in self.auto_refresh_timers for i in indexes):
                 submenu.addSeparator()
                 plural = "s" if len(indexes) > 1 else ""
-                submenu.addAction("Stop Selected Timer%s" % plural, lambda: self.clearAutoRefresh(indexes))
+                submenu.addAction(tr("Stop Selected Timer%s") % plural, lambda: self.clearAutoRefresh(indexes))
             menu.addMenu(submenu)
 
         menu.addSeparator()
@@ -332,7 +355,17 @@ class Expression(QtWidgets.QWidget):
 
         menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
 
-    def _add_auto_refresh_index(self, indexes: list[QtCore.QModelIndex], timeout: int):
+    def _add_auto_refresh_index(self, indexes: list[QtCore.QModelIndex], timeout: int | None):
+        if timeout is None:
+            timeout, ok = QtWidgets.QInputDialog.getInt(
+                self,
+                self.__class__.__name__,
+                tr("Set an interval (unit: ms)"),
+                min=100,
+                step=100,
+            )
+            if not ok:
+                return
         def _timeout(i):
             model = self.ui.treeView.model()
             if not isinstance(model, qtmodel.StructTreeModel):
@@ -364,20 +397,32 @@ class Expression(QtWidgets.QWidget):
             timer.setInterval(timeout)
             timer.start()
 
-    def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None):
-        indexes = indexes or list(self.auto_refresh_timers.keys())
-        def _clear_color(index: QtCore.QModelIndex):
-            model = self.ui.treeView.model()
-            if not isinstance(model, qtmodel.StructTreeModel):
-                return
-            model.setData(index, None, QtCore.Qt.ItemDataRole.BackgroundRole)
-            model.refreshIndex(i)
+    def _check_timer_before_deleting_treeitems(self) -> QtWidgets.QMessageBox.StandardButton:
+        rtn = QtWidgets.QMessageBox.StandardButton.Yes
+        if self.auto_refresh_timers:
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("Deleting any item stops all the auto refresh timers, is that OK?"),
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+        return rtn
 
+    def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None) -> int:
+        model = self.ui.treeView.model()
+        if not isinstance(model, qtmodel.StructTreeModel):
+            return 0
+
+        indexes = indexes or list(self.auto_refresh_timers.keys())
         for i in indexes:
             if timer := self.auto_refresh_timers.get(i):
-                _clear_color(i)
+                model.setData(i, None, QtCore.Qt.ItemDataRole.BackgroundRole)
+                model.refreshIndex(i)
                 timer.stop()
                 del self.auto_refresh_timers[i]
+
+        return len(indexes)
 
     def _openBinParserFromExpression(self, item):
         _d = self.app.plugin(dock.Dock)
@@ -407,10 +452,15 @@ class Expression(QtWidgets.QWidget):
             model.refreshIndex(index)
 
     def clearTree(self):
-        model = self.ui.treeView.model()
-
-        if isinstance(model, qtmodel.StructTreeModel):
-            model.removeRows(0, model.rowCount())
+        rtn = self._check_timer_before_deleting_treeitems()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return True
+        if self.clearAutoRefresh():
+            QtCore.QTimer.singleShot(100, self.clearTree)
+        else:
+            model = self.ui.treeView.model()
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.removeRows(0, model.rowCount())
 
 
 if __name__ == '__main__':

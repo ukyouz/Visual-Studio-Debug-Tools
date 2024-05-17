@@ -85,8 +85,12 @@ class Dock(Plugin):
         return action
 
     def _close_dock(self, dockWidget: QtWidgets.QDockWidget, widget_dict: dict):
+        ok = True
+        if w := dockWidget.widget():
+            ok = w.close()
+        if not ok:
+            return
         self.app.removeDockWidget(dockWidget)
-        self.app.evt.apply_hook("DockWidgetClosing", dockWidget.widget())
         del widget_dict[dockWidget]
 
     def addExpressionView(self) -> QtWidgets.QDockWidget:
