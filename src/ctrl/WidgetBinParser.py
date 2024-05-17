@@ -88,6 +88,29 @@ class BinParser(QtWidgets.QWidget):
                             return True
         return False
 
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        if getattr(self.fileio, "name") is not None:
+            # expect a file (ie. sent from BinView), so just let it go
+            e.accept()
+            return
+
+        # expect memory on ram (ie. sent from VS Debugger)
+        # need to warn user for closing a view
+        model1 = self.ui.tableView.model()
+        model2 = self.ui.treeView.model()
+        if any((model1, model2)) and any((model1.rowCount(), model2.rowCount())):
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("View is not empty, Ok to close?"),
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+                e.ignore()
+                return
+        e.accept()
+
     def export_as_csv(self):
         if self.fileio:
             filename = getattr(self.fileio, "name", "noname")

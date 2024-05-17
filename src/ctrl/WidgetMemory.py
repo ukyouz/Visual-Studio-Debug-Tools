@@ -2,6 +2,7 @@ import logging
 import sys
 from contextlib import suppress
 
+from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
@@ -46,6 +47,21 @@ class Memory(QtWidgets.QWidget):
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         header = self.ui.tableMemory.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        model = self.ui.tableMemory.model()
+        if model is not None and model.rowCount():
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                tr("View is not empty, Ok to close?"),
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+                e.ignore()
+                return
+        e.accept()
 
     def inputAddress(self) -> int:
         with suppress(Exception):
