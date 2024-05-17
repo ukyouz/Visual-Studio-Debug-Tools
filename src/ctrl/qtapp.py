@@ -46,6 +46,8 @@ def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
 
 
 i18n = QtCore.QCoreApplication.translate
+tr = lambda txt: i18n("App", txt)
+
 
 
 @dataclass
@@ -225,6 +227,7 @@ class AppCtrl(QtWidgets.QMainWindow):
             action.triggered.connect(partial(self.run_cmd, cmd))
         return action
 
+
 class MenuAction(TypedDict):
     name: str
     command: NotRequired[str]
@@ -333,3 +336,111 @@ class HistoryMenu(QtCore.QObject):
         self.data_list.remove(data)
         self._current = None
         self._update_menu()
+
+
+class AutoRefreshTimer(QtCore.QObject):
+    timeOut = QtCore.pyqtSignal(QtCore.QModelIndex)
+
+    def __init__(self, parent, view: QtWidgets.QAbstractItemView):
+        super().__init__(parent)
+        self.view = view
+        self.auto_refresh_timers = {}
+
+    def onClosing(self):
+        if self.auto_refresh_timers:
+            rtn = QtWidgets.QMessageBox.warning(
+                self.parent(),
+                self.parent().__class__.__name__,
+                tr("Auto refresh timers are still running, Ok to close?"),
+                QtWidgets.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Ok:
+                self.clearAutoRefresh()
+            return rtn
+        else:
+            return None
+
+    def onDeleting(self):
+        rtn = QtWidgets.QMessageBox.StandardButton.Yes
+        if self.auto_refresh_timers:
+            rtn = QtWidgets.QMessageBox.warning(
+                self.parent(),
+                self.parent().__class__.__name__,
+                tr("Deleting any item stops all the auto refresh timers, is that OK?"),
+                QtWidgets.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Ok:
+                self.clearAutoRefresh()
+        return rtn
+
+    def createContextMenues(self, indexes: list[QtCore.QModelIndex]):
+        submenu = QtWidgets.QMenu(tr("Refresh Timer"))
+        submenu.setIcon(QtGui.QIcon(":icon/images/vswin2019/Time_color_16x.svg"))
+        actions = {
+            500: submenu.addAction(tr("0.5 Second"), lambda: self._add_auto_refresh_index(indexes, 500)),
+            1000: submenu.addAction(tr("1 Second"), lambda: self._add_auto_refresh_index(indexes, 1000)),
+            5000: submenu.addAction(tr("5 Seconds"), lambda: self._add_auto_refresh_index(indexes, 5000)),
+        }
+        submenu.addSeparator()
+        submenu.addAction(tr("Custom Time Interval"), lambda: self._add_auto_refresh_index(indexes, None))
+        customized = set()
+        for i in indexes:
+            if t := self.auto_refresh_timers.get(i, None):
+                if act := actions.get(t.interval(), None):
+                    act.setCheckable(True)
+                    act.setChecked(True)
+                else:
+                    customized.add(t.interval())
+        for time in customized:
+            act = submenu.addAction("%d ms" % time, lambda: self._add_auto_refresh_index(indexes, time))
+            act.setCheckable(True)
+            act.setChecked(True)
+        if any(i in self.auto_refresh_timers for i in indexes):
+            submenu.addSeparator()
+            plural = "s" if len(indexes) > 1 else ""
+            act = submenu.addAction(tr("Stop Selected Timer%s") % plural, lambda: self.clearAutoRefresh(indexes))
+        return submenu
+
+    def _add_auto_refresh_index(self, indexes: list[QtCore.QModelIndex], timeout: int | None):
+        if timeout is None:
+            timeout, ok = QtWidgets.QInputDialog.getInt(
+                self.parent(),
+                self.parent().__class__.__name__,
+                tr("Set an interval (unit: ms)"),
+                min=100,
+                step=100,
+            )
+            if not ok:
+                return
+        def _timeout(i):
+            model = self.view.model()
+            model.dataChanged.emit(i, i)
+            self.timeOut.emit(i)
+
+        model = self.view.model()
+        for i in indexes:
+            model.setData(i, QtGui.QColor(QtCore.Qt.GlobalColor.yellow), QtCore.Qt.ItemDataRole.BackgroundRole)
+            _timeout(i)
+
+            timer = self.auto_refresh_timers.get(i, None)
+            if timer is None:
+                timer = QtCore.QTimer()
+                timer.timeout.connect(lambda: _timeout(i))
+                self.auto_refresh_timers[i] = timer
+            else:
+                timer.stop()
+            timer.setInterval(timeout)
+            timer.start()
+
+    def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None) -> int:
+        model = self.view.model()
+        indexes = indexes or list(self.auto_refresh_timers.keys())
+        for i in indexes:
+            if timer := self.auto_refresh_timers.get(i):
+                model.setData(i, None, QtCore.Qt.ItemDataRole.BackgroundRole)
+                model.dataChanged.emit(i, i)
+                timer.stop()
+                del self.auto_refresh_timers[i]
+        return len(indexes)

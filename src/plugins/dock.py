@@ -133,7 +133,7 @@ class Dock(Plugin):
             action = self._addAction(menu, "Refresh", expr.refreshTree)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
 
-            action = self._addAction(menu, "Stop All Auto Refresh Timers", expr.clearAutoRefresh)
+            action = self._addAction(menu, "Stop All Auto Refresh Timers", expr.var_watcher.clearAutoRefresh)
             action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
 
             menu.addSeparator()
