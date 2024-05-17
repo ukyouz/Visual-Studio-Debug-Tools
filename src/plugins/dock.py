@@ -63,6 +63,16 @@ class Dock(Plugin):
             for d in widgets.keys():
                 d.close()
 
+    def _rename_dockwidget(self, dockwidget):
+        txt, done = QtWidgets.QInputDialog.getText(
+            dockwidget,
+            self.app.__class__.__name__,
+            tr("Input a new name for [%r]") % dockwidget.windowTitle(),
+            text=dockwidget.windowTitle(),
+        )
+        if done:
+            dockwidget.setWindowTitle(txt)
+
     def generate_dockwidget(self):
         dockWidget = QtWidgets.QDockWidget(parent=self.app)
         # dockWidget.setObjectName("dockWidget")
@@ -75,6 +85,7 @@ class Dock(Plugin):
         dockWidget.setTitleBarWidget(titlebar)
         dockWidget.setContentsMargins(0, 0, 0, 0)
         menu = QtWidgets.QMenu()
+        self._addAction(menu, tr("Rename tab"), lambda: self._rename_dockwidget(dockWidget))
         titlebar.ui.btnMore.setMenu(menu)
         return dockWidget
 
