@@ -14,6 +14,7 @@ from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
 from ctrl.WidgetMemory import Memory
 from helper import qtmodel
+from plugins import debugger
 
 tr = lambda txt: i18n("Dock", txt)
 
@@ -45,7 +46,12 @@ class Dock(Plugin):
 
     def post_init(self):
         self.docks = defaultdict(dict)
+        self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
+    def load_plugins(self, dbg: debugger.Debugger):
+        self._dbg = dbg
+
+    def init_views(self):
         # initialize dock widgets
         de = self.addExpressionView()
         dm = self.addMemoryView()
@@ -55,8 +61,6 @@ class Dock(Plugin):
         self.app.setDockOptions(opts | QtWidgets.QMainWindow.DockOption.GroupedDragging)
         self.app.resizeDocks([dm], [width * 2 // 3], QtCore.Qt.Orientation.Horizontal)
         self.app.tabifyDockWidget(dm, de)
-
-        self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
     def _onClosed(self, evt):
         for widgets in self.docks.values():
@@ -107,7 +111,7 @@ class Dock(Plugin):
     def addExpressionView(self) -> QtWidgets.QDockWidget:
         dockWidget = self.generate_dockwidget()
         dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
-        expr = Expression(self.app)
+        expr = Expression(self.app, self._dbg)
         self.docks["expression"][dockWidget] = expr
         dockWidget.setWidget(expr)
         dockWidget.setWindowTitle("Expression-%d" % len(self.docks["expression"]))
@@ -150,7 +154,7 @@ class Dock(Plugin):
     def addMemoryView(self) -> QtWidgets.QDockWidget:
         dockWidget = self.generate_dockwidget()
         dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
-        mem = Memory(self.app)
+        mem = Memory(self.app, self._dbg)
         self.docks["memory"][dockWidget] = mem
         dockWidget.setWidget(mem)
         dockWidget.setWindowTitle("Memory-%d" % len(self.docks["memory"]))
@@ -170,25 +174,19 @@ class Dock(Plugin):
 
         return dockWidget
 
-    def _openBinParserFromMemory(self, mem):
-        try:
-            addr = mem.requestedAddress()
-            size = mem.requestedSize()
-            data = mem.readBuffer()
-        except Exception as err:
-            QtWidgets.QMessageBox.warning(
-                self.app,
-                self.__class__.__name__,
-                str(err),
-            )
-            return
-        b = self.addBinParserView(data)
+    def _openBinParserFromMemory(self, mem: Memory):
+        addr = mem.requestedAddress()
+        size = mem.requestedSize()
+        b = self.addBinParserView(addr, size)
         b.setWindowTitle("{:#08x} +{}".format(addr, size))
 
-    def addBinParserView(self, data: bytes) -> QtWidgets.QDockWidget:
+    def addBinParserView(self, addr: int, size: int) -> QtWidgets.QDockWidget:
         dockWidget = self.generate_dockwidget()
         # dockWidget.setWindowIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
-        bp = BinParser(self.app, fileio=io.BytesIO(data))
+        bp = BinParser(self.app)
+        bp.viewAddress = addr
+        bp.viewSize = size
+        bp.loadFile(self._dbg.get_memory_stream())
         self.docks["binparser"][dockWidget] = bp
         dockWidget.setWidget(bp)
         dockWidget.setWindowTitle("BinParser-%d" % len(self.docks["binparser"]))

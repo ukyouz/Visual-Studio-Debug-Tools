@@ -13,6 +13,7 @@ from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
 from ctrl.WidgetProcessSelector import ProcessSelector
+from plugins import debugger
 from plugins import dock
 from plugins import help_menu
 from plugins import loadpdb
@@ -62,6 +63,11 @@ class VisualStudioDebugger(AppCtrl):
         editToolBar.addWidget(processSelector)
 
         self.cmd.register("AttachCurrentProcess", processSelector.attach_current_selected_process)
+
+        d = self.plugin(dock.Dock)
+        dbg = self.plugin(debugger.Debugger)
+        d.load_plugins(dbg)
+        d.init_views()
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:

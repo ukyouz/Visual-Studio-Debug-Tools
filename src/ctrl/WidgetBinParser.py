@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -16,6 +17,7 @@ from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+from modules.utils.typ import Stream
 from plugins import loadpdb
 from view import WidgetBinParser
 
@@ -43,7 +45,7 @@ class ParseHistoryMenu(HistoryMenu):
 
 
 class BinParser(QtWidgets.QWidget):
-    def __init__(self, app: AppCtrl, fileio=None):
+    def __init__(self, app: AppCtrl):
         super().__init__(app)
         self.ui = WidgetBinParser.Ui_Form()
         self.ui.setupUi(self)
@@ -54,9 +56,9 @@ class BinParser(QtWidgets.QWidget):
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = ParseHistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
-        self.fileio = fileio
-        if fileio:
-            self._loadFile(fileio)
+        self.viewAddress = 0
+        self.viewSize = -1
+        self.fileio = None
 
         # events
         self.ui.btnParse.clicked.connect(self._onBtnParseClicked)
@@ -70,6 +72,16 @@ class BinParser(QtWidgets.QWidget):
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableView.installEventFilter(self)
+
+    @property
+    def streamSize(self):
+        if self.viewSize > 0:
+            return self.viewSize
+        elif self.fileio:
+            self.fileio.seek(0, os.SEEK_END)
+            return self.fileio.tell()
+        else:
+            return 0
 
     def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
         if obj == self.ui.tableView:
@@ -154,9 +166,12 @@ class BinParser(QtWidgets.QWidget):
             logger.warning(e)
             return 0
 
-    def _loadFile(self, fileio: io.BytesIO):
+    def loadFile(self, fileio: Stream):
+        self.fileio = fileio
         set_app_title(self, getattr(fileio, "name", "noname"))
         tblmodel = qtmodel.HexTable(fileio, self.ui.tableMemory)
+        tblmodel.viewAddress = self.viewAddress
+        tblmodel.viewSize = self.viewSize
         self.ui.tableMemory.setModel(tblmodel)
 
     def _onLineOffsetChanged(self):
@@ -254,19 +269,14 @@ class BinParser(QtWidgets.QWidget):
                 )
 
         count = self.ui.spinParseCount.value()
-        if self.fileio:
-            self.fileio.seek(0, io.SEEK_END)
-            total_byte = self.fileio.tell()
-        else:
-            total_byte = 0
 
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_expr_to_table,
                 structname,
-                addr=self.parse_offset,
+                addr=self.viewAddress + self.parse_offset,
                 count=count,
-                data_size=total_byte,
+                data_size=self.streamSize,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
@@ -274,9 +284,9 @@ class BinParser(QtWidgets.QWidget):
             self.app.exec_async(
                 pdb.parse_expr_to_struct,
                 structname,
-                addr=self.parse_offset,
+                addr=self.viewAddress + self.parse_offset,
                 count=count,
-                data_size=total_byte,
+                data_size=self.viewAddress + self.streamSize,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
                 errored_cb=_err,
@@ -334,6 +344,7 @@ if __name__ == '__main__':
     if args.file:
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())
-    window = BinParser(None, fileio)
+    window = BinParser(None)
+    window.loadFile(fileio)
     window.show()
     sys.exit(app.exec())

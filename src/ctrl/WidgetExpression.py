@@ -39,13 +39,14 @@ def _err(widget, err, traceback):
 
 
 class Expression(QtWidgets.QWidget):
-    def __init__(self, app: AppCtrl):
+    def __init__(self, app: AppCtrl, dbg: debugger.Debugger):
         super().__init__(app)
         self.ui = WidgetExpression.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
 
         self.app = app
+        self.debugger = dbg
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = HistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
@@ -145,7 +146,7 @@ class Expression(QtWidgets.QWidget):
 
     def _try_get_virtual_base(self, cb=None) -> int | None:
         try:
-            return dbg.get_virtual_base()
+            return self.debugger.get_virtual_base()
         except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -170,7 +171,6 @@ class Expression(QtWidgets.QWidget):
                 cb()
 
     def _addExpression(self):
-        dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
         def cb():
@@ -194,7 +194,7 @@ class Expression(QtWidgets.QWidget):
             self.parse_hist.add_data(expr)
             model = self.ui.treeView.model()
             if isinstance(model, qtmodel.StructTreeModel):
-                model.loadStream(dbg.get_memory_stream())
+                model.loadStream(self.debugger.get_memory_stream())
                 model.appendItem(struct_record)
             for c in range(2, model.columnCount()):
                 self.ui.treeView.resizeColumnToContents(c)
@@ -203,7 +203,7 @@ class Expression(QtWidgets.QWidget):
             pdb.query_struct,
             expr=expr,
             virtual_base=virt_base,
-            io_stream=dbg.get_memory_stream(),
+            io_stream=self.debugger.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=functools.partial(_err, self),
             block_UIs=[
@@ -213,7 +213,6 @@ class Expression(QtWidgets.QWidget):
         )
 
     def _change_expr(self, parent):
-        dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
         item = parent.internalPointer()
@@ -228,7 +227,7 @@ class Expression(QtWidgets.QWidget):
                 return
             item["_is_invalid"] = False
             if isinstance(model, qtmodel.StructTreeModel):
-                model.loadStream(dbg.get_memory_stream())
+                model.loadStream(self.debugger.get_memory_stream())
                 model.setItem(struct_record, parent)
 
         logger.debug("Expand: %r" % item["expr"])
@@ -237,7 +236,7 @@ class Expression(QtWidgets.QWidget):
             pdb.query_struct,
             expr=item["expr"],
             virtual_base=virt_base,
-            io_stream=dbg.get_memory_stream(),
+            io_stream=self.debugger.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=functools.partial(_err, self),
             block_UIs=[
@@ -246,7 +245,6 @@ class Expression(QtWidgets.QWidget):
         )
 
     def _lazy_load_pointer(self, parent, count, casting=False):
-        dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         item = parent.internalPointer().copy()
 
@@ -265,7 +263,7 @@ class Expression(QtWidgets.QWidget):
                 item["fields"] = [empty_struct]
                 model.setItem(item, parent)
                 return
-            model.loadStream(dbg.get_memory_stream())
+            model.loadStream(self.debugger.get_memory_stream())
             item["fields"] = struct_record["fields"]
             model.setItem(item, parent)
 
@@ -275,7 +273,7 @@ class Expression(QtWidgets.QWidget):
             self.app.exec_async(
                 pdb.deref_function_pointer,
                 struct=item,
-                io_stream=dbg.get_memory_stream(),
+                io_stream=self.debugger.get_memory_stream(),
                 virtual_base=virt_base,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
@@ -288,7 +286,7 @@ class Expression(QtWidgets.QWidget):
                 pdb.deref_struct,
                 struct=item,
                 count=count,
-                io_stream=dbg.get_memory_stream(),
+                io_stream=self.debugger.get_memory_stream(),
                 casting=casting,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
@@ -336,21 +334,14 @@ class Expression(QtWidgets.QWidget):
 
     def _openBinParserFromExpression(self, item):
         _d = self.app.plugin(dock.Dock)
-        try:
-            data = self.readBuffer(item)
-        except Exception as err:
-            QtWidgets.QMessageBox.warning(
-                self.app,
-                self.__class__.__name__,
-                str(err),
-            )
-            return
-        b = _d.addBinParserView(data)
+        b = _d.addBinParserView(
+            item["addr"],
+            item["size"],
+        )
         b.setWindowTitle(item["expr"])
 
     def readBuffer(self, item: loadpdb.ViewStruct) -> bytes:
-        dbg = self.app.plugin(debugger.Debugger)
-        stream = dbg.get_memory_stream()
+        stream = self.debugger.get_memory_stream()
         stream.seek(item["address"])
         return stream.read(item["size"])
 
@@ -380,6 +371,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Expression(None)
+    window = Expression(None, None)
     window.show()
     sys.exit(app.exec())

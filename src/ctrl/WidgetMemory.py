@@ -29,13 +29,14 @@ class MemoryHistory(HistoryMenu):
 
 
 class Memory(QtWidgets.QWidget):
-    def __init__(self, app: AppCtrl):
+    def __init__(self, app: AppCtrl, dbg: debugger.Debugger):
         super().__init__(app)
         self.ui = WidgetMemory.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
 
         self.app = app
+        self.debugger = dbg
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = MemoryHistory(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
@@ -47,6 +48,7 @@ class Memory(QtWidgets.QWidget):
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         header = self.ui.tableMemory.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         model = self.ui.tableMemory.model()
@@ -68,9 +70,8 @@ class Memory(QtWidgets.QWidget):
             return eval(self.ui.lineAddress.text())
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
-            dbg = self.app.plugin(debugger.Debugger)
-            virt_base = dbg.get_virtual_base()
-            stream = dbg.get_memory_stream()
+            virt_base = self.debugger.get_virtual_base()
+            stream = self.debugger.get_memory_stream()
             return int(pdb.query_cstruct(self.ui.lineAddress.text(), virt_base, stream))
         except InvalidExpression as e:
             QtWidgets.QMessageBox.warning(
@@ -101,9 +102,8 @@ class Memory(QtWidgets.QWidget):
             return eval(self.ui.lineSize.text())
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
-            dbg = self.app.plugin(debugger.Debugger)
-            virt_base = dbg.get_virtual_base()
-            stream = dbg.get_memory_stream()
+            virt_base = self.debugger.get_virtual_base()
+            stream = self.debugger.get_memory_stream()
             return int(pdb.query_cstruct(self.ui.lineSize.text(), virt_base, stream))
         except InvalidExpression as e:
             QtWidgets.QMessageBox.warning(
@@ -149,11 +149,9 @@ class Memory(QtWidgets.QWidget):
         self.ui.lineSize.setText(size)
 
     def _loadMemory(self):
-        dbg = self.app.plugin(debugger.Debugger)
-
         try:
             # test connection
-            dbg.get_virtual_base()
+            self.debugger.get_virtual_base()
         except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -178,7 +176,7 @@ class Memory(QtWidgets.QWidget):
                 self.app.run_cmd("AttachCurrentProcess", callback=self._loadMemory)
                 return
 
-        mem = dbg.get_memory_stream()
+        mem = self.debugger.get_memory_stream()
         addr = self.inputAddress()
         model = qtmodel.HexTable(mem)
         model.viewAddress = addr
@@ -193,8 +191,7 @@ class Memory(QtWidgets.QWidget):
         set_app_title(self, "M-{:#08x}".format(addr))
 
     def readBuffer(self) -> bytes:
-        dbg = self.app.plugin(debugger.Debugger)
-        mem = dbg.get_memory_stream()
+        mem = self.debugger.get_memory_stream()
         model = self.ui.tableMemory.model()
         if not isinstance(model, qtmodel.HexTable):
             raise qtmodel.ModelNotSupportError(tr("Not support read memory from current model: %r") % model)
@@ -234,6 +231,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Memory(None)
+    window = Memory(None, None)
     window.show()
     sys.exit(app.exec())

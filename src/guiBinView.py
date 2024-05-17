@@ -104,8 +104,9 @@ class BinViewer(AppCtrl):
                 QtCore.QTimer.singleShot(0, lambda: self._loadFile(fileio))
 
     def _loadFile(self, fileio: io.BytesIO):
-        widget = BinParser(self, fileio)
+        widget = BinParser(self)
         window = self.ui.mdiArea.addSubWindow(widget)
+        widget.loadFile(fileio)
         widget.show()
         self.subwidgets.append(window)
 
