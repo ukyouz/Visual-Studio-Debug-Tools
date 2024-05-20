@@ -71,16 +71,29 @@ class BinParser(QtWidgets.QWidget):
         self.ui.btnToggleChar.clicked.connect(self._onBtnToggleCharClicked)
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
+        self.ui.treeView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.treeView.customContextMenuRequested.connect(lambda p: self._onContextMenuOpened(p, self.ui.treeView))
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableView.installEventFilter(self)
         self.ui.tableView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.ui.tableView.customContextMenuRequested.connect(self._onContextMenuOpened)
+        self.ui.tableView.customContextMenuRequested.connect(lambda p: self._onContextMenuOpened(p, self.ui.tableView))
         self.ui.tableView.horizontalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.ui.tableView.horizontalHeader().customContextMenuRequested.connect(self._onHorizontalContextMenuOpened)
         self.ui.tableView.verticalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.ui.tableView.verticalHeader().customContextMenuRequested.connect(self._onVerticalContextMenuOpened)
 
-        self.var_watcher = AutoRefreshTimer(self, self.ui.tableView)
+        self._var_watcher = {
+            "tree": AutoRefreshTimer(self, self.ui.treeView),
+            "table": AutoRefreshTimer(self, self.ui.tableView),
+        }
+
+    @property
+    def var_watcher(self):
+        tab = self.ui.stackedWidget.currentWidget()
+        if tab == self.ui.pageTree:
+            return self._var_watcher["tree"]
+        else:
+            return self._var_watcher["table"]
 
     @property
     def streamSize(self):
@@ -379,18 +392,15 @@ class BinParser(QtWidgets.QWidget):
 
         menu.exec(self.ui.tableView.verticalHeader().viewport().mapToGlobal(position))
 
-    def _onContextMenuOpened(self, position):
-        indexes = self.ui.tableView.selectedIndexes()
-        model = self.ui.tableView.model()
-        if not isinstance(model, qtmodel.StructTableModel):
-            return
+    def _onContextMenuOpened(self, position, view):
+        indexes = view.selectedIndexes()
 
         menu = QtWidgets.QMenu()
 
         submenu = self.var_watcher.createContextMenues(indexes)
         menu.addMenu(submenu)
 
-        menu.exec(self.ui.tableView.viewport().mapToGlobal(position))
+        menu.exec(view.viewport().mapToGlobal(position))
 
 
 if __name__ == '__main__':
