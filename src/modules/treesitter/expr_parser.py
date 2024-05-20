@@ -79,7 +79,7 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
         try:
             struct = p.tpi_stream.deref_pointer(struct["lf"], _addr, recursive=False)
         except ValueError as e:
-            raise InvalidExpression(e)
+            raise InvalidExpression("%s at %r" % (e, ref_expr))
         except NotImplementedError as e:
             raise InvalidExpression("Fail to deref: %r" % ref_expr)
 
