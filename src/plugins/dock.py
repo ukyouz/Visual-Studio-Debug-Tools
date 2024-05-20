@@ -63,8 +63,8 @@ class Dock(Plugin):
         self.app.tabifyDockWidget(dm, de)
 
     def _onClosed(self, evt):
-        for widgets in self.docks.values():
-            for d in widgets.keys():
+        for docks in self.docks.values():
+            for d in docks.keys():
                 d.close()
 
     def _rename_dockwidget(self, dockwidget):
