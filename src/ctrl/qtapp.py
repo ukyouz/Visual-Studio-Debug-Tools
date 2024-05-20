@@ -1,6 +1,8 @@
 import abc
 import logging
+import math
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
@@ -19,6 +21,23 @@ from PyQt6 import QtWidgets
 
 from helper.qtthread import Runnable
 from modules.utils.typ import DequeList
+
+
+def clamp(minval, maxval, val):
+    return max(minval, min(maxval, val))
+
+
+def colorlarp(start: QtGui.QColor, end: QtGui.QColor, minval, maxval, val) -> QtGui.QColor:
+    if minval > maxval:
+        raise ValueError(f"{minval=} shall smaller than {maxval=}")
+    _val = clamp(minval, maxval, val)
+    _t = (_val - minval) / (maxval - minval)
+
+    r = round(start.red() * _t + end.red() * (1 - _t))
+    g = round(start.green() * _t + end.green() * (1 - _t))
+    b = round(start.blue() * _t + end.blue() * (1 - _t))
+    a = round(start.alpha() * _t + end.alpha() * (1 - _t))
+    return QtGui.QColor.fromRgb(r, g, b, a)
 
 
 class LogFilter(logging.Filter):
@@ -345,6 +364,7 @@ class AutoRefreshTimer(QtCore.QObject):
         super().__init__(parent)
         self.view = view
         self.auto_refresh_timers = {}
+        self.timer_indice = defaultdict(list)
 
     def onClosing(self):
         if self.auto_refresh_timers:
@@ -375,12 +395,27 @@ class AutoRefreshTimer(QtCore.QObject):
                 self.clearAutoRefresh()
         return rtn
 
+    def onAnyRelatedOperating(self):
+        rtn = QtWidgets.QMessageBox.StandardButton.Yes
+        if self.auto_refresh_timers:
+            rtn = QtWidgets.QMessageBox.warning(
+                self.parent(),
+                self.parent().__class__.__name__,
+                tr("You need to stop all the auto refresh timers to continue, is that OK?"),
+                QtWidgets.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Ok:
+                self.clearAutoRefresh()
+        return rtn
+
     def createContextMenues(self, indexes: list[QtCore.QModelIndex]):
         submenu = QtWidgets.QMenu(tr("Refresh Timer"))
         submenu.setIcon(QtGui.QIcon(":icon/images/vswin2019/Time_color_16x.svg"))
         actions = {
             500: submenu.addAction(tr("0.5 Second"), lambda: self._add_auto_refresh_index(indexes, 500)),
             1000: submenu.addAction(tr("1 Second"), lambda: self._add_auto_refresh_index(indexes, 1000)),
+            2000: submenu.addAction(tr("2 Seconds"), lambda: self._add_auto_refresh_index(indexes, 2000)),
             5000: submenu.addAction(tr("5 Seconds"), lambda: self._add_auto_refresh_index(indexes, 5000)),
         }
         submenu.addSeparator()
@@ -401,6 +436,7 @@ class AutoRefreshTimer(QtCore.QObject):
             submenu.addSeparator()
             plural = "s" if len(indexes) > 1 else ""
             act = submenu.addAction(tr("Stop Selected Timer%s") % plural, lambda: self.clearAutoRefresh(indexes))
+            act.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
         return submenu
 
     def _add_auto_refresh_index(self, indexes: list[QtCore.QModelIndex], timeout: int | None):
@@ -414,24 +450,46 @@ class AutoRefreshTimer(QtCore.QObject):
             )
             if not ok:
                 return
-        def _timeout(i):
-            model = self.view.model()
-            model.dataChanged.emit(i, i)
-            self.timeOut.emit(i)
+        if len(indexes) == 0:
+            return
+
+        def _timeout(indexes):
+            for i in indexes:
+                model = self.view.model()
+                model.dataChanged.emit(i, i, [QtCore.Qt.ItemDataRole.UserRole])
+                self.timeOut.emit(i)
 
         model = self.view.model()
+        timer = QtCore.QTimer()
+        color = colorlarp(QtGui.QColor("#f1fbd7"), QtGui.QColor("#ffff00"), math.log(500), math.log(10000), math.log(timeout))
         for i in indexes:
-            model.setData(i, QtGui.QColor(QtCore.Qt.GlobalColor.yellow), QtCore.Qt.ItemDataRole.BackgroundRole)
-            _timeout(i)
+            model.setData(i, QtGui.QColor(color), QtCore.Qt.ItemDataRole.BackgroundRole)
 
-            timer = self.auto_refresh_timers.get(i, None)
-            if timer is None:
-                timer = QtCore.QTimer()
-                timer.timeout.connect(lambda: _timeout(i))
-                self.auto_refresh_timers[i] = timer
-            else:
-                timer.stop()
-            timer.setInterval(timeout)
+            prev_timer = self.auto_refresh_timers.get(i, None)
+            if prev_timer is not None:
+                indice = self.timer_indice.get(prev_timer, [])
+                if indice:
+                    with suppress(ValueError):
+                        indice.remove(i)
+                    if not indice:
+                        prev_timer.stop()
+                        del self.timer_indice[prev_timer]
+
+            self.auto_refresh_timers[i] = timer
+
+        timer.timeout.connect(partial(_timeout, indexes))
+        self.timer_indice[timer] = indexes
+        timer.setInterval(timeout)
+        timer.start()
+
+        self.parent().app.evt.apply_hook("WidgetTimerStarted", self.parent())
+
+    def pauseAutoRefresh(self):
+        for timer in self.timer_indice.keys():
+            timer.stop()
+
+    def resumeAutoRefresh(self):
+        for timer in self.timer_indice.keys():
             timer.start()
 
     def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None) -> int:
@@ -440,7 +498,14 @@ class AutoRefreshTimer(QtCore.QObject):
         for i in indexes:
             if timer := self.auto_refresh_timers.get(i):
                 model.setData(i, None, QtCore.Qt.ItemDataRole.BackgroundRole)
-                model.dataChanged.emit(i, i)
+                model.dataChanged.emit(i, i, [QtCore.Qt.ItemDataRole.UserRole])
                 timer.stop()
+
+                indice = self.timer_indice[timer]
+                assert indice != []
+                indice.remove(i)
+                if indice == []:
+                    del self.timer_indice[timer]
+
                 del self.auto_refresh_timers[i]
         return len(indexes)

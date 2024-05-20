@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 import math
 import os
 from collections import defaultdict
@@ -18,6 +19,8 @@ from modules.utils.myfunc import float_from_int
 from modules.utils.myfunc import hex2
 from modules.utils.myfunc import int_from_float
 from modules.utils.typ import Stream
+
+logger = logging.getLogger(__name__)
 
 
 def bytes_to_ascii(data: bytes):
@@ -298,6 +301,7 @@ class StructTreeModel(AbstractTreeModel):
         self.allow_dereferece_pointer = False
         self.allow_edit_top_expr = True
         self._value_version = 0
+        self.dataChanged.connect(self._onDataChanging)
 
     def child(self, row, parent):
         item = self.itemFromIndex(parent)
@@ -537,7 +541,7 @@ class StructTreeModel(AbstractTreeModel):
         else:
             if isinstance(item["fields"], dict):
                 keys = [x[0] for x in iter_children(item["fields"])]
-                remove_keys = keys[row: row + count]
+                remove_keys = keys[row: row + count - 1]
                 for k in reversed(remove_keys):
                     del item["fields"][k]
             elif isinstance(item["fields"], list):
@@ -603,6 +607,16 @@ class StructTreeModel(AbstractTreeModel):
         _clear_value(item)
         self.refresh(index)
 
+    def _onDataChanging(self, tl, br, roles=None):
+        roles = roles or []
+        if QtCore.Qt.ItemDataRole.UserRole in roles:
+            if tl == br:
+                self.refreshIndex(tl)
+            else:
+                logger.warning("Not implant updating range of StructTreeModel items yet!")
+                logger.warning(f"{tl!r} {br!r}")
+                logger.warning(f"{tl.row()} {tl.column()} {br.row()} {br.column()}")
+
     def loadStream(self, fileio: Stream):
         self.fileio = fileio
         self.refresh()
@@ -637,6 +651,7 @@ class StructTableModel(QtCore.QAbstractTableModel):
             self.titles = [x["expr"].replace(".", "\n.").lstrip() for x in data[0]]
         else:
             self.titles = []
+        self.dataChanged.connect(self._onDataChanging)
 
     def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if role == QtCore.Qt.ItemDataRole.DisplayRole: # only change what DisplayRole returns
@@ -650,6 +665,8 @@ class StructTableModel(QtCore.QAbstractTableModel):
         row = index.row()
         col = index.column()
         item = self._data[row][col]
+        if val := item.get("_role_data", {}).get(role, None):
+            return val
         if role in {QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole}:
             val = _calc_val(self.fileio, item)
             if val is not None:
@@ -678,6 +695,25 @@ class StructTableModel(QtCore.QAbstractTableModel):
                 return QtGui.QColor("red")
             # if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
             #     return QtGui.QColor("blue")
+
+    def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
+        row = index.row()
+        col = index.column()
+        item = self._data[row][col]
+        rd = item.get("_role_data")
+        if rd is None:
+            item["_role_data"] = {}
+        changed = item["_role_data"].get(role, None) != value
+        item["_role_data"][role] = value
+        return changed
+
+    def _onDataChanging(self, tl, rb, roles=None):
+        roles = roles or []
+        if QtCore.Qt.ItemDataRole.UserRole in roles:
+            for row in range(tl.row(), rb.row() + 1):
+                row_data = self._data[row]
+                for col in range(tl.column(), rb.column() + 1):
+                    row_data[col]["_refresh_requested"] = True
 
     def flags(self, index: QtCore.QModelIndex):
         flags = super().flags(index)

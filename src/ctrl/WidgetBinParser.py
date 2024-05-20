@@ -13,6 +13,7 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
+from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
@@ -72,6 +73,14 @@ class BinParser(QtWidgets.QWidget):
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableView.installEventFilter(self)
+        self.ui.tableView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.customContextMenuRequested.connect(self._onContextMenuOpened)
+        self.ui.tableView.horizontalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.horizontalHeader().customContextMenuRequested.connect(self._onHorizontalContextMenuOpened)
+        self.ui.tableView.verticalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.verticalHeader().customContextMenuRequested.connect(self._onVerticalContextMenuOpened)
+
+        self.var_watcher = AutoRefreshTimer(self, self.ui.tableView)
 
     @property
     def streamSize(self):
@@ -101,29 +110,36 @@ class BinParser(QtWidgets.QWidget):
         return False
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
-        if getattr(self.fileio, "name") is not None:
-            # expect a file (ie. sent from BinView), so just let it go
-            e.accept()
-            return
-
-        # expect memory on ram (ie. sent from VS Debugger)
-        # need to warn user for closing a view
-        model1 = self.ui.tableView.model()
-        model2 = self.ui.treeView.model()
-        if any((model1, model2)) and any((model1.rowCount(), model2.rowCount())):
-            rtn = QtWidgets.QMessageBox.warning(
-                self,
-                self.__class__.__name__,
-                tr("View is not empty, Ok to close?"),
-                QtWidgets.QMessageBox.StandardButton.Yes,
-                QtWidgets.QMessageBox.StandardButton.Cancel,
-            )
-            if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
-                e.ignore()
+        rtn = self.var_watcher.onClosing()
+        if rtn is None:
+            if getattr(self.fileio, "name") is not None:
+                # expect a file (ie. sent from BinView), so just let it go
+                e.accept()
                 return
-        e.accept()
+
+            # expect memory on ram (ie. sent from VS Debugger)
+            # need to warn user for closing a view
+            model1 = self.ui.tableView.model()
+            model2 = self.ui.treeView.model()
+            if any((model1, model2)) and any((model1.rowCount(), model2.rowCount())):
+                rtn = QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    tr("View is not empty, Ok to close?"),
+                    QtWidgets.QMessageBox.StandardButton.Yes,
+                    QtWidgets.QMessageBox.StandardButton.Cancel,
+                )
+
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            e.ignore()
+        else:
+            e.accept()
 
     def export_as_csv(self):
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+
         if self.fileio:
             filename = getattr(self.fileio, "name", "noname")
             bin_fname = "/" + str(Path(filename).with_suffix(".csv"))
@@ -211,6 +227,10 @@ class BinParser(QtWidgets.QWidget):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+
         self.setEnabled(False)
 
         if pdb.is_loading():
@@ -293,6 +313,10 @@ class BinParser(QtWidgets.QWidget):
             )
 
     def _onParseHistoryClicked(self, data: ParseRecord):
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+
         self.ui.lineStruct.setText(data.struct)
         self.ui.lineOffset.setText(data.offset)
         self.ui.spinParseCount.setValue(data.count or 1)
@@ -312,7 +336,6 @@ class BinParser(QtWidgets.QWidget):
         model.allow_edit_top_expr = False
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
-            # TODO: global address fileio reader
             model.loadStream(self.fileio)
         self.ui.treeView.setModel(model)
         # expand the first item
@@ -326,10 +349,48 @@ class BinParser(QtWidgets.QWidget):
         model = qtmodel.StructTableModel(data)
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
-            # TODO: global address fileio reader
             model.loadStream(self.fileio)
         self.ui.tableView.setModel(model)
         return model
+
+    def _onHorizontalContextMenuOpened(self, position):
+        indexes = self.ui.tableView.selectedIndexes()
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        submenu = self.var_watcher.createContextMenues(indexes)
+        menu.addMenu(submenu)
+
+        menu.exec(self.ui.tableView.horizontalHeader().viewport().mapToGlobal(position))
+
+    def _onVerticalContextMenuOpened(self, position):
+        indexes = self.ui.tableView.selectedIndexes()
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        submenu = self.var_watcher.createContextMenues(indexes)
+        menu.addMenu(submenu)
+
+        menu.exec(self.ui.tableView.verticalHeader().viewport().mapToGlobal(position))
+
+    def _onContextMenuOpened(self, position):
+        indexes = self.ui.tableView.selectedIndexes()
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        submenu = self.var_watcher.createContextMenues(indexes)
+        menu.addMenu(submenu)
+
+        menu.exec(self.ui.tableView.viewport().mapToGlobal(position))
 
 
 if __name__ == '__main__':

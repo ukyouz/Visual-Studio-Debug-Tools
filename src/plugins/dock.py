@@ -197,6 +197,10 @@ class Dock(Plugin):
             titlebar.ui.btnClose.clicked.connect(lambda: self._close_dock(dockWidget, self.docks["binparser"]))
 
             menu = titlebar.ui.btnMore.menu()
+
+            action = self._addAction(menu, "Stop All Auto Refresh Timers", bp.var_watcher.clearAutoRefresh)
+            action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
+
             self._addAction(menu, "Export Parsing Result...", bp.export_as_csv)
 
         return dockWidget
