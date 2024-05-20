@@ -123,7 +123,7 @@ class Dock(Plugin):
 
             menu = titlebar.ui.btnMore.menu()
 
-            action = self._addAction(menu, "Editable top expression")
+            action = self._addAction(menu, tr("Editable top expression"))
             def _toggle_editable_top_node(checked: bool):
                 model = expr.ui.treeView.model()
                 if isinstance(model, qtmodel.StructTreeModel):
@@ -134,19 +134,19 @@ class Dock(Plugin):
 
             menu.addSeparator()
 
-            action = self._addAction(menu, "Refresh", expr.refreshTree)
+            action = self._addAction(menu, tr("Refresh"), expr.refreshTree)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
 
-            action = self._addAction(menu, "Stop All Auto Refresh Timers", expr.var_watcher.clearAutoRefresh)
+            action = self._addAction(menu, tr("Stop All Auto Refresh Timers"), expr.var_watcher.clearAutoRefresh)
             action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
 
             menu.addSeparator()
 
-            action = self._addAction(menu, "Clear expressions", expr.clearTree)
+            action = self._addAction(menu, tr("Clear expressions"), expr.clearTree)
 
             menu.addSeparator()
 
-            action = self._addAction(menu, "Add Expression View", self.addExpressionView)
+            action = self._addAction(menu, tr("Add Expression View"), self.addExpressionView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
 
         return dockWidget
@@ -168,8 +168,8 @@ class Dock(Plugin):
             action = self._addAction(menu, tr("Show in BinParser"), partial(self._openBinParserFromMemory, mem))
             # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
             menu.addSeparator()
-            self._addAction(menu, "Dump Memory...", mem.dumpBuffer)
-            action = self._addAction(menu, "Add Memory View", self.addMemoryView)
+            self._addAction(menu, tr("Dump Memory..."), mem.dumpBuffer)
+            action = self._addAction(menu, tr("Add Memory View"), self.addMemoryView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
 
         return dockWidget
@@ -198,9 +198,9 @@ class Dock(Plugin):
 
             menu = titlebar.ui.btnMore.menu()
 
-            action = self._addAction(menu, "Stop All Auto Refresh Timers", bp.var_watcher.clearAutoRefresh)
+            action = self._addAction(menu, tr("Stop All Auto Refresh Timers"), bp.var_watcher.clearAutoRefresh)
             action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
 
-            self._addAction(menu, "Export Parsing Result...", bp.export_as_csv)
+            self._addAction(menu, tr("Export Parsing Result..."), bp.export_as_csv)
 
         return dockWidget

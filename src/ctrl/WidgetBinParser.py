@@ -161,7 +161,7 @@ class BinParser(QtWidgets.QWidget):
         dialog = QtWidgets.QFileDialog(self)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            caption="Save as csv...",
+            caption=tr("Save as csv..."),
             directory=dialog.directory().filePath(bin_fname),
             filter="CSV files (*.csv);; Any (*.*)"
         )
@@ -291,13 +291,13 @@ class BinParser(QtWidgets.QWidget):
             if isinstance(e, loadpdb.InvalidExpression):
                 QtWidgets.QMessageBox.warning(
                     self,
-                    "PDB Error!",
+                    tr("PDB Error!"),
                     tr("Invalid expression: %r") % structname,
                 )
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
-                    "PDB Error!",
+                    tr("PDB Error!"),
                     tr("Please load pdbin first!"),
                 )
 

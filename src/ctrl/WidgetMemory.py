@@ -204,7 +204,7 @@ class Memory(QtWidgets.QWidget):
             data = self.readBuffer()
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self,
-                caption="Save bin as...",
+                caption=tr("Save bin as..."),
                 filter="Bin (*.bin);; Any (*.*)",
             )
             if filename:
