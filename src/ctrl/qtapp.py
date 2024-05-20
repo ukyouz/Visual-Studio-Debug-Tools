@@ -461,7 +461,7 @@ class AutoRefreshTimer(QtCore.QObject):
 
         model = self.view.model()
         timer = QtCore.QTimer()
-        color = colorlarp(QtGui.QColor("#f1fbd7"), QtGui.QColor("#ffff00"), math.log(500), math.log(10000), math.log(timeout))
+        color = colorlarp(QtGui.QColor("#f1fbd7"), QtGui.QColor("#ffe000"), math.log(500), math.log(10000), math.log(timeout))
         for i in indexes:
             model.setData(i, QtGui.QColor(color), QtCore.Qt.ItemDataRole.BackgroundRole)
 
@@ -484,13 +484,29 @@ class AutoRefreshTimer(QtCore.QObject):
 
         self.parent().app.evt.apply_hook("WidgetTimerStarted", self.parent())
 
+    def resumeAutoRefresh(self):
+        for timer in self.timer_indice.keys():
+            timer.start()
+
+        model = self.view.model()
+        for i, timer in self.auto_refresh_timers.items():
+            timeout = timer.interval()
+            color = colorlarp(QtGui.QColor("#f1fbd7"), QtGui.QColor("#ffe000"), math.log(500), math.log(10000), math.log(timeout))
+            model.setData(i, QtGui.QColor(color), QtCore.Qt.ItemDataRole.BackgroundRole)
+            br = model.index(i.row(), model.columnCount() - 1, i.parent())
+            model.dataChanged.emit(i, br, [QtCore.Qt.ItemDataRole.BackgroundRole])
+
     def pauseAutoRefresh(self):
         for timer in self.timer_indice.keys():
             timer.stop()
 
-    def resumeAutoRefresh(self):
-        for timer in self.timer_indice.keys():
-            timer.start()
+        model = self.view.model()
+        for i, timer in self.auto_refresh_timers.items():
+            timeout = timer.interval()
+            color = colorlarp(QtGui.QColor("#d3dac2"), QtGui.QColor("#d2c669"), math.log(500), math.log(10000), math.log(timeout))
+            model.setData(i, QtGui.QColor(color), QtCore.Qt.ItemDataRole.BackgroundRole)
+            br = model.index(i.row(), model.columnCount() - 1, i.parent())
+            model.dataChanged.emit(i, br, [QtCore.Qt.ItemDataRole.BackgroundRole])
 
     def clearAutoRefresh(self, indexes: list[QtCore.QModelIndex]=None) -> int:
         model = self.view.model()
@@ -508,4 +524,6 @@ class AutoRefreshTimer(QtCore.QObject):
                     del self.timer_indice[timer]
 
                 del self.auto_refresh_timers[i]
+        if not self.auto_refresh_timers:
+            self.parent().app.evt.apply_hook("WidgetTimerCleared", self.parent())
         return len(indexes)
