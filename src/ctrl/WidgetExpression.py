@@ -335,7 +335,7 @@ class Expression(QtWidgets.QWidget):
     def _openBinParserFromExpression(self, item):
         _d = self.app.plugin(dock.Dock)
         b = _d.addBinParserView(
-            item["addr"],
+            item["address"],
             item["size"],
         )
         b.setWindowTitle(item["expr"])
