@@ -1,4 +1,3 @@
-import io
 from collections import defaultdict
 from functools import partial
 
@@ -8,7 +7,6 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
-from ctrl.qtapp import i18n
 from ctrl.WidgetBinParser import BinParser
 from ctrl.WidgetDockTitleBar import DockTitleBar
 from ctrl.WidgetExpression import Expression
@@ -16,21 +14,20 @@ from ctrl.WidgetMemory import Memory
 from helper import qtmodel
 from plugins import debugger
 
-tr = lambda txt: i18n("Dock", txt)
 
 class Dock(Plugin):
     def registerMenues(self) -> list[MenuAction]:
         return [
             {
-                "name": "Debugger",
+                "name": self.tr("Debugger"),
                 "submenus": [
                     {
-                        "name": "Add Memory View",
+                        "name": self.tr("Add Memory View"),
                         "command": "AddMemoryView",
                         "icon": ":icon/images/ctrl/Memory_16x.svg",
                     },
                     {
-                        "name": "Add Expression View",
+                        "name": self.tr("Add Expression View"),
                         "command": "AddExpressionView",
                         "icon": ":icon/images/ctrl/VariableExpression_16x.svg",
                     },
@@ -71,7 +68,7 @@ class Dock(Plugin):
         txt, done = QtWidgets.QInputDialog.getText(
             dockwidget,
             self.app.__class__.__name__,
-            tr("Input a new name for [%r]") % dockwidget.windowTitle(),
+            self.tr("Input a new name for [%s]") % dockwidget.windowTitle(),
             text=dockwidget.windowTitle(),
         )
         if done:
@@ -89,7 +86,7 @@ class Dock(Plugin):
         dockWidget.setTitleBarWidget(titlebar)
         dockWidget.setContentsMargins(0, 0, 0, 0)
         menu = QtWidgets.QMenu()
-        self._addAction(menu, tr("Rename tab"), lambda: self._rename_dockwidget(dockWidget))
+        self._addAction(menu, self.tr("Rename tab"), lambda: self._rename_dockwidget(dockWidget))
         titlebar.ui.btnMore.setMenu(menu)
         return dockWidget
 
@@ -123,7 +120,7 @@ class Dock(Plugin):
 
             menu = titlebar.ui.btnMore.menu()
 
-            action = self._addAction(menu, tr("Editable top expression"))
+            action = self._addAction(menu, self.tr("Editable top expression"))
             def _toggle_editable_top_node(checked: bool):
                 model = expr.ui.treeView.model()
                 if isinstance(model, qtmodel.StructTreeModel):
@@ -134,19 +131,19 @@ class Dock(Plugin):
 
             menu.addSeparator()
 
-            action = self._addAction(menu, tr("Refresh"), expr.refreshTree)
+            action = self._addAction(menu, self.tr("Refresh"), expr.refreshTree)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
 
-            action = self._addAction(menu, tr("Stop All Auto Refresh Timers"), expr.var_watcher.clearAutoRefresh)
+            action = self._addAction(menu, self.tr("Stop All Auto Refresh Timers"), expr.var_watcher.clearAutoRefresh)
             action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
 
             menu.addSeparator()
 
-            action = self._addAction(menu, tr("Clear expressions"), expr.clearTree)
+            action = self._addAction(menu, self.tr("Clear expressions"), expr.clearTree)
 
             menu.addSeparator()
 
-            action = self._addAction(menu, tr("Add Expression View"), self.addExpressionView)
+            action = self._addAction(menu, self.tr("Add Expression View"), self.addExpressionView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/VariableExpression_16x.svg"))
 
         return dockWidget
@@ -165,11 +162,11 @@ class Dock(Plugin):
             titlebar.ui.btnClose.clicked.connect(lambda: self._close_dock(dockWidget, self.docks["memory"]))
 
             menu = titlebar.ui.btnMore.menu()
-            action = self._addAction(menu, tr("Show in BinParser"), partial(self._openBinParserFromMemory, mem))
+            action = self._addAction(menu, self.tr("Show in BinParser"), partial(self._openBinParserFromMemory, mem))
             # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
             menu.addSeparator()
-            self._addAction(menu, tr("Dump Memory..."), mem.dumpBuffer)
-            action = self._addAction(menu, tr("Add Memory View"), self.addMemoryView)
+            self._addAction(menu, self.tr("Dump Memory..."), mem.dumpBuffer)
+            action = self._addAction(menu, self.tr("Add Memory View"), self.addMemoryView)
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Memory_16x.svg"))
 
         return dockWidget
@@ -198,9 +195,9 @@ class Dock(Plugin):
 
             menu = titlebar.ui.btnMore.menu()
 
-            action = self._addAction(menu, tr("Stop All Auto Refresh Timers"), bp.var_watcher.clearAutoRefresh)
+            action = self._addAction(menu, self.tr("Stop All Auto Refresh Timers"), bp.var_watcher.clearAutoRefresh)
             action.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
 
-            self._addAction(menu, tr("Export Parsing Result..."), bp.export_as_csv)
+            self._addAction(menu, self.tr("Export Parsing Result..."), bp.export_as_csv)
 
         return dockWidget

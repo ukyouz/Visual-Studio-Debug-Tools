@@ -17,7 +17,7 @@ class Translator(Plugin):
         val = self.app.app_setting.value("app/lang", "")
         return [
             {
-                "name": "Languages",
+                "name": self.tr("Languages"),
                 "actionGroup": True,
                 "submenus": [
                     {

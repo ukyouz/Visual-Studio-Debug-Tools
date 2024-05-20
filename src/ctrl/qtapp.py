@@ -64,10 +64,6 @@ def set_app_title(app: QtWidgets.QMainWindow | QtWidgets.QWidget, title: str):
         app.setWindowTitle("%s" % clsname)
 
 
-i18n = QtCore.QCoreApplication.translate
-tr = lambda txt: i18n("App", txt)
-
-
 
 @dataclass
 class CommandManager:
@@ -229,7 +225,7 @@ class AppCtrl(QtWidgets.QMainWindow):
         else:
             menu = QtWidgets.QMenu(parent=parent)
             menu.setObjectName(norm_name)
-            menu.setTitle(i18n("MainWindow", name))
+            menu.setTitle(self.tr(name))
             setattr(self.ui, norm_name, menu)
         return menu
 
@@ -239,9 +235,9 @@ class AppCtrl(QtWidgets.QMainWindow):
         assert not hasattr(self.ui, norm_actname), "Duplicated actioins"
         setattr(self.ui, norm_actname, action)
         action.setObjectName(norm_actname)
-        action.setText(i18n("MainWindow", name))
+        action.setText(self.tr(name))
         if shortcut:
-            action.setShortcut(i18n("MainWindow", shortcut))
+            action.setShortcut(shortcut)
         if cmd:
             action.triggered.connect(partial(self.run_cmd, cmd))
         return action
@@ -269,7 +265,7 @@ class PluginNotLoaded(Exception):
 
 
 @dataclass
-class Plugin:
+class Plugin(QtCore.QObject):
     app: AppCtrl
 
     def registerMenues(self) -> list[MenuAction]:
@@ -315,7 +311,7 @@ class HistoryMenu(QtCore.QObject):
 
         if self.data_list:
             self.menu.addSeparator()
-            action = self.menu.addAction("Clear History")
+            action = self.menu.addAction(self.tr("Clear History"))
             action.triggered.connect(self._clear)
 
     def _selected(self, data):
@@ -371,7 +367,7 @@ class AutoRefreshTimer(QtCore.QObject):
             rtn = QtWidgets.QMessageBox.warning(
                 self.parent(),
                 self.parent().__class__.__name__,
-                tr("Auto refresh timers are still running, Ok to close?"),
+                self.tr("Auto refresh timers are still running, Ok to close?"),
                 QtWidgets.QMessageBox.StandardButton.Ok,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
@@ -387,7 +383,7 @@ class AutoRefreshTimer(QtCore.QObject):
             rtn = QtWidgets.QMessageBox.warning(
                 self.parent(),
                 self.parent().__class__.__name__,
-                tr("Deleting any item stops all the auto refresh timers, is that OK?"),
+                self.tr("Deleting any item stops all the auto refresh timers, is that OK?"),
                 QtWidgets.QMessageBox.StandardButton.Ok,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
@@ -401,7 +397,7 @@ class AutoRefreshTimer(QtCore.QObject):
             rtn = QtWidgets.QMessageBox.warning(
                 self.parent(),
                 self.parent().__class__.__name__,
-                tr("You need to stop all the auto refresh timers to continue, is that OK?"),
+                self.tr("You need to stop all the auto refresh timers to continue, is that OK?"),
                 QtWidgets.QMessageBox.StandardButton.Ok,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
@@ -410,16 +406,16 @@ class AutoRefreshTimer(QtCore.QObject):
         return rtn
 
     def createContextMenues(self, indexes: list[QtCore.QModelIndex]):
-        submenu = QtWidgets.QMenu(tr("Refresh Timer"))
+        submenu = QtWidgets.QMenu(self.tr("Refresh Timer"))
         submenu.setIcon(QtGui.QIcon(":icon/images/vswin2019/Time_color_16x.svg"))
         actions = {
-            500: submenu.addAction(tr("0.5 Second"), lambda: self._add_auto_refresh_index(indexes, 500)),
-            1000: submenu.addAction(tr("1 Second"), lambda: self._add_auto_refresh_index(indexes, 1000)),
-            2000: submenu.addAction(tr("2 Seconds"), lambda: self._add_auto_refresh_index(indexes, 2000)),
-            5000: submenu.addAction(tr("5 Seconds"), lambda: self._add_auto_refresh_index(indexes, 5000)),
+            500: submenu.addAction(self.tr("0.5 Second"), lambda: self._add_auto_refresh_index(indexes, 500)),
+            1000: submenu.addAction(self.tr("1 Second"), lambda: self._add_auto_refresh_index(indexes, 1000)),
+            2000: submenu.addAction(self.tr("2 Seconds"), lambda: self._add_auto_refresh_index(indexes, 2000)),
+            5000: submenu.addAction(self.tr("5 Seconds"), lambda: self._add_auto_refresh_index(indexes, 5000)),
         }
         submenu.addSeparator()
-        submenu.addAction(tr("Custom Time Interval"), lambda: self._add_auto_refresh_index(indexes, None))
+        submenu.addAction(self.tr("Custom Time Interval..."), lambda: self._add_auto_refresh_index(indexes, None))
         customized = set()
         for i in indexes:
             if t := self.auto_refresh_timers.get(i, None):
@@ -435,7 +431,7 @@ class AutoRefreshTimer(QtCore.QObject):
         if any(i in self.auto_refresh_timers for i in indexes):
             submenu.addSeparator()
             plural = "s" if len(indexes) > 1 else ""
-            act = submenu.addAction(tr("Stop Selected Timer%s") % plural, lambda: self.clearAutoRefresh(indexes))
+            act = submenu.addAction(self.tr("Stop Selected Timer{p}").format(p=plural), lambda: self.clearAutoRefresh(indexes))
             act.setIcon(QtGui.QIcon(":icon/images/vswin2019/Timeout_16x.svg"))
         return submenu
 
@@ -444,7 +440,7 @@ class AutoRefreshTimer(QtCore.QObject):
             timeout, ok = QtWidgets.QInputDialog.getInt(
                 self.parent(),
                 self.parent().__class__.__name__,
-                tr("Set an interval (unit: ms)"),
+                self.tr("Set an interval (unit: ms)"),
                 min=100,
                 step=100,
             )

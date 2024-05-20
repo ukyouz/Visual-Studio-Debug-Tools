@@ -7,7 +7,6 @@ from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
@@ -15,7 +14,6 @@ from plugins import debugger
 from plugins import loadpdb
 from view import WidgetMemory
 
-tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -56,7 +54,7 @@ class Memory(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr("View is not empty, Ok to close?"),
+                self.tr("View is not empty, Ok to close?"),
                 QtWidgets.QMessageBox.StandardButton.Yes,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
@@ -77,7 +75,7 @@ class Memory(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr("Invalid Expression: %s") % str(e),
+                self.tr("Invalid Expression: %s") % str(e),
             )
             logger.warning(e)
             return 0
@@ -88,13 +86,13 @@ class Memory(QtWidgets.QWidget):
     def requestedAddress(self) -> int:
         model = self.ui.tableMemory.model()
         if not isinstance(model,  qtmodel.HexTable):
-            raise qtmodel.ModelNotSupportError(tr("No memory is loaded yet!"))
+            raise qtmodel.ModelNotSupportError(self.tr("No memory is loaded yet!"))
         return model.viewAddress
 
     def requestedSize(self) -> int:
         model = self.ui.tableMemory.model()
         if not isinstance(model,  qtmodel.HexTable):
-            raise qtmodel.ModelNotSupportError(tr("No memory is loaded yet!"))
+            raise qtmodel.ModelNotSupportError(self.tr("No memory is loaded yet!"))
         return model.viewSize
 
     def inputSize(self) -> int:
@@ -109,7 +107,7 @@ class Memory(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr("Invalid Expression: %s! Use default size: 1024.") % str(e),
+                self.tr("Invalid Expression: %s! Use default size: 1024.") % str(e),
             )
             logger.warning(e)
             return 1024
@@ -163,7 +161,7 @@ class Memory(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr(
+                self.tr(
                     "You shall attach to a process before this operation.\n"
                     "Attach to current selected process and continue?"
                 ),
@@ -185,7 +183,7 @@ class Memory(QtWidgets.QWidget):
         model.itembyte = self.itemSize
         self.ui.tableMemory.setModel(model)
         self.ui.tableMemory.resizeColumnsToContents()
-        self.ui.labelAddress.setText("Address: {}".format(model.addrPrefix[0]))
+        self.ui.labelAddress.setText(self.tr("Address: {}").format(model.addrPrefix[0]))
         self.parse_hist.add_data((self.ui.lineAddress.text(), self.ui.lineSize.text()))
 
         set_app_title(self, "M-{:#08x}".format(addr))
@@ -194,7 +192,7 @@ class Memory(QtWidgets.QWidget):
         mem = self.debugger.get_memory_stream()
         model = self.ui.tableMemory.model()
         if not isinstance(model, qtmodel.HexTable):
-            raise qtmodel.ModelNotSupportError(tr("Not support read memory from current model: %r") % model)
+            raise qtmodel.ModelNotSupportError(self.tr("Not support read memory from current model: %r") % model)
 
         mem.seek(model.viewAddress)
         return mem.read(model.viewSize)
@@ -204,7 +202,7 @@ class Memory(QtWidgets.QWidget):
             data = self.readBuffer()
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self,
-                caption=tr("Save bin as..."),
+                caption=self.tr("Save bin as..."),
                 filter="Bin (*.bin);; Any (*.*)",
             )
             if filename:
@@ -221,7 +219,7 @@ class Memory(QtWidgets.QWidget):
             QtWidgets.QMessageBox.information(
                 self,
                 self.__class__.__name__,
-                tr("Successfully dump memory to\n%r") % filename,
+                self.tr("Successfully dump memory to\n%r") % filename,
             )
 
 if __name__ == '__main__':

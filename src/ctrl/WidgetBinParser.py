@@ -15,14 +15,12 @@ from PyQt6 import QtWidgets
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.utils.typ import Stream
 from plugins import loadpdb
 from view import WidgetBinParser
 
-tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -138,7 +136,7 @@ class BinParser(QtWidgets.QWidget):
                 rtn = QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
-                    tr("View is not empty, Ok to close?"),
+                    self.tr("View is not empty, Ok to close?"),
                     QtWidgets.QMessageBox.StandardButton.Yes,
                     QtWidgets.QMessageBox.StandardButton.Cancel,
                 )
@@ -161,7 +159,7 @@ class BinParser(QtWidgets.QWidget):
         dialog = QtWidgets.QFileDialog(self)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            caption=tr("Save as csv..."),
+            caption=self.tr("Save as csv..."),
             directory=dialog.directory().filePath(bin_fname),
             filter="CSV files (*.csv);; Any (*.*)"
         )
@@ -177,13 +175,13 @@ class BinParser(QtWidgets.QWidget):
                         QtWidgets.QMessageBox.information(
                             self,
                             self.__class__.__name__,
-                            tr("Successfully exported table!\n%r") % filename,
+                            self.tr("Successfully exported table!\n%r") % filename,
                         )
                     except Exception as e:
                         QtWidgets.QMessageBox.warning(
                             self,
                             self.__class__.__name__,
-                            tr("Error exported file! %s") % e,
+                            self.tr("Error exported file! %s") % e,
                         )
 
     @property
@@ -291,14 +289,14 @@ class BinParser(QtWidgets.QWidget):
             if isinstance(e, loadpdb.InvalidExpression):
                 QtWidgets.QMessageBox.warning(
                     self,
-                    tr("PDB Error!"),
-                    tr("Invalid expression: %r") % structname,
+                    self.tr("PDB Error!"),
+                    self.tr("Invalid expression: %r") % structname,
                 )
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
-                    tr("PDB Error!"),
-                    tr("Please load pdbin first!"),
+                    self.tr("PDB Error!"),
+                    self.tr("Please load pdbin first!"),
                 )
 
         count = self.ui.spinParseCount.value()

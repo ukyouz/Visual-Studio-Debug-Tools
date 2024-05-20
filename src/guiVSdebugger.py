@@ -47,12 +47,16 @@ class VisualStudioDebugger(AppCtrl):
         self.ui.checkLogWrap.stateChanged.connect(lambda on: self.ui.plainTextLog.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth if on else QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap))
         self.ui.btnClearLog.clicked.connect(lambda: self.ui.plainTextLog.clear())
 
+        # load the translator first to apply language setting
+        t = translator.Translator(self)
+        t.post_init()
+
         self._plugins = {}
         self.loadPlugins([
             run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             dock.Dock(self),
-            translator.Translator(self),
+            t,
             help_menu.AboutMe(self),
         ])
 

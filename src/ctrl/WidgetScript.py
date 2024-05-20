@@ -12,13 +12,10 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from view import WidgetScript
 from view import resource
-
-tr = lambda txt: i18n("Script", txt)
 
 
 class WidgetLogger:
@@ -154,7 +151,7 @@ class Script(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr("Current script is not saved yet, do you want to overwrite it?"),
+                self.tr("Current script is not saved yet, do you want to overwrite it?"),
                 QtWidgets.QMessageBox.StandardButton.Yes,
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
@@ -172,7 +169,7 @@ class Script(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
-                    tr("File not found: %r") % filename,
+                    self.tr("File not found: %r") % filename,
                 )
                 return
             self.ui.labelFilename.setText(filename)
@@ -184,7 +181,7 @@ class Script(QtWidgets.QWidget):
         if not os.path.exists(filename):
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self,
-                tr("Save new script to..."),
+                self.tr("Save new script to..."),
                 directory=str(self.app.app_dir / "scripts"),
                 filter="Script (*.py);; Any (*.*)"
             )

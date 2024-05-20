@@ -9,7 +9,6 @@ from PyQt6 import QtWidgets
 from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
@@ -18,22 +17,21 @@ from plugins import dock
 from plugins import loadpdb
 from view import WidgetExpression
 
-tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
-def _err(widget, err, traceback):
+def _err(self, err, traceback):
     match err:
         case InvalidExpression():
             QtWidgets.QMessageBox.warning(
-                widget,
-                widget.__class__.__name__,
-                tr("Invalid Expression: %s") % str(err),
+                self,
+                self.__class__.__name__,
+                self.tr("Invalid Expression: %s") % str(err),
             )
         case _:
             QtWidgets.QMessageBox.warning(
-                widget,
-                tr("PDB Error!"),
+                self,
+                self.tr("PDB Error!"),
                 repr(err),
             )
 
@@ -120,7 +118,7 @@ class Expression(QtWidgets.QWidget):
                 rtn = QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
-                    tr("View is not empty, Ok to close?"),
+                    self.tr("View is not empty, Ok to close?"),
                     QtWidgets.QMessageBox.StandardButton.Ok,
                     QtWidgets.QMessageBox.StandardButton.Cancel,
                 )
@@ -160,7 +158,7 @@ class Expression(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr(
+                self.tr(
                     "You shall attach to a process before this operation.\n"
                     "Attach to current selected process and continue?"
                 ),
@@ -309,13 +307,13 @@ class Expression(QtWidgets.QWidget):
         menu = QtWidgets.QMenu()
         if len(indexes) == 1:
             item = model.itemFromIndex(indexes[0])
-            action = menu.addAction(tr("Copy Expression"))
+            action = menu.addAction(self.tr("Copy Expression"))
             action.triggered.connect(lambda: QtGui.QGuiApplication.clipboard().setText(item["expr"]))
 
         menu.addSeparator()
 
         if len(indexes):
-            action = menu.addAction(tr("Refresh"))
+            action = menu.addAction(self.tr("Refresh"))
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
 
@@ -325,7 +323,7 @@ class Expression(QtWidgets.QWidget):
         menu.addSeparator()
 
         if len(indexes) == 1:
-            action = menu.addAction(tr("Show in BinParser"))
+            action = menu.addAction(self.tr("Show in BinParser"))
             # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             item = model.itemFromIndex(indexes[0])
             action.triggered.connect(functools.partial(self._openBinParserFromExpression, item))

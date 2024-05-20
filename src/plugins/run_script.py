@@ -21,7 +21,7 @@ class RunScript(Plugin):
                 "name": "Tool",
                 "submenus": [
                     {
-                        "name": "Open Script Window...",
+                        "name": self.tr("Open Script Window..."),
                         "command": "OpenScriptWindow",
                         "position": 0,
                     },
