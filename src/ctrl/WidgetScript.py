@@ -2,7 +2,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from pprint import pformat
 
 from pyqode.core import api
 from pyqode.core import modes
