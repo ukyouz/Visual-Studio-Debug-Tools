@@ -2,6 +2,7 @@ import abc
 import logging
 import math
 from collections import defaultdict
+from collections import deque
 from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import field
@@ -78,7 +79,7 @@ class CommandManager:
 
 @dataclass
 class EventManager:
-    evts: dict[str, list[Callable]] = field(default_factory=partial(defaultdict, list))
+    evts: dict[str, deque[Callable]] = field(default_factory=partial(defaultdict, deque))
 
     def apply_hook(self, eventname: str, *args, **kwargs):
         for fn in self.evts.get(eventname, []):
