@@ -75,42 +75,51 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineAddress">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>2</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <widget class="QSplitter" name="splitter">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
-          <property name="font">
-           <font>
-            <family>Consolas</family>
-           </font>
+          <property name="handleWidth">
+           <number>0</number>
           </property>
-          <property name="placeholderText">
-           <string>address</string>
+          <property name="childrenCollapsible">
+           <bool>false</bool>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineSize">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="font">
-           <font>
-            <family>Consolas</family>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>Unit is byte</string>
-          </property>
-          <property name="placeholderText">
-           <string>size</string>
-          </property>
+          <widget class="QLineEdit" name="lineAddress">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>2</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>Consolas</family>
+            </font>
+           </property>
+           <property name="placeholderText">
+            <string>address</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="lineSize">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>Consolas</family>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>Unit is byte</string>
+           </property>
+           <property name="placeholderText">
+            <string>size</string>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>
