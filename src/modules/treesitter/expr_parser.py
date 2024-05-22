@@ -180,7 +180,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     sub_struct = struct["fields"][field]
                 elif notation == "->":
                     struct = deref_pointer(p, io_stream, struct, None, childs[0].text, allow_null_pointer)
-                    _assert(isinstance(struct["fields"], dict), "Field not exists: b%r" % field)
+                    _assert(isinstance(struct["fields"], dict), "Member not exists: b%r" % field)
                     sub_struct = struct["fields"][field]
                 else:
                     raise NotImplementedError(node.text)

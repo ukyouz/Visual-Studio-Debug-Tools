@@ -66,7 +66,7 @@ class CStruct:
 
     def __getattr__(self, field: str):
         if not isinstance(self._record["fields"], dict):
-            raise InvalidExpression("Field not found: %r" % field)
+            raise InvalidExpression("Member not found: %r" % field)
         return CStruct(self._record["fields"][field], self._stream)
 
     def __getitem__(self, index: int):
