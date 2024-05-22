@@ -268,6 +268,9 @@ class PluginNotLoaded(Exception):
 class Plugin(QtCore.QObject):
     app: AppCtrl
 
+    def __post_init__(self):
+        super().__init__(self.app)
+
     def registerMenues(self) -> list[MenuAction]:
         return []
 

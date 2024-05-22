@@ -105,6 +105,8 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
 
 
 def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, allow_null_pointer=False) -> pdb.StructRecord:
+    if p is None:
+        return pdb.new_struct()
     tree = get_syntax_tree(expr)
 
     def _get_value_of(x: pdb.StructRecord | int) -> int:
@@ -117,7 +119,8 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
         childs = node.children
         match node.type:
             case "translation_unit":
-                _assert(len(childs) < 2 or childs[1].type == ";", "Translation Unit not support: %r" % node.text)
+                _assert(childs != [], "Translation Unit is empty.")
+                _assert(len(childs) == 1 or childs[1].type == ";", "Translation Unit not support: %r" % node.text)
                 return _walk_syntax_node(childs[0])
             case "expression_statement":
                 _assert(len(childs) < 2 or childs[1].type == ";", "Expression/Statement not support: %r" % node.text)

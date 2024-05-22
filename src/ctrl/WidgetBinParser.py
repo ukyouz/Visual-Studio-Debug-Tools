@@ -17,6 +17,7 @@ from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+from modules.treesitter.expr_parser import InvalidExpression
 from modules.utils.typ import Stream
 from plugins import loadpdb
 from view import WidgetBinParser
@@ -46,9 +47,10 @@ class ParseHistoryMenu(HistoryMenu):
 class BinParser(QtWidgets.QWidget):
     def __init__(self, app: AppCtrl):
         super().__init__(app)
+        self.app = app
+        self.fileio = None
         self.ui = WidgetBinParser.Ui_Form()
         self.ui.setupUi(self)
-        self.app = app
         set_app_title(self, "")
 
         # properties
@@ -57,7 +59,6 @@ class BinParser(QtWidgets.QWidget):
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
         self.viewAddress = 0
         self.viewSize = -1
-        self.fileio = None
 
         # events
         self.ui.btnParse.clicked.connect(self._onBtnParseClicked)
@@ -191,8 +192,14 @@ class BinParser(QtWidgets.QWidget):
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             return int(pdb.query_cstruct(self.ui.lineOffset.text(), io_stream=self.fileio))
+        except ValueError as e:
+            logger.warning("Offset: {}".format(e))
+            return 0
+        except InvalidExpression as e:
+            logger.warning("Offset: {}".format(e))
+            return 0
         except Exception as e:
-            logger.warning(e)
+            logger.warning(e, exc_info=True)
             return 0
 
     def loadFile(self, fileio: Stream):

@@ -39,11 +39,11 @@ def _err(self, err, traceback):
 class Expression(QtWidgets.QWidget):
     def __init__(self, app: AppCtrl, dbg: debugger.Debugger):
         super().__init__(app)
+        self.app = app
         self.ui = WidgetExpression.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
 
-        self.app = app
         self.debugger = dbg
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = HistoryMenu(self.ui.btnHistory.menu())

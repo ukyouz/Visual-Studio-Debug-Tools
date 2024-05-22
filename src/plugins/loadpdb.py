@@ -152,8 +152,8 @@ def _remove_extra_paren(expr: str) -> str:
 
 
 class LoadPdb(Plugin):
-    _pdb: pdb.PDB7
-    _loading: bool
+    _pdb: pdb.PDB7 = None
+    _loading: bool = False
 
     def registerMenues(self) -> list[MenuAction]:
         return [
@@ -185,7 +185,6 @@ class LoadPdb(Plugin):
         ]
 
     def post_init(self):
-        self._loading = False
         self.widget = None
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 

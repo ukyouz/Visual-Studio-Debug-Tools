@@ -28,12 +28,12 @@ class MemoryHistory(HistoryMenu):
 
 class Memory(QtWidgets.QWidget):
     def __init__(self, app: AppCtrl, dbg: debugger.Debugger):
+        self.app = app
         super().__init__(app)
         self.ui = WidgetMemory.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
 
-        self.app = app
         self.debugger = dbg
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = MemoryHistory(self.ui.btnHistory.menu())
@@ -77,10 +77,10 @@ class Memory(QtWidgets.QWidget):
                 self.__class__.__name__,
                 self.tr("Invalid Expression: %s") % str(e),
             )
-            logger.warning(e)
+            logger.warning("Addr: {}".format(e))
             return 0
         except Exception as e:
-            logger.warning(e)
+            logger.warning(e, exc_info=True)
             return 0
 
     def requestedAddress(self) -> int:
@@ -103,16 +103,19 @@ class Memory(QtWidgets.QWidget):
             virt_base = self.debugger.get_virtual_base()
             stream = self.debugger.get_memory_stream()
             return int(pdb.query_cstruct(self.ui.lineSize.text(), virt_base, stream))
+        except ValueError:
+            return 1024
         except InvalidExpression as e:
-            QtWidgets.QMessageBox.warning(
-                self,
-                self.__class__.__name__,
-                self.tr("Invalid Expression: %s! Use default size: 1024.") % str(e),
-            )
-            logger.warning(e)
+            if self.ui.lineSize.text():
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    self.tr("Invalid Expression: %s! Use default size: 1024.") % str(e),
+                )
+            logger.warning("Size: {}".format(e))
             return 1024
         except Exception as e:
-            logger.warning(e)
+            logger.warning(e, exc_info=True)
             return 1024
 
     @property
