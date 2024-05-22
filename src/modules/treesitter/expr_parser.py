@@ -150,7 +150,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     type=structname,
                     value=address,
                     address=address,
-                    size=4,  # TODO: support both 32bit/64bit
+                    size=p.tpi_stream.ARCH_PTR_SIZE,
                     is_pointer=True,
                     lf=lf,
                 )
@@ -226,7 +226,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
             case "sizeof_expression":
                 struct = _walk_syntax_node(childs[1])
                 if isinstance(struct, int):
-                    return 4  # TODO: support both 32bit/64bit
+                    return p.tpi_stream.ARCH_PTR_SIZE
                 elif isinstance(struct, dict):
                     return struct["size"]
                 else:
