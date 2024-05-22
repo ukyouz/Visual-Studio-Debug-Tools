@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import sys
 from dataclasses import dataclass
@@ -24,6 +25,8 @@ from plugins import run_script
 from plugins import translator
 from view import BinView
 from view import resource
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -113,8 +116,10 @@ class BinViewer(AppCtrl):
     def _export_active_window(self):
         win = self.ui.mdiArea.activeSubWindow()
         widget = win.widget()
-        if getattr(widget, "export_as_csv"):
+        if getattr(widget, "export_as_csv", None):
             widget.export_as_csv()
+        else:
+            logger.warning("No implantation of 'export_as_csv' method for %r" % widget)
 
 
 if __name__ == '__main__':

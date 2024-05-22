@@ -123,16 +123,18 @@ class BinParser(QtWidgets.QWidget):
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         rtn = self.var_watcher.onClosing()
         if rtn is None:
-            if getattr(self.fileio, "name") is not None:
+            if getattr(self.fileio, "name", None) is not None:
                 # expect a file (ie. sent from BinView), so just let it go
                 e.accept()
                 return
 
             # expect memory on ram (ie. sent from VS Debugger)
             # need to warn user for closing a view
-            model1 = self.ui.tableView.model()
-            model2 = self.ui.treeView.model()
-            if any((model1, model2)) and any((model1.rowCount(), model2.rowCount())):
+            models = (
+                self.ui.treeView.model(),
+                self.ui.tableView.model(),
+            )
+            if any(m.rowCount() for m in models if m):
                 rtn = QtWidgets.QMessageBox.warning(
                     self,
                     self.__class__.__name__,
