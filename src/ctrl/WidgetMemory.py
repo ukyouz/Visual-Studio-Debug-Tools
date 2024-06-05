@@ -203,6 +203,13 @@ class Memory(QtWidgets.QWidget):
     def dumpBuffer(self):
         try:
             data = self.readBuffer()
+        except Exception as err:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                str(err),
+            )
+        else:
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self,
                 caption=self.tr("Save bin as..."),
@@ -211,19 +218,12 @@ class Memory(QtWidgets.QWidget):
             if filename:
                 with open(filename, "wb") as fs:
                     fs.write(data)
-        except Exception as err:
-            QtWidgets.QMessageBox.warning(
-                self,
-                self.__class__.__name__,
-                str(err),
+                QtWidgets.QMessageBox.information(
+                    self,
+                    self.__class__.__name__,
+                    self.tr("Successfully dump memory to\n%r") % filename,
             )
-        else:
-            # Successful case
-            QtWidgets.QMessageBox.information(
-                self,
-                self.__class__.__name__,
-                self.tr("Successfully dump memory to\n%r") % filename,
-            )
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
