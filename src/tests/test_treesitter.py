@@ -32,7 +32,7 @@ def p() -> pdb.PDB7:
 @pytest.mark.parametrize(
     "expr, err_msg",
     [
-        ("((TextHolder)124)[4]", "Shall be a pointer type, got: 'TextHolder'"),
+        ("((TextHolder)124)[4]", "Shall be a pointer type, got: 'TextHolder' at b'((TextHolder)124)'"),
         ("((yyy *)124)[4]", "Bad struct casting: b'yyy *'"),
         ("(0x123[2]", "Invalid syntax: b'(0x123[2]'"),
         ("1 || 3 ff", "Invalid syntax: b'1 || 3 ff'"),
@@ -43,8 +43,8 @@ def p() -> pdb.PDB7:
         ("gA.afunc.c", "Notation error for pointer: b'.c'"),
         ("gA.afunc[1]", "Fail to deref: b'gA.afunc'"),
         ("gA.b[gA.attr]", "KeyError('b')"),
-        ("gA.s->szBuffer[gA.attr]", "Shall be a pointer type, got: 'TextHolder'"),
-        ("gA.s.dwLen[1]", "Shall be a pointer type, got: 'T_LONG'"),
+        ("gA.s->szBuffer[gA.attr]", "Shall be a pointer type, got: 'TextHolder' at b'gA.s'"),
+        ("gA.s.dwLen[1]", "Shall be a pointer type, got: 'T_LONG' at b'gA.s.dwLen'"),
         ("gC.bb", "Identifier not found: 'gC'"),
         ("get(gA, gB)", "Not support function call yet: b'get(gA, gB)'"),
         ("get(gA)", "Not support macro yet: b'get(gA)'"),

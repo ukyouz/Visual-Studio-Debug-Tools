@@ -125,6 +125,26 @@
     </widget>
    </item>
    <item>
+    <widget class="QToolButton" name="btnTimer">
+     <property name="toolTip">
+      <string>Pause/Resume Timers</string>
+     </property>
+     <property name="text">
+      <string>TimerRunning</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resource.qrc">
+       <normaloff>:/icon/images/vswin2019/Timer_16x.svg</normaloff>:/icon/images/vswin2019/Timer_16x.svg</iconset>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="autoRaise">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QToolButton" name="btnMore">
      <property name="text">
       <string>...</string>
@@ -135,6 +155,20 @@
      </property>
      <property name="popupMode">
       <enum>QToolButton::InstantPopup</enum>
+     </property>
+     <property name="autoRaise">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QToolButton" name="btnClose">
+     <property name="text">
+      <string>Close</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resource.qrc">
+       <normaloff>:/action/images/vswin2019/Close_12x_16x.svg</normaloff>:/action/images/vswin2019/Close_12x_16x.svg</iconset>
      </property>
      <property name="autoRaise">
       <bool>true</bool>

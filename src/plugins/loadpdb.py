@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +13,6 @@ from PyQt6 import QtWidgets
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
-from ctrl.qtapp import i18n
 from ctrl.WidgetPicklePdb import PicklePdb
 from helper import qtmodel
 from modules.pdbparser.pdbparser import pdb
@@ -22,7 +22,6 @@ from modules.treesitter.expr_parser import query_struct_from_expr
 from modules.utils.myfunc import BITMASK
 from modules.utils.typ import Stream
 
-tr = lambda txt: i18n("LoadPdb", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +66,7 @@ class CStruct:
 
     def __getattr__(self, field: str):
         if not isinstance(self._record["fields"], dict):
-            raise InvalidExpression("Field not found: %r" % field)
+            raise InvalidExpression("Member not found: %r" % field)
         return CStruct(self._record["fields"][field], self._stream)
 
     def __getitem__(self, index: int):
@@ -153,26 +152,26 @@ def _remove_extra_paren(expr: str) -> str:
 
 
 class LoadPdb(Plugin):
-    _pdb: pdb.PDB7
-    _loading: bool
+    _pdb: pdb.PDB7 = None
+    _loading: bool = False
 
     def registerMenues(self) -> list[MenuAction]:
         return [
             {
-                "name": "PDB",
+                "name": self.tr("PDB"),
                 "submenus": [
                     {
-                        "name": "Generate PDB...",
+                        "name": self.tr("Generate PDB..."),
                         "command": "ShowPicklePdb",
                         "icon": ":icon/images/vswin2019/Database_16x.svg",
                     },
                     {
-                        "name": "Recently PDBs",
+                        "name": self.tr("Recently PDBs"),
                         "submenus": [],
                     },
                     {"name": "---",},
                     {
-                        "name": "Show PDB status...",
+                        "name": self.tr("Show PDB status..."),
                         "command": "ShowPdbStatus",
                     },
                 ]
@@ -186,15 +185,15 @@ class LoadPdb(Plugin):
         ]
 
     def post_init(self):
-        self._loading = False
         self.widget = None
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
 
         self._pdb_fname = ""
         current_pdb = self.app.app_setting.value("LoadPdb/pdbin", "")
 
-        menu = self.app.menu("Recently PDBs")
+        menu = self.app.menu(self.tr("Recently PDBs"))
         _recently_used = self.app.app_setting.value("LoadPdb/recent_used", [])
+        _recently_used = [x for x in _recently_used if os.path.exists(x)]
         self._hist_pdbs = HistoryMenu(menu, _recently_used, default=current_pdb)
         self._hist_pdbs.actionTriggered.connect(lambda _f: self.load_pdbin(_f))
         self._hist_pdbs.cleared.connect(lambda: self.app.app_setting.remove("LoadPdb/recent_used"))
@@ -228,6 +227,7 @@ class LoadPdb(Plugin):
                 self._pdb = _pdb
                 self._loading = False
                 self.app.statusBar().showMessage("Pdbin is Loaded.")
+                self.app.log("PDB is loaded!")
 
             def _err(expt, tb):
                 self._hist_pdbs.remove_data(filename)
@@ -351,7 +351,7 @@ class LoadPdb(Plugin):
 
     def query_struct(self, expr: str, virtual_base: int | None=0, io_stream=None) -> ViewStruct:
         if virtual_base is None:
-            raise ValueError(tr("`virtual_base` is None! Maybe forgot to attach to a live process?"))
+            raise ValueError(self.tr("`virtual_base` is None! Maybe forgot to attach to a live process?"))
         struct = query_struct_from_expr(self._pdb, expr, virtual_base, io_stream)
         struct["levelname"] = expr
         _add_expr(struct, expr)

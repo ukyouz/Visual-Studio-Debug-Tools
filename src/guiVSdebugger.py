@@ -1,5 +1,6 @@
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Type
 
@@ -12,6 +13,7 @@ from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
 from ctrl.WidgetProcessSelector import ProcessSelector
+from plugins import debugger
 from plugins import dock
 from plugins import help_menu
 from plugins import loadpdb
@@ -42,12 +44,19 @@ class VisualStudioDebugger(AppCtrl):
         self.app_dir = Path(__file__).parent
         self.setWindowIcon(QtGui.QIcon(str(self.app_dir / "view/images/vsjitdebugger_VSJITDEBUGGER.ICO.ico")))
 
+        self.ui.checkLogWrap.stateChanged.connect(lambda on: self.ui.plainTextLog.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth if on else QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap))
+        self.ui.btnClearLog.clicked.connect(lambda: self.ui.plainTextLog.clear())
+
+        # load the translator first to apply language setting
+        t = translator.Translator(self)
+        t.post_init()
+
         self._plugins = {}
         self.loadPlugins([
             run_script.RunScript(self),
             loadpdb.LoadPdb(self),
             dock.Dock(self),
-            translator.Translator(self),
+            t,
             help_menu.AboutMe(self),
         ])
 
@@ -58,6 +67,11 @@ class VisualStudioDebugger(AppCtrl):
         editToolBar.addWidget(processSelector)
 
         self.cmd.register("AttachCurrentProcess", processSelector.attach_current_selected_process)
+
+        d = self.plugin(dock.Dock)
+        dbg = self.plugin(debugger.Debugger)
+        d.load_plugins(dbg)
+        d.init_views()
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
@@ -72,6 +86,12 @@ class VisualStudioDebugger(AppCtrl):
             return self._plugins[plg_cls.__name__]
         except KeyError:
             raise PluginNotLoaded(plg_cls)
+
+    def log(self, msg):
+        self.ui.tabWidget.setCurrentIndex(0)
+        now = datetime.now()
+        timestamp = now.isoformat(sep=" ", timespec="milliseconds")
+        self.ui.plainTextLog.appendPlainText(f"[{timestamp}] {msg}")
 
 
 if __name__ == '__main__':

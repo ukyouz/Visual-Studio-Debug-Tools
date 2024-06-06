@@ -79,7 +79,7 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
         try:
             struct = p.tpi_stream.deref_pointer(struct["lf"], _addr, recursive=False)
         except ValueError as e:
-            raise InvalidExpression(e)
+            raise InvalidExpression("%s at %r" % (e, ref_expr))
         except NotImplementedError as e:
             raise InvalidExpression("Fail to deref: %r" % ref_expr)
 
@@ -105,6 +105,8 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
 
 
 def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, allow_null_pointer=False) -> pdb.StructRecord:
+    if p is None:
+        return pdb.new_struct()
     tree = get_syntax_tree(expr)
 
     def _get_value_of(x: pdb.StructRecord | int) -> int:
@@ -117,7 +119,8 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
         childs = node.children
         match node.type:
             case "translation_unit":
-                _assert(len(childs) < 2 or childs[1].type == ";", "Translation Unit not support: %r" % node.text)
+                _assert(childs != [], "Translation Unit is empty.")
+                _assert(len(childs) == 1 or childs[1].type == ";", "Translation Unit not support: %r" % node.text)
                 return _walk_syntax_node(childs[0])
             case "expression_statement":
                 _assert(len(childs) < 2 or childs[1].type == ";", "Expression/Statement not support: %r" % node.text)
@@ -147,7 +150,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     type=structname,
                     value=address,
                     address=address,
-                    size=4,  # TODO: support both 32bit/64bit
+                    size=p.tpi_stream.ARCH_PTR_SIZE,
                     is_pointer=True,
                     lf=lf,
                 )
@@ -180,7 +183,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     sub_struct = struct["fields"][field]
                 elif notation == "->":
                     struct = deref_pointer(p, io_stream, struct, None, childs[0].text, allow_null_pointer)
-                    _assert(isinstance(struct["fields"], dict), "Field not exists: b%r" % field)
+                    _assert(isinstance(struct["fields"], dict), "Member not exists: b%r" % field)
                     sub_struct = struct["fields"][field]
                 else:
                     raise NotImplementedError(node.text)
@@ -223,7 +226,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
             case "sizeof_expression":
                 struct = _walk_syntax_node(childs[1])
                 if isinstance(struct, int):
-                    return 4  # TODO: support both 32bit/64bit
+                    return p.tpi_stream.ARCH_PTR_SIZE
                 elif isinstance(struct, dict):
                     return struct["size"]
                 else:

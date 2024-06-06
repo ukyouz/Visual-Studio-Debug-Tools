@@ -1,16 +1,6 @@
-import pickle
-import re
-from contextlib import suppress
-from pathlib import Path
-from typing import Iterable
-
-from PyQt6 import QtWidgets
-
 from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.WidgetScript import Script
-from modules.pdbparser.pdbparser import pdb
-from modules.pdbparser.pdbparser import picklepdb
 
 
 class RunScript(Plugin):
@@ -21,7 +11,7 @@ class RunScript(Plugin):
                 "name": "Tool",
                 "submenus": [
                     {
-                        "name": "Open Script Window...",
+                        "name": self.tr("Open Script Window..."),
                         "command": "OpenScriptWindow",
                         "position": 0,
                     },
