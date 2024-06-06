@@ -851,6 +851,10 @@ class FileExplorerModel(AbstractTreeModel):
 
         return self.index(r, 0, ffi)
 
+    def pathFromIndex(self, index: QtCore.QModelIndex) -> Path:
+        item = self.itemFromIndex(index)
+        return item
+
     def _insert_file(self, file: Path):
         if file in self.requestPaths:
             return self.pathIndexes[file]

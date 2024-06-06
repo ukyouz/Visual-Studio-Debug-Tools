@@ -4,6 +4,7 @@ import os
 import sys
 from dataclasses import dataclass
 from dataclasses import field
+from functools import partial
 from pathlib import Path
 from typing import Optional
 from typing import Type
@@ -37,7 +38,7 @@ class ParseRecord:
 
 
 class BinViewer(AppCtrl):
-    def __init__(self, filenames=None):
+    def __init__(self, filenames: list[str] = None):
         super().__init__()
         self.ui = BinView.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -49,9 +50,10 @@ class BinViewer(AppCtrl):
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
         self.ui.btnOpenFiles.clicked.connect(self._onFileOpened)
         self.ui.treeExplorer.setModel(qtmodel.FileExplorerModel(Path()))
+        self.ui.treeExplorer.doubleClicked.connect(self._onExplorerDoubleClicked)
 
         self._plugins = {}
-        self.subwidgets = []
+        self.subwidgets = {}
         self.loadPlugins([
             run_script.RunScript(self),
             loadpdb.LoadPdb(self),
@@ -69,9 +71,7 @@ class BinViewer(AppCtrl):
         ])
 
         if filenames:
-            for f in filenames:
-                if os.path.isfile(f):
-                    self._onFileOpened(f)
+            self._onFileOpened(filenames)
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:
@@ -87,31 +87,45 @@ class BinViewer(AppCtrl):
         except KeyError:
             raise PluginNotLoaded(plg_cls)
 
-    def _onFileOpened(self, filename=""):
-        if not filename:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+    def _onFileOpened(self, filenames: list[str] | bool =False):
+        if not filenames:
+            filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(
                 self,
-                caption="Open File",
+                caption="Open Files",
                 filter="Any (*.*)"
             )
-        if filename:
+        for f in filenames:
+            if not os.path.isfile(f):
+                continue
             model = self.ui.treeExplorer.model()
             if isinstance(model, qtmodel.FileExplorerModel):
-                indexes = model.addFiles([filename])
+                indexes = model.addFiles([f])
                 self.ui.treeExplorer.scrollTo(indexes[0], QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible)
                 self.ui.treeExplorer.setCurrentIndex(indexes[0])
+                QtCore.QTimer.singleShot(0, partial(self._loadFile, f))
 
-            with open(filename, "rb") as fs:
-                fileio = io.BytesIO(fs.read())
-                fileio.name = filename
-                QtCore.QTimer.singleShot(0, lambda: self._loadFile(fileio))
+    def _loadFile(self, f: str):
+        with open(f, "rb") as fs:
+            fileio = io.BytesIO(fs.read())
+            fileio.name = f
+            widget = BinParser(self)
+            window = self.ui.mdiArea.addSubWindow(widget)
+            widget.loadFile(fileio)
+            widget.show()
+            fpath = Path(getattr(fileio, "name", ""))
+            logger.info("File loaded: %s" % fpath)
+            try:
+                self.subwidgets[fpath] = window
+            except KeyError:
+                logger.warning("Document not ready to open: %s" % fpath)
 
-    def _loadFile(self, fileio: io.BytesIO):
-        widget = BinParser(self)
-        window = self.ui.mdiArea.addSubWindow(widget)
-        widget.loadFile(fileio)
-        widget.show()
-        self.subwidgets.append(window)
+    def _onExplorerDoubleClicked(self, index):
+        model = self.ui.treeExplorer.model()
+        if not isinstance(model, qtmodel.FileExplorerModel):
+            return
+        fpath = model.pathFromIndex(index)
+        window = self.subwidgets[fpath]
+        self.ui.mdiArea.setActiveSubWindow(window)
 
     def _export_active_window(self):
         win = self.ui.mdiArea.activeSubWindow()
@@ -125,7 +139,7 @@ class BinViewer(AppCtrl):
 if __name__ == '__main__':
     from argparse import ArgumentParser
     p = ArgumentParser()
-    p.add_argument("files", nargs="*", default="")
+    p.add_argument("files", nargs="*", default=[])
     args = p.parse_args()
 
     # https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7
