@@ -746,15 +746,16 @@ class StructTableModel(QtCore.QAbstractTableModel):
     def getTextFromIndexes(self, indexes: list[QtCore.QModelIndex]=None) -> str:
         if indexes is None:
             indexes = [self.index(r, c) for r in range(self.rowCount()) for c in range(self.columnCount())]
-        cols = set(i.column() for i in indexes)
+        cols = sorted(set(i.column() for i in indexes))
         headers = [self.headerData(c, QtCore.Qt.Orientation.Horizontal) for c in cols]
-        rows = defaultdict(list)
+        data_rows = defaultdict(lambda: {c: "" for c in cols})
         for ind in indexes:
-            rows[ind.row()].append(self.data(ind))
+            data_rows[ind.row()][ind.column()] = self.data(ind)
         csvf = io.StringIO()
         csvwriter = csv.writer(csvf, lineterminator='\n')
         csvwriter.writerow(headers)
-        csvwriter.writerows(rows.values(), )
+        for data_row in data_rows.values():
+            csvwriter.writerow(data_row.values())
         return csvf.getvalue()
 
 
