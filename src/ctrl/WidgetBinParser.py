@@ -375,37 +375,61 @@ class BinParser(QtWidgets.QWidget):
 
     def _onHorizontalContextMenuOpened(self, position):
         indexes = self.ui.tableView.selectedIndexes()
+        if not indexes:
+            return
         model = self.ui.tableView.model()
         if not isinstance(model, qtmodel.StructTableModel):
             return
 
         menu = QtWidgets.QMenu()
 
-        submenu = self.var_watcher.createContextMenues(indexes)
-        menu.addMenu(submenu)
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
 
         menu.exec(self.ui.tableView.horizontalHeader().viewport().mapToGlobal(position))
 
     def _onVerticalContextMenuOpened(self, position):
         indexes = self.ui.tableView.selectedIndexes()
+        if not indexes:
+            return
         model = self.ui.tableView.model()
         if not isinstance(model, qtmodel.StructTableModel):
             return
 
         menu = QtWidgets.QMenu()
 
-        submenu = self.var_watcher.createContextMenues(indexes)
-        menu.addMenu(submenu)
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
 
         menu.exec(self.ui.tableView.verticalHeader().viewport().mapToGlobal(position))
 
     def _onContextMenuOpened(self, position, view):
         indexes = view.selectedIndexes()
+        if not indexes:
+            return
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
 
         menu = QtWidgets.QMenu()
 
-        submenu = self.var_watcher.createContextMenues(indexes)
-        menu.addMenu(submenu)
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
 
         menu.exec(view.viewport().mapToGlobal(position))
 
