@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from typing import Any
+from typing import NoReturn
 
 from tree_sitter import Language
 from tree_sitter import Node
@@ -15,6 +16,9 @@ _approot = os.path.join(os.path.dirname(__file__), "../..")
 C_LANGUAGE = Language(os.path.join(_approot, "libs/treesitter_c.so"), "c")
 
 logger = logging.getLogger(__name__)
+
+
+REG_STRUCT = re.compile(r"(?:struct\s*)?(?P<STRUCT>[^* ]+)\s*(?P<STAR>\*)?")
 
 
 class InvalidExpression(Exception):
@@ -52,11 +56,6 @@ def get_syntax_tree(src: str):
     return tree
 
 
-def _assert(assert_cond: bool, err_msg: str):
-    if not assert_cond:
-        raise InvalidExpression(err_msg)
-
-
 def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecord, index: int | None, ref_expr=b"", allow_null_pointer=False) -> pdb.StructRecord:
     """
     index:
@@ -83,7 +82,7 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
         except NotImplementedError as e:
             raise InvalidExpression("Fail to deref: %r" % ref_expr)
 
-    _assert(isinstance(_addr, int), repr(_addr))
+    assert isinstance(_addr, int), repr(_addr)
     out_struct = p.tpi_stream.form_structs(struct["lf"], _addr, recursive=False)
     if index is not None:
         out_struct["levelname"] = "[%d]" % index
@@ -119,29 +118,33 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
         childs = node.children
         match node.type:
             case "translation_unit":
-                _assert(childs != [], "Translation Unit is empty.")
-                _assert(len(childs) == 1 or childs[1].type == ";", "Translation Unit not support: %r" % node.text)
+                assert childs != [], "Translation Unit is empty."
+                assert len(childs) == 1 or childs[1].type == ";", "Translation Unit not support: %r" % node.text
                 return _walk_syntax_node(childs[0])
             case "expression_statement":
-                _assert(len(childs) < 2 or childs[1].type == ";", "Expression/Statement not support: %r" % node.text)
+                assert len(childs) < 2 or childs[1].type == ";", "Expression/Statement not support: %r" % node.text
                 return _walk_syntax_node(childs[0])
             case "ERROR":
-                _assert(len(childs) == 1, "Invalid syntax: %r" % node.text)
+                assert len(childs) == 1, "Invalid syntax: %r" % node.text
                 return _walk_syntax_node(childs[0])
             case "parenthesized_expression":
-                # _assert(childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text)
-                _assert(len(childs) == 3, "Invalid syntax: %r" % node.text)
+                # assert childs[0].type == '(' and childs[2].type == ')', "Invalid syntax: %r" % node.text
+                assert len(childs) == 3, "Invalid syntax: %r" % node.text
                 return _walk_syntax_node(childs[1])
             case "cast_expression":
                 # assert childs[0].type == '(' and childs[2].type == ')'
                 structname = childs[1].text.decode()
-                lf, _ = p.get_lf_from_name(structname)
-                pointer_literal = False
-                if lf is None:
-                    pointer_literal = True
+                match = REG_STRUCT.match(structname)
+                if match is None:
+                    raise InvalidExpression("Bad struct casting: b%r" % structname)
+                if match["STAR"] is not None:
                     # ie: xxx_def *
-                    if match := re.match(r"(?:struct\s*)?(?P<STRUCT>.+)\s+\*", structname):
-                        lf, _ = p.get_lf_from_name(match.group("STRUCT"))
+                    lf, _ = p.get_lf_from_name(match.group("STRUCT"))
+                    pointer_literal = True
+                else:
+                    # ie: xxx_def_ptr
+                    lf, _ = p.get_lf_from_name(structname)
+                    pointer_literal = False
                 if lf is None:
                     raise InvalidExpression("Bad struct casting: b%r" % structname)
 
@@ -174,16 +177,16 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                 # foo.bar
                 # foo->bar
                 struct = _walk_syntax_node(childs[0])
-                _assert(isinstance(struct, dict), "Not a struct: %r" % childs[0].text)
+                assert isinstance(struct, dict), "Not a struct: %r" % childs[0].text
                 notation = childs[1].type
                 field = childs[2].text.decode()
                 if notation == ".":
-                    _assert(struct["fields"] is not None, "Notation error for pointer: b'%s%s'" % (notation, field))
-                    _assert(not isinstance(struct["fields"], list), "Notation error for array: b'%s%s'" % (notation, field))
+                    assert struct["fields"] is not None, "Notation error for pointer: b'%s%s'" % (notation, field)
+                    assert not isinstance(struct["fields"], list), "Notation error for array: b'%s%s'" % (notation, field)
                     sub_struct = struct["fields"][field]
                 elif notation == "->":
                     struct = deref_pointer(p, io_stream, struct, None, childs[0].text, allow_null_pointer)
-                    _assert(isinstance(struct["fields"], dict), "Member not exists: b%r" % field)
+                    assert isinstance(struct["fields"], dict), "Member not exists: b%r" % field
                     sub_struct = struct["fields"][field]
                 else:
                     raise NotImplementedError(node.text)
@@ -196,13 +199,14 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                 # foo[0]
                 # assert childs[1].type == '[' and childs[3].type == ']'
                 struct = _walk_syntax_node(childs[0])
-                _assert(isinstance(struct, dict), "Fail to get index from: %r" % childs[0].text)
+                assert isinstance(struct, dict), "Fail to get index from: %r" % childs[0].text
                 index = _get_value_of(_walk_syntax_node(childs[2]))
                 if struct["fields"] is None:
                     struct = deref_pointer(p, io_stream, struct, index, childs[0].text, allow_null_pointer)
+                assert isinstance(struct["fields"], list), "Shall be an array or pointer: %r" % childs[0]
                 try:
                     sub_struct = struct["fields"][index]
-                except IndexError as e:
+                except IndexError:
                     raise InvalidExpression("Index out of range: b'[%d]'" % index)
                 return p.tpi_stream.form_structs(
                     sub_struct["lf"],
@@ -212,13 +216,13 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
             case "identifier":
                 structname = node.text.decode()
                 lf, offset = p.get_lf_from_name(structname)
-                _assert(lf is not None, "Identifier not found: %r" % structname)
+                assert lf is not None, "Identifier not found: %r" % structname
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
             case "type_identifier":
                 structname = node.text.decode()
                 lf, offset = p.get_lf_from_name(structname)
-                _assert(lf is not None, "Identifier not found: %r" % structname)
+                assert lf is not None, "Identifier not found: %r" % structname
                 out_struct = p.tpi_stream.form_structs(lf, virt_base + offset, recursive=False)
                 return out_struct
             case "number_literal":
@@ -285,7 +289,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                         raise InvalidExpression("Not support update expression: %r" % operator)
             case "conditional_expression":
                 # x ? 1 : 2
-                _assert(childs[1].type == "?" and childs[3].type == ":", "Invalid syntax: " % node.text)
+                assert childs[1].type == "?" and childs[3].type == ":", "Invalid syntax: " % node.text
                 cond = _get_value_of(_walk_syntax_node(childs[0]))
                 if bool(cond):
                     return _walk_syntax_node(childs[2])
@@ -323,6 +327,8 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
 
     try:
         struct = _walk_syntax_node(tree.root_node)
+    except AssertionError as e:
+        raise InvalidExpression(e)
     except KeyError as e:
         raise InvalidExpression(repr(e))
     except ArgumentError as e:

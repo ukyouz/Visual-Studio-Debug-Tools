@@ -65,6 +65,7 @@ def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
         ("((struct A *)100)->attr", 100),
         ("(struct A *)100", 100),
         ("(struct A *)gA.pint", 12),
+        ("((BDefPtr)100)", 100),
         ("*((struct A *)100)", 100),
         ("gA.x - 1", 12 - 4),
         ("gA.x + 1", 12 + 4),
