@@ -49,6 +49,8 @@ def p() -> pdb.PDB7:
         ("get(gA, gB)", "Not support function call yet: b'get(gA, gB)'"),
         ("get(gA)", "Not support macro yet: b'get(gA)'"),
         ("g_Message.szBuffer[999]", "Index out of range: b'[999]'"),
+        ("offsetof(ABC, arr)", "Bad struct: b'ABC'"),
+        ("offsetof(A, axxx)", "Member b'axxx' not found in b'A'"),
     ]
 )
 def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
@@ -107,7 +109,9 @@ def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):
         "gA",
         "sizeof(gA)",
         "(BDefPtr)100",
-        "gA.x[0]"
+        "gA.x[0]",
+        "offsetof(struct A, arr)",
+        "offsetof(A, arr)",
     ]
 )
 def test_good_expr(stream: TestStream, p: pdb.PDB7, expr: str):

@@ -291,6 +291,27 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     return _walk_syntax_node(childs[2])
                 else:
                     return _walk_syntax_node(childs[4])
+            case "offsetof_expression":
+                # offset( type_descriptor, field_identifier )
+                structname = childs[2].text.decode()
+                member = childs[4].text.decode()
+                match = REG_STRUCT.match(structname)
+                assert match is not None, "Bad struct descriptor: b%r" % structname
+
+                lf, _ = p.get_lf_from_name(match.group("STRUCT"))
+                assert lf is not None, "Bad struct: b%r" % structname
+
+                struct = p.tpi_stream.form_structs(lf, 0, recursive=False)
+                if isinstance(struct, dict):
+                    assert struct["fields"] is not None, "Struct b%r has no member" % (structname)
+                    assert member in struct["fields"], "Member b%r not found in b%r" % (member, structname)
+                    if isinstance(struct["fields"], dict):
+                        return struct["fields"][member]["address"]
+                    else:
+                        raise NotImplementedError(struct["fields"])
+                else:
+                    raise NotImplementedError(struct)
+
             case "macro_type_specifier":
                 raise InvalidExpression("Not support macro yet: %r" % node.text)
             case "call_expression":
