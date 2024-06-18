@@ -46,6 +46,7 @@ class PicklePdb(QtWidgets.QWidget):
 
         root = Path(folder)
         model = qtmodel.FileExplorerModel(Path())
+        model.addFolder(root)
         model.addFiles(list(root.rglob("*.pdb")))
         self.ui.treePdb.setModel(model)
         if model.rowCount():
@@ -109,6 +110,7 @@ class PicklePdb(QtWidgets.QWidget):
     def _on_generated_done(self):
         root = Path(self.ui.labelFolder.text())
         model = qtmodel.FileExplorerModel(Path())
+        model.addFolder(root)
         model.addFiles(list(root.rglob("*.pdbin")))
         self.ui.treeBin.setModel(model)
         if model.rowCount():

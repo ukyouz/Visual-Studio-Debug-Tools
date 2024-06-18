@@ -821,7 +821,7 @@ class FileExplorerModel(AbstractTreeModel):
 
         return True
 
-    def _insert_folder(self, folder: Path) -> QtCore.QModelIndex:
+    def addFolder(self, folder: Path) -> QtCore.QModelIndex:
         with suppress(KeyError):
             return self.pathIndexes[folder]
 
@@ -834,7 +834,7 @@ class FileExplorerModel(AbstractTreeModel):
         most_common_path = Path(os.path.commonpath([folder] + self.folders[ff]))
         if not ffi.isValid() and self.rowCount(ffi):
             if most_common_path != folder:
-                ffi = self._insert_folder(most_common_path)
+                ffi = self.addFolder(most_common_path)
                 ff = most_common_path
 
         for r, subf in enumerate(list(self.folders[ff])):
@@ -860,7 +860,7 @@ class FileExplorerModel(AbstractTreeModel):
         if file in self.requestPaths:
             return self.pathIndexes[file]
         self.requestPaths.add(file)
-        parent = self._insert_folder(file.parent)
+        parent = self.addFolder(file.parent)
         folder = self.itemFromIndex(parent)
 
         r = self.rowCount(parent)
