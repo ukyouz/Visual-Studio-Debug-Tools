@@ -773,6 +773,7 @@ class FileExplorerModel(AbstractTreeModel):
         self.requestPaths = set()
         self.pathIndexes = {}
         self.folders = defaultdict(list)
+        self.showFullpathRoot = True
 
     def index(self, row, column, parent=QtCore.QModelIndex()) -> QtCore.QModelIndex:
         ind = super().index(row, column, parent)
@@ -795,6 +796,9 @@ class FileExplorerModel(AbstractTreeModel):
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             folder_index = self.parent(index)
             folder = self.itemFromIndex(folder_index)
+            if not folder_index.isValid():
+                if not self.showFullpathRoot:
+                    return item.name
             try:
                 return str(item.relative_to(folder))
             except:
