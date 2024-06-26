@@ -10,6 +10,7 @@ from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import set_app_title
+from ctrl.WidgetBinParser import BinParser
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
@@ -328,6 +329,12 @@ class Expression(QtWidgets.QWidget):
             item = model.itemFromIndex(indexes[0])
             action.triggered.connect(functools.partial(self._openBinParserFromExpression, item))
 
+            if item["is_pointer"] and model.rowCount(indexes[0]):
+                action = menu.addAction(self.tr("Show Content in BinParser"))
+                # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+                item = model.itemFromIndex(indexes[0])
+                action.triggered.connect(functools.partial(self._openBinParserFromExpressionBody, item))
+
         menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
 
     def _openBinParserFromExpression(self, item):
@@ -337,6 +344,24 @@ class Expression(QtWidgets.QWidget):
             item["size"],
         )
         b.setWindowTitle(item["expr"])
+        widget = b.widget()
+        if isinstance(widget, BinParser):
+            widget.setStruct(item["type"])
+            widget.focusParseResult()
+
+    def _openBinParserFromExpressionBody(self, item):
+        _d = self.app.plugin(dock.Dock)
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        type_struct = pdb.deref_struct(item, self.debugger.get_memory_stream())
+        b = _d.addBinParserView(
+            item["value"],
+            type_struct["size"] * item.get("_count", 1),
+        )
+        b.setWindowTitle(item["expr"])
+        widget = b.widget()
+        if isinstance(widget, BinParser):
+            widget.setStruct(item["type"])
+            widget.focusParseResult()
 
     def readBuffer(self, item: loadpdb.ViewStruct) -> bytes:
         stream = self.debugger.get_memory_stream()

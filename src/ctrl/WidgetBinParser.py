@@ -433,6 +433,12 @@ class BinParser(QtWidgets.QWidget):
 
         menu.exec(view.viewport().mapToGlobal(position))
 
+    def focusParseResult(self):
+        self.ui.splitter.setSizes([1, 0])
+
+    def setStruct(self, name: str):
+        self.ui.lineStruct.setText(name)
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
