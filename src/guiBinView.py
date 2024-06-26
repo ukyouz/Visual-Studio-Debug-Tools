@@ -48,6 +48,7 @@ class BinViewer(AppCtrl):
 
         # events
         self.ui.actionOpen_File.triggered.connect(self._onFileOpened)
+        self.ui.actionHide_Binary_View.triggered.connect(self._focusActiveWidget)
         self.ui.btnOpenFiles.clicked.connect(self._onFileOpened)
         self.ui.treeExplorer.setModel(qtmodel.FileExplorerModel(Path()))
         self.ui.treeExplorer.doubleClicked.connect(self._onExplorerDoubleClicked)
@@ -134,6 +135,14 @@ class BinViewer(AppCtrl):
             widget.export_as_csv()
         else:
             logger.warning("No implantation of 'export_as_csv' method for %r" % widget)
+
+    def _focusActiveWidget(self):
+        win = self.ui.mdiArea.activeSubWindow()
+        widget = win.widget()
+        if getattr(widget, "focusParseResult", None):
+            widget.focusParseResult()
+        else:
+            logger.warning("No implantation of 'focusParseResult' method for %r" % widget)
 
 
 if __name__ == '__main__':
