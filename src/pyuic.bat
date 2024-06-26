@@ -1,4 +1,5 @@
 @REM ..\venv\Lib\site-packages\qt6_applications\Qt\bin\rcc.exe -g python .\view\resource.qrc | sed '0,/PySide6/s//PyQt6/' > .\view\resource.py
+pylupdate6.exe -ts langs\ja_JP.ts .\ctrl\ .\view\ .\plugins\ --no-obsolete
 ..\venv\Lib\site-packages\qt6_applications\Qt\bin\lrelease.exe .\langs\ja_JP.ts -qm .\langs\ja_JP.qm
 pyuic6.exe .\view\BinView.ui -o .\view\BinView.py
 pyuic6.exe .\view\WidgetBinParser.ui -o .\view\WidgetBinParser.py
