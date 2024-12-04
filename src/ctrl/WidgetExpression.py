@@ -167,15 +167,12 @@ class Expression(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
             if rtn == QtWidgets.QMessageBox.StandardButton.Yes:
-                cb()
+                self.app.run_cmd("AttachCurrentProcess", callback=cb)
 
     def _addExpression(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
-        def cb():
-            self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
-
-        virt_base = self._try_get_virtual_base(cb)
+        virt_base = self._try_get_virtual_base(self._addExpression)
         if virt_base is None:
             return
 
@@ -211,10 +208,51 @@ class Expression(QtWidgets.QWidget):
             ],
         )
 
-    def _change_expr(self, parent):
+    def reloadExpressions(self, indexes: list[QtCore.QModelIndex]):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
-        item = parent.internalPointer()
+
+        virt_base = self._try_get_virtual_base(
+            functools.partial(self.reloadExpressions, indexes)
+        )
+        if virt_base is None:
+            return
+
+        def _cb(struct_record, index):
+            item = index.internalPointer()
+            if struct_record is None:
+                item["_is_invalid"] = True
+                return
+            if struct_record is None:
+                return
+            item["_is_invalid"] = False
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.loadStream(self.debugger.get_memory_stream())
+                model.setItem(struct_record, index)
+
+        for ind in indexes:
+            if ind.column() != 0:
+                continue
+            expr = self.ui.treeView.model().data(ind)
+
+            logger.debug("Reload: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
+
+            self.app.exec_async(
+                pdb.query_struct,
+                expr=expr,
+                virtual_base=virt_base,
+                io_stream=self.debugger.get_memory_stream(),
+                finished_cb=functools.partial(_cb, index=ind),
+                errored_cb=functools.partial(_err, self),
+                block_UIs=[
+                    self.ui.treeView,
+                ],
+            )
+
+    def _change_expr(self, index):
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        model = self.ui.treeView.model()
+        item = index.internalPointer()
 
         virt_base = self._try_get_virtual_base()
         if virt_base is None:
@@ -227,7 +265,7 @@ class Expression(QtWidgets.QWidget):
             item["_is_invalid"] = False
             if isinstance(model, qtmodel.StructTreeModel):
                 model.loadStream(self.debugger.get_memory_stream())
-                model.setItem(struct_record, parent)
+                model.setItem(struct_record, index)
 
         logger.debug("Expand: %r" % item["expr"])
 
@@ -317,6 +355,12 @@ class Expression(QtWidgets.QWidget):
             action = menu.addAction(self.tr("Refresh"))
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
+
+            if all(not i.parent().isValid() for i in indexes):
+                action = menu.addAction(self.tr("Reload Address"))
+                action.setToolTip(self.tr("Refetch address for the selected expression(s)."))
+                action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+                action.triggered.connect(lambda: self.reloadExpressions(indexes))
 
             submenu = self.var_watcher.createContextMenues(indexes)
             menu.addMenu(submenu)
