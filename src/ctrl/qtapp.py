@@ -293,9 +293,10 @@ class HistoryMenu(QtCore.QObject):
         self.data_list = DequeList(options)
         self.recently_used_on_top = False
         self._current = default
-        self._update_menu()
+        self._app_setting = (None, "")  # QtCore.QSettings, key
+        self._redraw_menu()
 
-    def _update_menu(self):
+    def _redraw_menu(self):
         self.menu.clear()
         actgroup = QtGui.QActionGroup(self.menu)
         actgroup.setExclusive(True)
@@ -321,7 +322,7 @@ class HistoryMenu(QtCore.QObject):
     def _selected(self, data):
         self._current = data
         if self.recently_used_on_top:
-            self._update_menu()
+            self._redraw_menu()
 
     def _clear(self):
         self.menu.clear()
@@ -349,12 +350,26 @@ class HistoryMenu(QtCore.QObject):
 
         if need_insert_front or self.stringify(self._current) != self.stringify(data):
             self._current = data
-            self._update_menu()
+            self._redraw_menu()
+            self._save_settings()
 
     def remove_data(self, data):
         self.data_list.remove(data)
         self._current = None
-        self._update_menu()
+        self._redraw_menu()
+        self._save_settings()
+
+    def restore_from_settings(self, key: str, settings: QtCore.QSettings, *, auto_save=True):
+        if auto_save:
+            self._app_setting = (settings, key)
+        if val := settings.value(key):
+            self.data_list = DequeList(val)
+            self._redraw_menu()
+
+    def _save_settings(self):
+        app_setting, key = self._app_setting
+        if app_setting and key:
+            app_setting.setValue(key, list(self.data_list))
 
 
 class AutoRefreshTimer(QtCore.QObject):

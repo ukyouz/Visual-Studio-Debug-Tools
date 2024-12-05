@@ -49,6 +49,7 @@ class Expression(QtWidgets.QWidget):
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = HistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
+        self.parse_hist.restore_from_settings("Expression/history", self.app.app_setting, auto_save=True)
 
         # event bindingd
         self.installEventFilter(self)
