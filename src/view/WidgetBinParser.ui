@@ -238,6 +238,25 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkParseTable">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Ignored">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Table</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLabel" name="label_3">
             <property name="text">
              <string>Count</string>
@@ -272,25 +291,6 @@
             </property>
             <property name="value">
              <number>1</number>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkParseTable">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Ignored">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Table</string>
             </property>
            </widget>
           </item>
@@ -453,6 +453,19 @@ QTableView::item{  padding: 0px 6px; }</string>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineStruct</tabstop>
+  <tabstop>lineOffset</tabstop>
+  <tabstop>btnToggleChar</tabstop>
+  <tabstop>btnToggleHex</tabstop>
+  <tabstop>checkParseTable</tabstop>
+  <tabstop>spinParseCount</tabstop>
+  <tabstop>btnParse</tabstop>
+  <tabstop>treeView</tabstop>
+  <tabstop>tableMemory</tabstop>
+  <tabstop>btnHistory</tabstop>
+  <tabstop>tableView</tabstop>
+ </tabstops>
  <resources>
   <include location="resource.qrc"/>
  </resources>

@@ -32,7 +32,7 @@ def p() -> pdb.PDB7:
 @pytest.mark.parametrize(
     "expr, err_msg",
     [
-        ("((TextHolder)124)[4]", "Shall be a pointer type, got: 'TextHolder'"),
+        ("((TextHolder)124)[4]", "Shall be a pointer type, got: 'TextHolder' at b'((TextHolder)124)'"),
         ("((yyy *)124)[4]", "Bad struct casting: b'yyy *'"),
         ("(0x123[2]", "Invalid syntax: b'(0x123[2]'"),
         ("1 || 3 ff", "Invalid syntax: b'1 || 3 ff'"),
@@ -43,12 +43,14 @@ def p() -> pdb.PDB7:
         ("gA.afunc.c", "Notation error for pointer: b'.c'"),
         ("gA.afunc[1]", "Fail to deref: b'gA.afunc'"),
         ("gA.b[gA.attr]", "KeyError('b')"),
-        ("gA.s->szBuffer[gA.attr]", "Shall be a pointer type, got: 'TextHolder'"),
-        ("gA.s.dwLen[1]", "Shall be a pointer type, got: 'T_LONG'"),
+        ("gA.s->szBuffer[gA.attr]", "Shall be a pointer type, got: 'TextHolder' at b'gA.s'"),
+        ("gA.s.dwLen[1]", "Shall be a pointer type, got: 'T_LONG' at b'gA.s.dwLen'"),
         ("gC.bb", "Identifier not found: 'gC'"),
         ("get(gA, gB)", "Not support function call yet: b'get(gA, gB)'"),
         ("get(gA)", "Not support macro yet: b'get(gA)'"),
         ("g_Message.szBuffer[999]", "Index out of range: b'[999]'"),
+        ("offsetof(ABC, arr)", "Bad struct: b'ABC'"),
+        ("offsetof(A, axxx)", "Member b'axxx' not found in b'A'"),
     ]
 )
 def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
@@ -63,6 +65,7 @@ def test_bad_exprs(stream: TestStream, p: pdb.PDB7, expr: str, err_msg: str):
         ("((struct A *)100)->attr", 100),
         ("(struct A *)100", 100),
         ("(struct A *)gA.pint", 12),
+        ("((BDefPtr)100)", 100),
         ("*((struct A *)100)", 100),
         ("gA.x - 1", 12 - 4),
         ("gA.x + 1", 12 + 4),
@@ -107,7 +110,9 @@ def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):
         "gA",
         "sizeof(gA)",
         "(BDefPtr)100",
-        "gA.x[0]"
+        "gA.x[0]",
+        "offsetof(struct A, arr)",
+        "offsetof(A, arr)",
     ]
 )
 def test_good_expr(stream: TestStream, p: pdb.PDB7, expr: str):

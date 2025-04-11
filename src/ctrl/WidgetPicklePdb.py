@@ -11,6 +11,7 @@ from ctrl.qtapp import set_app_title
 from helper import qtmodel
 from modules.pdbparser.pdbparser import picklepdb
 from view import WidgetPicklePdb
+from view import resource
 
 
 class PicklePdb(QtWidgets.QWidget):
@@ -28,14 +29,17 @@ class PicklePdb(QtWidgets.QWidget):
         self.ui.btnGenerateSelected.clicked.connect(self._generate_pdbin)
         self.ui.btnLoadSelected.clicked.connect(self._load_pdbin)
 
-        if val := self.app.app_setting.value("LoadPdb/pdbin", ""):
+        if app and (val := self.app.app_setting.value("LoadPdb/pdbin", "")):
             self.setEnabled(False)
             loaded_db_folder = Path(val).parent.parent  # TARGET/vsdbg/xx.pdbin
             QtCore.QTimer.singleShot(0, lambda: self._open_folder(loaded_db_folder))
 
     def _open_folder(self, folder=""):
         if not folder:
-            prev_folder = self.app.app_setting.value("LoadPdb/lastGeneratedFolder", "")
+            if self.app:
+                prev_folder = self.app.app_setting.value("LoadPdb/lastGeneratedFolder", "")
+            else:
+                prev_folder = ""
             folder = QtWidgets.QFileDialog.getExistingDirectory(
                 self,
                 directory=prev_folder,
@@ -46,6 +50,8 @@ class PicklePdb(QtWidgets.QWidget):
 
         root = Path(folder)
         model = qtmodel.FileExplorerModel(Path())
+        model.showFullpathRoot = False
+        model.addFolder(root)
         model.addFiles(list(root.rglob("*.pdb")))
         self.ui.treePdb.setModel(model)
         if model.rowCount():
@@ -109,12 +115,14 @@ class PicklePdb(QtWidgets.QWidget):
     def _on_generated_done(self):
         root = Path(self.ui.labelFolder.text())
         model = qtmodel.FileExplorerModel(Path())
+        model.showFullpathRoot = False
         model.addFiles(list(root.rglob("*.pdbin")))
         self.ui.treeBin.setModel(model)
         if model.rowCount():
             self.ui.treeBin.setExpanded(model.index(0, 0), True)
 
-        self.app.app_setting.setValue("LoadPdb/lastGeneratedFolder", str(root))
+        if self.app:
+            self.app.app_setting.setValue("LoadPdb/lastGeneratedFolder", str(root))
 
     def _load_pdbin(self):
         model = self.ui.treeBin.model()

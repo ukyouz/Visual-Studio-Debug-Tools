@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -12,14 +13,15 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
+from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
+from modules.treesitter.expr_parser import InvalidExpression
+from modules.utils.typ import Stream
 from plugins import loadpdb
 from view import WidgetBinParser
 
-tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
@@ -43,20 +45,20 @@ class ParseHistoryMenu(HistoryMenu):
 
 
 class BinParser(QtWidgets.QWidget):
-    def __init__(self, app: AppCtrl, fileio=None):
+    def __init__(self, app: AppCtrl):
         super().__init__(app)
+        self.app = app
+        self.fileio = None
         self.ui = WidgetBinParser.Ui_Form()
         self.ui.setupUi(self)
-        self.app = app
         set_app_title(self, "")
 
         # properties
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = ParseHistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onParseHistoryClicked)
-        self.fileio = fileio
-        if fileio:
-            self._loadFile(fileio)
+        self.viewAddress = 0
+        self.viewSize = -1
 
         # events
         self.ui.btnParse.clicked.connect(self._onBtnParseClicked)
@@ -68,8 +70,39 @@ class BinParser(QtWidgets.QWidget):
         self.ui.btnToggleChar.clicked.connect(self._onBtnToggleCharClicked)
         self.ui.treeView.expanded.connect(lambda: self.ui.treeView.resizeColumnToContents(0))
         self.ui.treeView.setItemDelegate(qtmodel.BorderItemDelegate())
+        self.ui.treeView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.treeView.customContextMenuRequested.connect(lambda p: self._onContextMenuOpened(p, self.ui.treeView))
         self.ui.tableMemory.setItemDelegate(qtmodel.BorderItemDelegate())
         self.ui.tableView.installEventFilter(self)
+        self.ui.tableView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.customContextMenuRequested.connect(lambda p: self._onContextMenuOpened(p, self.ui.tableView))
+        self.ui.tableView.horizontalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.horizontalHeader().customContextMenuRequested.connect(self._onHorizontalContextMenuOpened)
+        self.ui.tableView.verticalHeader().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.tableView.verticalHeader().customContextMenuRequested.connect(self._onVerticalContextMenuOpened)
+
+        self._var_watcher = {
+            "tree": AutoRefreshTimer(self, self.ui.treeView),
+            "table": AutoRefreshTimer(self, self.ui.tableView),
+        }
+
+    @property
+    def var_watcher(self):
+        tab = self.ui.stackedWidget.currentWidget()
+        if tab == self.ui.pageTree:
+            return self._var_watcher["tree"]
+        else:
+            return self._var_watcher["table"]
+
+    @property
+    def streamSize(self):
+        if self.viewSize > 0:
+            return self.viewSize
+        elif self.fileio:
+            self.fileio.seek(0, os.SEEK_END)
+            return self.fileio.tell()
+        else:
+            return 0
 
     def eventFilter(self, obj: QtCore.QObject, evt: QtCore.QEvent) -> bool:
         if obj == self.ui.tableView:
@@ -88,7 +121,39 @@ class BinParser(QtWidgets.QWidget):
                             return True
         return False
 
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        rtn = self.var_watcher.onClosing()
+        if rtn is None:
+            if getattr(self.fileio, "name", None) is not None:
+                # expect a file (ie. sent from BinView), so just let it go
+                e.accept()
+                return
+
+            # expect memory on ram (ie. sent from VS Debugger)
+            # need to warn user for closing a view
+            models = (
+                self.ui.treeView.model(),
+                self.ui.tableView.model(),
+            )
+            if any(m.rowCount() for m in models if m):
+                rtn = QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    self.tr("View is not empty, Ok to close?"),
+                    QtWidgets.QMessageBox.StandardButton.Yes,
+                    QtWidgets.QMessageBox.StandardButton.Cancel,
+                )
+
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            e.ignore()
+        else:
+            e.accept()
+
     def export_as_csv(self):
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+
         if self.fileio:
             filename = getattr(self.fileio, "name", "noname")
             bin_fname = "/" + str(Path(filename).with_suffix(".csv"))
@@ -97,7 +162,7 @@ class BinParser(QtWidgets.QWidget):
         dialog = QtWidgets.QFileDialog(self)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            caption="Save as csv...",
+            caption=self.tr("Save as csv..."),
             directory=dialog.directory().filePath(bin_fname),
             filter="CSV files (*.csv);; Any (*.*)"
         )
@@ -113,13 +178,13 @@ class BinParser(QtWidgets.QWidget):
                         QtWidgets.QMessageBox.information(
                             self,
                             self.__class__.__name__,
-                            tr("Successfully exported table!\n%r") % filename,
+                            self.tr("Successfully exported table!\n%r") % filename,
                         )
                     except Exception as e:
                         QtWidgets.QMessageBox.warning(
                             self,
                             self.__class__.__name__,
-                            tr("Error exported file! %s") % e,
+                            self.tr("Error exported file! %s") % e,
                         )
 
     @property
@@ -127,13 +192,22 @@ class BinParser(QtWidgets.QWidget):
         try:
             pdb = self.app.plugin(loadpdb.LoadPdb)
             return int(pdb.query_cstruct(self.ui.lineOffset.text(), io_stream=self.fileio))
+        except ValueError as e:
+            logger.warning("Offset: {}".format(e))
+            return 0
+        except InvalidExpression as e:
+            logger.warning("Offset: {}".format(e))
+            return 0
         except Exception as e:
-            logger.warning(e)
+            logger.warning(e, exc_info=True)
             return 0
 
-    def _loadFile(self, fileio: io.BytesIO):
+    def loadFile(self, fileio: Stream):
+        self.fileio = fileio
         set_app_title(self, getattr(fileio, "name", "noname"))
         tblmodel = qtmodel.HexTable(fileio, self.ui.tableMemory)
+        tblmodel.viewAddress = self.viewAddress
+        tblmodel.viewSize = self.viewSize
         self.ui.tableMemory.setModel(tblmodel)
 
     def _onLineOffsetChanged(self):
@@ -172,6 +246,10 @@ class BinParser(QtWidgets.QWidget):
     def _onBtnParseClicked(self):
         structname = self.ui.lineStruct.text()
         pdb = self.app.plugin(loadpdb.LoadPdb)
+
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
 
         self.setEnabled(False)
 
@@ -220,30 +298,25 @@ class BinParser(QtWidgets.QWidget):
             if isinstance(e, loadpdb.InvalidExpression):
                 QtWidgets.QMessageBox.warning(
                     self,
-                    "PDB Error!",
-                    tr("Invalid expression: %r") % structname,
+                    self.tr("PDB Error!"),
+                    self.tr("Invalid expression: %r") % structname,
                 )
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
-                    "PDB Error!",
-                    tr("Please load pdbin first!"),
+                    self.tr("PDB Error!"),
+                    self.tr("Please load pdbin first!"),
                 )
 
         count = self.ui.spinParseCount.value()
-        if self.fileio:
-            self.fileio.seek(0, io.SEEK_END)
-            total_byte = self.fileio.tell()
-        else:
-            total_byte = 0
 
         if self.ui.checkParseTable.isChecked():
             self.app.exec_async(
                 pdb.parse_expr_to_table,
                 structname,
-                addr=self.parse_offset,
+                addr=self.viewAddress + self.parse_offset,
                 count=count,
-                data_size=total_byte,
+                data_size=self.streamSize,
                 finished_cb=_cb_table,
                 errored_cb=_err,
             )
@@ -251,15 +324,19 @@ class BinParser(QtWidgets.QWidget):
             self.app.exec_async(
                 pdb.parse_expr_to_struct,
                 structname,
-                addr=self.parse_offset,
+                addr=self.viewAddress + self.parse_offset,
                 count=count,
-                data_size=total_byte,
+                data_size=self.viewAddress + self.streamSize,
                 add_dummy_root=True,
                 finished_cb=_cb_tree,
                 errored_cb=_err,
             )
 
     def _onParseHistoryClicked(self, data: ParseRecord):
+        rtn = self.var_watcher.onAnyRelatedOperating()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+
         self.ui.lineStruct.setText(data.struct)
         self.ui.lineOffset.setText(data.offset)
         self.ui.spinParseCount.setValue(data.count or 1)
@@ -279,7 +356,6 @@ class BinParser(QtWidgets.QWidget):
         model.allow_edit_top_expr = False
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
-            # TODO: global address fileio reader
             model.loadStream(self.fileio)
         self.ui.treeView.setModel(model)
         # expand the first item
@@ -293,10 +369,75 @@ class BinParser(QtWidgets.QWidget):
         model = qtmodel.StructTableModel(data)
         model.toggleHexMode(self.ui.btnToggleHex.isChecked())
         if self.fileio:
-            # TODO: global address fileio reader
             model.loadStream(self.fileio)
         self.ui.tableView.setModel(model)
         return model
+
+    def _onHorizontalContextMenuOpened(self, position):
+        indexes = self.ui.tableView.selectedIndexes()
+        if not indexes:
+            return
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
+
+        menu.exec(self.ui.tableView.horizontalHeader().viewport().mapToGlobal(position))
+
+    def _onVerticalContextMenuOpened(self, position):
+        indexes = self.ui.tableView.selectedIndexes()
+        if not indexes:
+            return
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
+
+        menu.exec(self.ui.tableView.verticalHeader().viewport().mapToGlobal(position))
+
+    def _onContextMenuOpened(self, position, view):
+        indexes = view.selectedIndexes()
+        if not indexes:
+            return
+        model = self.ui.tableView.model()
+        if not isinstance(model, qtmodel.StructTableModel):
+            return
+
+        menu = QtWidgets.QMenu()
+
+        if self.app.__class__.__name__ == "VisualStudioDebugger":
+            action = menu.addAction(self.tr("Refresh"))
+            action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+            action.triggered.connect(lambda: [model.dataChanged.emit(i, i) for i in indexes])
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
+
+        menu.exec(view.viewport().mapToGlobal(position))
+
+    def focusParseResult(self):
+        self.ui.splitter.setSizes([1, 0])
+
+    def setStruct(self, name: str):
+        self.ui.lineStruct.setText(name)
 
 
 if __name__ == '__main__':
@@ -311,6 +452,7 @@ if __name__ == '__main__':
     if args.file:
         with open(args.file, "rb") as fs:
             fileio = io.BytesIO(fs.read())
-    window = BinParser(None, fileio)
+    window = BinParser(None)
+    window.loadFile(fileio)
     window.show()
     sys.exit(app.exec())

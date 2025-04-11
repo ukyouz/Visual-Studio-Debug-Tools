@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 import math
 import os
 from collections import defaultdict
@@ -18,6 +19,8 @@ from modules.utils.myfunc import float_from_int
 from modules.utils.myfunc import hex2
 from modules.utils.myfunc import int_from_float
 from modules.utils.typ import Stream
+
+logger = logging.getLogger(__name__)
 
 
 def bytes_to_ascii(data: bytes):
@@ -158,9 +161,10 @@ class HexTable(QtCore.QAbstractTableModel):
 
     def shiftOffset(self, offset: int):
         self.layoutAboutToBeChanged.emit()
-
         self.viewOffset = offset
+        self.refresh()
 
+    def refresh(self):
         tl = self.index(0, 0)
         br = self.index(self.rowCount(), self.columnCount())
         self.dataChanged.emit(tl, br)
@@ -297,6 +301,7 @@ class StructTreeModel(AbstractTreeModel):
         self.allow_dereferece_pointer = False
         self.allow_edit_top_expr = True
         self._value_version = 0
+        self.dataChanged.connect(self._onDataChanging)
 
     def child(self, row, parent):
         item = self.itemFromIndex(parent)
@@ -375,6 +380,8 @@ class StructTreeModel(AbstractTreeModel):
             return None
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
+        if val := item.get("_role_data", {}).get(role, None):
+            return val
         match role:
             case QtCore.Qt.ItemDataRole.DisplayRole | QtCore.Qt.ItemDataRole.EditRole:
                 match tag:
@@ -440,62 +447,74 @@ class StructTreeModel(AbstractTreeModel):
     def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
         tag = self.headers[index.column()].lower()
         item = self.itemFromIndex(index)
-        if tag == "levelname":
-            if value == item["expr"] or value == "":
-                return False
-            item["expr"] = value
-            item["levelname"] = value
-            self.exprChanged.emit(index)
-            return True
-        elif tag == "value":
-            try:
-                val = eval(value)
-            except:
-                return False
+        match role:
+            case QtCore.Qt.ItemDataRole.EditRole:
+                if tag == "levelname":
+                    if value == item["expr"] or value == "":
+                        return False
+                    item["expr"] = value
+                    item["levelname"] = value
+                    self.exprChanged.emit(index)
+                    return True
+                elif tag == "value":
+                    try:
+                        val = eval(value)
+                    except:
+                        return False
 
-            base = item["address"]
-            size = item["size"]
-            boff = item["bitoff"]
-            bsize = item.get("bitsize", size * 8)
+                    base = item["address"]
+                    size = item["size"]
+                    boff = item["bitoff"]
+                    bsize = item.get("bitsize", size * 8)
 
-            if isinstance(val, float):
-                val = int_from_float(val, bsize)
+                    if size is None or base == 0:
+                        return False
 
-            self.fileio.seek(base)
-            old_val = self.fileio.read(size)
-            if boff and bsize:
-                val = (val & BITMASK(bsize))
-                new_val = old_val & ~(BITMASK(bsize) << boff)
-                new_val |= val << boff
-            else:
-                new_val = val
-            if new_val == old_val:
-                return False
+                    if isinstance(val, float):
+                        val = int_from_float(val, bsize)
 
-            if not item.get("has_sign", False) and val < 0:
-                # cannot set a negative value to an unsigned type
-                return False
+                    self.fileio.seek(base)
+                    old_val = self.fileio.read(size)
+                    if boff and bsize:
+                        val = (val & BITMASK(bsize))
+                        new_val = old_val & ~(BITMASK(bsize) << boff)
+                        new_val |= val << boff
+                    else:
+                        new_val = val
+                    if new_val == old_val:
+                        return False
 
-            item["value"] = val
-            int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
-            self.fileio.write(new_val.to_bytes(size, "little", signed=int_with_sign))
-            return True
-        elif tag == "type":
-            old_value = item.get(tag, "")
-            if value == old_value:
-                return False
-            item["_is_pvoid"] = True
-            item[tag] = value
-            count = item.get("_count", 1)
-            self.pvoidStructChanged.emit(index, count)
-            return True
-        elif tag == "count":
-            old_value = item.get("_count", 1)
-            if value == old_value or value <= 0:
-                return False
-            item["_count"] = value
-            self.pointerDereferenced.emit(index, value)
-            return True
+                    if not item.get("has_sign", False) and val < 0:
+                        # cannot set a negative value to an unsigned type
+                        return False
+
+                    item["value"] = val
+                    int_with_sign = item.get("has_sign", False) and not item.get("is_real", False)
+                    self.fileio.write(new_val.to_bytes(size, "little", signed=int_with_sign))
+                    return True
+                elif tag == "type":
+                    old_value = item.get(tag, "")
+                    if value == old_value:
+                        return False
+                    item["_is_pvoid"] = True
+                    item[tag] = value
+                    count = item.get("_count", 1)
+                    self.pvoidStructChanged.emit(index, count)
+                    return True
+                elif tag == "count":
+                    old_value = item.get("_count", 1)
+                    if value == old_value or value <= 0:
+                        return False
+                    item["_count"] = value
+                    self.pointerDereferenced.emit(index, value)
+                    return True
+            case _:
+                rd = item.get("_role_data")
+                if rd is None:
+                    item["_role_data"] = {}
+                changed = item["_role_data"].get(role, None) != value
+                item["_role_data"][role] = value
+                return changed
         return False
 
     def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
@@ -522,7 +541,7 @@ class StructTreeModel(AbstractTreeModel):
         else:
             if isinstance(item["fields"], dict):
                 keys = [x[0] for x in iter_children(item["fields"])]
-                remove_keys = keys[row: row + count]
+                remove_keys = keys[row: row + count - 1]
                 for k in reversed(remove_keys):
                     del item["fields"][k]
             elif isinstance(item["fields"], list):
@@ -588,6 +607,16 @@ class StructTreeModel(AbstractTreeModel):
         _clear_value(item)
         self.refresh(index)
 
+    def _onDataChanging(self, tl, br, roles=None):
+        roles = roles or []
+        if QtCore.Qt.ItemDataRole.UserRole in roles:
+            if tl == br:
+                self.refreshIndex(tl)
+            else:
+                logger.warning("Not implant updating range of StructTreeModel items yet!")
+                logger.warning(f"{tl!r} {br!r}")
+                logger.warning(f"{tl.row()} {tl.column()} {br.row()} {br.column()}")
+
     def loadStream(self, fileio: Stream):
         self.fileio = fileio
         self.refresh()
@@ -622,19 +651,22 @@ class StructTableModel(QtCore.QAbstractTableModel):
             self.titles = [x["expr"].replace(".", "\n.").lstrip() for x in data[0]]
         else:
             self.titles = []
+        self.dataChanged.connect(self._onDataChanging)
 
     def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if role == QtCore.Qt.ItemDataRole.DisplayRole: # only change what DisplayRole returns
             if orientation == QtCore.Qt.Orientation.Horizontal:
                 return self.titles[section]
             elif orientation == QtCore.Qt.Orientation.Vertical:
-                return str(section + 1)
+                return str(section)
         return super().headerData(section, orientation, role) # must have this line
 
     def data(self, index: QtCore.QModelIndex, role=QtCore.Qt.ItemDataRole.DisplayRole):
         row = index.row()
         col = index.column()
         item = self._data[row][col]
+        if val := item.get("_role_data", {}).get(role, None):
+            return val
         if role in {QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole}:
             val = _calc_val(self.fileio, item)
             if val is not None:
@@ -663,6 +695,25 @@ class StructTableModel(QtCore.QAbstractTableModel):
                 return QtGui.QColor("red")
             # if self.flags(index) & QtCore.Qt.ItemFlag.ItemIsEditable:
             #     return QtGui.QColor("blue")
+
+    def setData(self, index: QtCore.QModelIndex, value: Any, role: int = QtCore.Qt.ItemDataRole.DisplayRole) -> bool:
+        row = index.row()
+        col = index.column()
+        item = self._data[row][col]
+        rd = item.get("_role_data")
+        if rd is None:
+            item["_role_data"] = {}
+        changed = item["_role_data"].get(role, None) != value
+        item["_role_data"][role] = value
+        return changed
+
+    def _onDataChanging(self, tl, rb, roles=None):
+        roles = roles or []
+        if QtCore.Qt.ItemDataRole.UserRole in roles:
+            for row in range(tl.row(), rb.row() + 1):
+                row_data = self._data[row]
+                for col in range(tl.column(), rb.column() + 1):
+                    row_data[col]["_refresh_requested"] = True
 
     def flags(self, index: QtCore.QModelIndex):
         flags = super().flags(index)
@@ -695,15 +746,16 @@ class StructTableModel(QtCore.QAbstractTableModel):
     def getTextFromIndexes(self, indexes: list[QtCore.QModelIndex]=None) -> str:
         if indexes is None:
             indexes = [self.index(r, c) for r in range(self.rowCount()) for c in range(self.columnCount())]
-        cols = set(i.column() for i in indexes)
+        cols = sorted(set(i.column() for i in indexes))
         headers = [self.headerData(c, QtCore.Qt.Orientation.Horizontal) for c in cols]
-        rows = defaultdict(list)
+        data_rows = defaultdict(lambda: {c: "" for c in cols})
         for ind in indexes:
-            rows[ind.row()].append(self.data(ind))
+            data_rows[ind.row()][ind.column()] = self.data(ind)
         csvf = io.StringIO()
         csvwriter = csv.writer(csvf, lineterminator='\n')
         csvwriter.writerow(headers)
-        csvwriter.writerows(rows.values(), )
+        for data_row in data_rows.values():
+            csvwriter.writerow(data_row.values())
         return csvf.getvalue()
 
 
@@ -721,6 +773,7 @@ class FileExplorerModel(AbstractTreeModel):
         self.requestPaths = set()
         self.pathIndexes = {}
         self.folders = defaultdict(list)
+        self.showFullpathRoot = True
 
     def index(self, row, column, parent=QtCore.QModelIndex()) -> QtCore.QModelIndex:
         ind = super().index(row, column, parent)
@@ -743,6 +796,9 @@ class FileExplorerModel(AbstractTreeModel):
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             folder_index = self.parent(index)
             folder = self.itemFromIndex(folder_index)
+            if not folder_index.isValid():
+                if not self.showFullpathRoot:
+                    return item.name
             try:
                 return str(item.relative_to(folder))
             except:
@@ -769,7 +825,7 @@ class FileExplorerModel(AbstractTreeModel):
 
         return True
 
-    def _insert_folder(self, folder: Path) -> QtCore.QModelIndex:
+    def addFolder(self, folder: Path) -> QtCore.QModelIndex:
         with suppress(KeyError):
             return self.pathIndexes[folder]
 
@@ -782,7 +838,7 @@ class FileExplorerModel(AbstractTreeModel):
         most_common_path = Path(os.path.commonpath([folder] + self.folders[ff]))
         if not ffi.isValid() and self.rowCount(ffi):
             if most_common_path != folder:
-                ffi = self._insert_folder(most_common_path)
+                ffi = self.addFolder(most_common_path)
                 ff = most_common_path
 
         for r, subf in enumerate(list(self.folders[ff])):
@@ -800,11 +856,15 @@ class FileExplorerModel(AbstractTreeModel):
 
         return self.index(r, 0, ffi)
 
+    def pathFromIndex(self, index: QtCore.QModelIndex) -> Path:
+        item = self.itemFromIndex(index)
+        return item
+
     def _insert_file(self, file: Path):
         if file in self.requestPaths:
             return self.pathIndexes[file]
         self.requestPaths.add(file)
-        parent = self._insert_folder(file.parent)
+        parent = self.addFolder(file.parent)
         folder = self.itemFromIndex(parent)
 
         r = self.rowCount(parent)

@@ -9,10 +9,10 @@ class AboutMe(Plugin):
     def registerMenues(self) -> list[MenuAction]:
         return [
             {
-                "name": "Help",
+                "name": self.tr("Help"),
                 "submenus": [
                     {
-                        "name": "About Me...",
+                        "name": self.tr("About..."),
                         "command": "ShowAboutMe",
                     },
                 ]

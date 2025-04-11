@@ -7,9 +7,10 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 from ctrl.qtapp import AppCtrl
+from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
-from ctrl.qtapp import i18n
 from ctrl.qtapp import set_app_title
+from ctrl.WidgetBinParser import BinParser
 from helper import qtmodel
 from modules.treesitter.expr_parser import InvalidExpression
 from plugins import debugger
@@ -17,37 +18,38 @@ from plugins import dock
 from plugins import loadpdb
 from view import WidgetExpression
 
-tr = lambda txt: i18n("Memory", txt)
 logger = logging.getLogger(__name__)
 
 
-def _err(widget, err, traceback):
+def _err(self, err, traceback):
     match err:
         case InvalidExpression():
             QtWidgets.QMessageBox.warning(
-                widget,
-                widget.__class__.__name__,
-                tr("Invalid Expression: %s") % str(err),
+                self,
+                self.__class__.__name__,
+                self.tr("Invalid Expression: %s") % str(err),
             )
         case _:
             QtWidgets.QMessageBox.warning(
-                widget,
-                tr("PDB Error!"),
+                self,
+                self.tr("PDB Error!"),
                 repr(err),
             )
 
 
 class Expression(QtWidgets.QWidget):
-    def __init__(self, app: AppCtrl):
+    def __init__(self, app: AppCtrl, dbg: debugger.Debugger):
         super().__init__(app)
+        self.app = app
         self.ui = WidgetExpression.Ui_Form()
         self.ui.setupUi(self)
         set_app_title(self, "")
 
-        self.app = app
+        self.debugger = dbg
         self.ui.btnHistory.setMenu(QtWidgets.QMenu())
         self.parse_hist = HistoryMenu(self.ui.btnHistory.menu())
         self.parse_hist.actionTriggered.connect(self._onHistoryClicked)
+        self.parse_hist.restore_from_settings("Expression/history", self.app.app_setting, auto_save=True)
 
         # event bindingd
         self.installEventFilter(self)
@@ -61,6 +63,9 @@ class Expression(QtWidgets.QWidget):
         self.ui.treeView.customContextMenuRequested.connect(self._onContextMenuOpened)
 
         self._init_ui()
+
+        self.var_watcher = AutoRefreshTimer(self, self.ui.treeView)
+        self.var_watcher.timeOut.connect(self._onAutoRefreshTimeout)
 
     def _init_ui(self):
         pdb = self.app.plugin(loadpdb.LoadPdb)
@@ -90,6 +95,9 @@ class Expression(QtWidgets.QWidget):
                         # can only the delete top level structrue
                         if indexes[0].parent().isValid():
                             return False
+                        rtn = self.var_watcher.onDeleting()
+                        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+                            return True
                         model = self.ui.treeView.model()
                         model.removeRow(indexes[0].row(), indexes[0].parent())
                         return True
@@ -104,13 +112,41 @@ class Expression(QtWidgets.QWidget):
 
         return False
 
+    def closeEvent(self, e: QtGui.QCloseEvent):
+        model = self.ui.treeView.model()
+        rtn = self.var_watcher.onClosing()
+        if rtn is None:
+            if model is not None and model.rowCount():
+                rtn = QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    self.tr("View is not empty, Ok to close?"),
+                    QtWidgets.QMessageBox.StandardButton.Ok,
+                    QtWidgets.QMessageBox.StandardButton.Cancel,
+                )
+
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            e.ignore()
+            return
+        e.accept()
+
     def _onHistoryClicked(self, val):
         self.ui.lineStruct.setText(val)
 
+    def _onAutoRefreshTimeout(self, i):
+        model = self.ui.treeView.model()
+        if not isinstance(model, qtmodel.StructTreeModel):
+            return
+        if model.rowCount(i) == 0:
+            # to avoid logging too much things, only log the specific data having no children item
+            item = model.itemFromIndex(i)
+            expr = item["expr"]
+            value = item["value"]
+            self.app.log(f"{expr} = {value} ({value:#x})")
+
     def _try_get_virtual_base(self, cb=None) -> int | None:
-        dbg = self.app.plugin(debugger.Debugger)
         try:
-            return dbg.get_virtual_base()
+            return self.debugger.get_virtual_base()
         except OSError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -124,7 +160,7 @@ class Expression(QtWidgets.QWidget):
             rtn = QtWidgets.QMessageBox.warning(
                 self,
                 self.__class__.__name__,
-                tr(
+                self.tr(
                     "You shall attach to a process before this operation.\n"
                     "Attach to current selected process and continue?"
                 ),
@@ -132,16 +168,12 @@ class Expression(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.StandardButton.Cancel,
             )
             if rtn == QtWidgets.QMessageBox.StandardButton.Yes:
-                cb()
+                self.app.run_cmd("AttachCurrentProcess", callback=cb)
 
     def _addExpression(self):
-        dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
 
-        def cb():
-            self.app.run_cmd("AttachCurrentProcess", callback=self._addExpression)
-
-        virt_base = self._try_get_virtual_base(cb)
+        virt_base = self._try_get_virtual_base(self._addExpression)
         if virt_base is None:
             return
 
@@ -159,7 +191,7 @@ class Expression(QtWidgets.QWidget):
             self.parse_hist.add_data(expr)
             model = self.ui.treeView.model()
             if isinstance(model, qtmodel.StructTreeModel):
-                model.loadStream(dbg.get_memory_stream())
+                model.loadStream(self.debugger.get_memory_stream())
                 model.appendItem(struct_record)
             for c in range(2, model.columnCount()):
                 self.ui.treeView.resizeColumnToContents(c)
@@ -168,7 +200,7 @@ class Expression(QtWidgets.QWidget):
             pdb.query_struct,
             expr=expr,
             virtual_base=virt_base,
-            io_stream=dbg.get_memory_stream(),
+            io_stream=self.debugger.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=functools.partial(_err, self),
             block_UIs=[
@@ -177,11 +209,51 @@ class Expression(QtWidgets.QWidget):
             ],
         )
 
-    def _change_expr(self, parent):
-        dbg = self.app.plugin(debugger.Debugger)
+    def reloadExpressions(self, indexes: list[QtCore.QModelIndex]):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
-        item = parent.internalPointer()
+
+        virt_base = self._try_get_virtual_base(
+            functools.partial(self.reloadExpressions, indexes)
+        )
+        if virt_base is None:
+            return
+
+        def _cb(struct_record, index):
+            item = index.internalPointer()
+            if struct_record is None:
+                item["_is_invalid"] = True
+                return
+            if struct_record is None:
+                return
+            item["_is_invalid"] = False
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.loadStream(self.debugger.get_memory_stream())
+                model.setItem(struct_record, index)
+
+        for ind in indexes:
+            if ind.column() != 0:
+                continue
+            expr = self.ui.treeView.model().data(ind)
+
+            logger.debug("Reload: %r (Virtual Base = %s)" % (expr, hex(virt_base)))
+
+            self.app.exec_async(
+                pdb.query_struct,
+                expr=expr,
+                virtual_base=virt_base,
+                io_stream=self.debugger.get_memory_stream(),
+                finished_cb=functools.partial(_cb, index=ind),
+                errored_cb=functools.partial(_err, self),
+                block_UIs=[
+                    self.ui.treeView,
+                ],
+            )
+
+    def _change_expr(self, index):
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        model = self.ui.treeView.model()
+        item = index.internalPointer()
 
         virt_base = self._try_get_virtual_base()
         if virt_base is None:
@@ -193,8 +265,8 @@ class Expression(QtWidgets.QWidget):
                 return
             item["_is_invalid"] = False
             if isinstance(model, qtmodel.StructTreeModel):
-                model.loadStream(dbg.get_memory_stream())
-                model.setItem(struct_record, parent)
+                model.loadStream(self.debugger.get_memory_stream())
+                model.setItem(struct_record, index)
 
         logger.debug("Expand: %r" % item["expr"])
 
@@ -202,7 +274,7 @@ class Expression(QtWidgets.QWidget):
             pdb.query_struct,
             expr=item["expr"],
             virtual_base=virt_base,
-            io_stream=dbg.get_memory_stream(),
+            io_stream=self.debugger.get_memory_stream(),
             finished_cb=_cb,
             errored_cb=functools.partial(_err, self),
             block_UIs=[
@@ -211,7 +283,6 @@ class Expression(QtWidgets.QWidget):
         )
 
     def _lazy_load_pointer(self, parent, count, casting=False):
-        dbg = self.app.plugin(debugger.Debugger)
         pdb = self.app.plugin(loadpdb.LoadPdb)
         item = parent.internalPointer().copy()
 
@@ -230,7 +301,7 @@ class Expression(QtWidgets.QWidget):
                 item["fields"] = [empty_struct]
                 model.setItem(item, parent)
                 return
-            model.loadStream(dbg.get_memory_stream())
+            model.loadStream(self.debugger.get_memory_stream())
             item["fields"] = struct_record["fields"]
             model.setItem(item, parent)
 
@@ -240,7 +311,7 @@ class Expression(QtWidgets.QWidget):
             self.app.exec_async(
                 pdb.deref_function_pointer,
                 struct=item,
-                io_stream=dbg.get_memory_stream(),
+                io_stream=self.debugger.get_memory_stream(),
                 virtual_base=virt_base,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
@@ -253,7 +324,7 @@ class Expression(QtWidgets.QWidget):
                 pdb.deref_struct,
                 struct=item,
                 count=count,
-                io_stream=dbg.get_memory_stream(),
+                io_stream=self.debugger.get_memory_stream(),
                 casting=casting,
                 finished_cb=_cb,
                 errored_cb=functools.partial(_err, self),
@@ -276,43 +347,69 @@ class Expression(QtWidgets.QWidget):
         menu = QtWidgets.QMenu()
         if len(indexes) == 1:
             item = model.itemFromIndex(indexes[0])
-            action = menu.addAction(tr("Copy Expression"))
+            action = menu.addAction(self.tr("Copy Expression"))
             action.triggered.connect(lambda: QtGui.QGuiApplication.clipboard().setText(item["expr"]))
 
         menu.addSeparator()
 
         if len(indexes):
-            action = menu.addAction(tr("Refresh"))
+            action = menu.addAction(self.tr("Refresh"))
             action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             action.triggered.connect(lambda: [model.refreshIndex(i) for i in indexes])
+
+            if all(not i.parent().isValid() for i in indexes):
+                action = menu.addAction(self.tr("Reload Address"))
+                action.setToolTip(self.tr("Refetch address for the selected expression(s)."))
+                action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+                action.triggered.connect(lambda: self.reloadExpressions(indexes))
+
+            submenu = self.var_watcher.createContextMenues(indexes)
+            menu.addMenu(submenu)
 
         menu.addSeparator()
 
         if len(indexes) == 1:
-            action = menu.addAction(tr("Show in BinParser"))
+            action = menu.addAction(self.tr("Show in BinParser"))
             # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
             item = model.itemFromIndex(indexes[0])
             action.triggered.connect(functools.partial(self._openBinParserFromExpression, item))
+
+            if item["is_pointer"] and model.rowCount(indexes[0]):
+                action = menu.addAction(self.tr("Show Content in BinParser"))
+                # action.setIcon(QtGui.QIcon(":icon/images/ctrl/Refresh_16x.svg"))
+                item = model.itemFromIndex(indexes[0])
+                action.triggered.connect(functools.partial(self._openBinParserFromExpressionBody, item))
 
         menu.exec(self.ui.treeView.viewport().mapToGlobal(position))
 
     def _openBinParserFromExpression(self, item):
         _d = self.app.plugin(dock.Dock)
-        try:
-            data = self.readBuffer(item)
-        except Exception as err:
-            QtWidgets.QMessageBox.warning(
-                self.app,
-                self.__class__.__name__,
-                str(err),
-            )
-            return
-        b = _d.addBinParserView(data)
+        b = _d.addBinParserView(
+            item["address"],
+            item["size"],
+        )
         b.setWindowTitle(item["expr"])
+        widget = b.widget()
+        if isinstance(widget, BinParser):
+            widget.setStruct(item["type"])
+            widget.focusParseResult()
+
+    def _openBinParserFromExpressionBody(self, item):
+        _d = self.app.plugin(dock.Dock)
+        pdb = self.app.plugin(loadpdb.LoadPdb)
+        type_struct = pdb.deref_struct(item, self.debugger.get_memory_stream())
+        b = _d.addBinParserView(
+            item["value"],
+            type_struct["size"] * item.get("_count", 1),
+        )
+        b.setWindowTitle(item["expr"])
+        widget = b.widget()
+        if isinstance(widget, BinParser):
+            widget.setStruct(item["type"])
+            widget.focusParseResult()
 
     def readBuffer(self, item: loadpdb.ViewStruct) -> bytes:
-        dbg = self.app.plugin(debugger.Debugger)
-        stream = dbg.get_memory_stream()
+        stream = self.debugger.get_memory_stream()
         stream.seek(item["address"])
         return stream.read(item["size"])
 
@@ -324,10 +421,15 @@ class Expression(QtWidgets.QWidget):
             model.refreshIndex(index)
 
     def clearTree(self):
-        model = self.ui.treeView.model()
-
-        if isinstance(model, qtmodel.StructTreeModel):
-            model.removeRows(0, model.rowCount())
+        rtn = self.var_watcher.onDeleting()
+        if rtn == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+        if self.var_watcher.clearAutoRefresh():
+            QtCore.QTimer.singleShot(100, self.clearTree)
+        else:
+            model = self.ui.treeView.model()
+            if isinstance(model, qtmodel.StructTreeModel):
+                model.removeRows(0, model.rowCount())
 
 
 if __name__ == '__main__':
@@ -337,6 +439,6 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Expression(None)
+    window = Expression(None, None)
     window.show()
     sys.exit(app.exec())

@@ -50,7 +50,14 @@
     <property name="title">
      <string>Tool</string>
     </property>
+    <widget class="QMenu" name="menuView">
+     <property name="title">
+      <string>View</string>
+     </property>
+     <addaction name="actionHide_Binary_View"/>
+    </widget>
     <addaction name="actionOpen_File"/>
+    <addaction name="menuView"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -229,6 +236,14 @@ QTreeView::branch:open:has-children:has-siblings{border-image: url(:/icon/images
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionHide_Binary_View">
+   <property name="text">
+    <string>Hide Binary View</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
    </property>
   </action>
  </widget>
