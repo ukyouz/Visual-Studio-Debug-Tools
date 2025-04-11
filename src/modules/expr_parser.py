@@ -6,13 +6,11 @@ from typing import Any
 from tree_sitter import Language
 from tree_sitter import Node
 from tree_sitter import Parser
+import tree_sitter_c as tsc
 
 from modules.pdbparser.pdbparser import pdb
 from modules.utils.myfunc import BITMASK
 from modules.utils.typ import Stream
-
-_approot = os.path.join(os.path.dirname(__file__), "../..")
-C_LANGUAGE = Language(os.path.join(_approot, "libs/treesitter_c.so"), "c")
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +44,7 @@ def _calc_val(fileio: Stream, item: pdb.StructRecord) -> Any:
 
 
 def get_syntax_tree(src: str):
-    parser = Parser()
-    parser.set_language(C_LANGUAGE)
+    parser = Parser(Language(tsc.language()))
     tree = parser.parse(src.encode())
     return tree
 
