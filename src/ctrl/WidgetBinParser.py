@@ -17,7 +17,7 @@ from ctrl.qtapp import AutoRefreshTimer
 from ctrl.qtapp import HistoryMenu
 from ctrl.qtapp import set_app_title
 from helper import qtmodel
-from modules.treesitter.expr_parser import InvalidExpression
+from modules.expr_parser import InvalidExpression
 from modules.utils.typ import Stream
 from plugins import loadpdb
 from view import WidgetBinParser

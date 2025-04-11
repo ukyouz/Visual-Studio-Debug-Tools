@@ -3,8 +3,8 @@ import os
 import pytest
 
 from modules.pdbparser.pdbparser import pdb
-from modules.treesitter.expr_parser import InvalidExpression
-from modules.treesitter.expr_parser import query_struct_from_expr
+from modules.expr_parser import InvalidExpression
+from modules.expr_parser import query_struct_from_expr
 
 
 class TestStream:
