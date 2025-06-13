@@ -377,9 +377,12 @@ class LoadPdb(Plugin):
             _expr = "(%s)" % _expr
 
         if isinstance(out_struct["fields"], list):
-            _arr = self._duplicate_as_array(_expr, out_struct["fields"][0], count)
-            out_struct["fields"] = _arr["fields"]
-            out_struct["size"] = _arr["size"]
+            if count > 1:
+                _arr = self._duplicate_as_array(_expr, out_struct["fields"][0], count)
+                out_struct["fields"] = _arr["fields"]
+                out_struct["size"] = _arr["size"]
+            else:
+                out_struct = self._duplicate_as_array(_expr, out_struct, 1)
         elif isinstance(out_struct["fields"], dict):
             out_struct = self._duplicate_as_array(_expr, out_struct, count)
         # else:
