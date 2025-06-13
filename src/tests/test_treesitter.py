@@ -118,3 +118,15 @@ def test_expr_addr(p: pdb.PDB7, expr: str, expected_addr: int):
 def test_good_expr(stream: TestStream, p: pdb.PDB7, expr: str):
     result = query_struct_from_expr(p, expr, io_stream=stream, allow_null_pointer=True)
     assert isinstance(result, dict)
+
+
+@pytest.fixture(scope="module")
+def p2() -> pdb.PDB7:
+    _p = pdb.parse(r"C:\Work\Desktop\Taipei\code\x2-qlc-model\real-fw\x2-sim.pdb")
+    return _p
+
+def test_a(p2: pdb.PDB7):
+    stream = TestStream(12)
+    expr = "gQinfoInitSvpAry"
+    result = query_struct_from_expr(p2, expr, io_stream=stream, allow_null_pointer=True)
+    print(123)

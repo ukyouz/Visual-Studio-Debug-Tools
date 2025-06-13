@@ -94,7 +94,7 @@ def deref_pointer(p: pdb.PDB7, io_stream: Stream | None, struct: pdb.StructRecor
     elif out_struct["fields"] is None:
         s = struct.copy()
         s["fields"] = [out_struct]
-        s["_do_not_parse_again"] = [out_struct]
+        s["_do_not_parse_again"] = True
         out_struct = s
 
     return out_struct
