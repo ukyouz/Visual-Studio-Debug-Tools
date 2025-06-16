@@ -439,7 +439,7 @@ class StructTreeModel(AbstractTreeModel):
                     return QtGui.QColor("#f0d6d5")
             case QtCore.Qt.ItemDataRole.DecorationRole:
                 if index.column() == 0:
-                    if item.get("is_funcptr", False):
+                    if item.get("is_funcptr", ""):
                         return QtGui.QIcon(":icon/images/vswin2019/CallReturnInstructionPointer_16x.svg")
                     else:
                         return QtGui.QIcon(":icon/images/vswin2019/Field_left_16x.svg")

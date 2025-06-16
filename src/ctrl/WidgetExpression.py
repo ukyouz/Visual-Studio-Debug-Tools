@@ -307,10 +307,11 @@ class Expression(QtWidgets.QWidget):
 
         logger.debug("Expand: '(%s)%s', Count = %d" % (item["type"], item["expr"], count))
 
-        if item.get("is_funcptr", False):
+        if item.get("is_funcptr", ""):
             self.app.exec_async(
                 pdb.deref_function_pointer,
                 struct=item,
+                count=count,
                 io_stream=self.debugger.get_memory_stream(),
                 virtual_base=virt_base,
                 finished_cb=_cb,
