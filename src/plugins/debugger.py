@@ -95,8 +95,12 @@ class Debugger(Plugin):
 
     def get_cached_stream(self, addr: int, size: int) -> CachedStream:
         if self.pd:
-            bin = self.pd.read_memory(addr, size)
-            buf = io.BytesIO(bin)
+            try:
+                bin = self.pd.read_memory(addr, size)
+            except:
+                buf = io.BytesIO(bytes(size))
+            else:
+                buf = io.BytesIO(bin)
         else:
             buf = io.BytesIO(bytes(size))
         return CachedStream(self.pd, buf, addr)
