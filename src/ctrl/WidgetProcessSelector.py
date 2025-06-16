@@ -104,12 +104,17 @@ class ProcessSelector(QtWidgets.QWidget):
             finished_cb=_cb,
         )
 
-    def detach_current_selected_process(self):
+    def detach_current_selected_process(self, callback=None):
         dbg = self.app.plugin(debugger.Debugger)
+
+        def _cb():
+            self.update_ui_states(False)
+            if callable(callback):
+                callback()
 
         self.app.exec_async(
             dbg.detach_process,
-            finished_cb=lambda: self.update_ui_states(False),
+            finished_cb=_cb,
         )
 
 

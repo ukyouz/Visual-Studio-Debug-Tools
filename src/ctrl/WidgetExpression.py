@@ -144,15 +144,18 @@ class Expression(QtWidgets.QWidget):
             value = item["value"]
             self.app.log(f"{expr} = {value} ({value:#x})")
 
-    def _try_get_virtual_base(self, cb=None) -> int | None:
+    def _try_get_virtual_base(self, cb=None, err_cb=None) -> int | None:
         try:
             return self.debugger.get_virtual_base()
         except OSError as e:
-            QtWidgets.QMessageBox.warning(
-                self,
-                self.__class__.__name__,
-                str(e),
-            )
+            if callable(err_cb):
+                err_cb(e)
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.__class__.__name__,
+                    str(e),
+                )
         except debugger.ProcessNotConnected:
             if not callable(cb):
                 return
@@ -213,12 +216,24 @@ class Expression(QtWidgets.QWidget):
         pdb = self.app.plugin(loadpdb.LoadPdb)
         model = self.ui.treeView.model()
 
-        virt_base = self._try_get_virtual_base(
-            functools.partial(self.reloadExpressions, indexes)
-        )
+        def _err_cb(e):
+            rtn = QtWidgets.QMessageBox.warning(
+                self,
+                self.__class__.__name__,
+                self.tr(
+                    "{}: {}!\n"
+                    "re-attach to current selected process and try again?"
+                ).format(e.__class__.__name__, e),
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
+            if rtn == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.app.run_cmd("ReloadCurrentProcess", callback=functools.partial(self.reloadExpressions, indexes))
+
+        virt_base = self._try_get_virtual_base(err_cb=_err_cb)
         if virt_base is None:
             return
-
+            
         def _cb(struct_record, index):
             item = index.internalPointer()
             if struct_record is None:

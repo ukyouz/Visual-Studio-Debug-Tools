@@ -1,5 +1,6 @@
 import logging
 import sys
+from functools import partial
 from datetime import datetime
 from pathlib import Path
 from typing import Type
@@ -66,7 +67,12 @@ class VisualStudioDebugger(AppCtrl):
         self.addToolBar(editToolBar)
         editToolBar.addWidget(processSelector)
 
+        def _re_attach(callback=None):
+            processSelector.detach_current_selected_process(
+                callback=partial(self.run_cmd, "AttachCurrentProcess", callback=callback),
+            )
         self.cmd.register("AttachCurrentProcess", processSelector.attach_current_selected_process)
+        self.cmd.register("ReloadCurrentProcess", _re_attach)
 
         d = self.plugin(dock.Dock)
         dbg = self.plugin(debugger.Debugger)
