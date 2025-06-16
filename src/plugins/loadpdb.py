@@ -36,7 +36,7 @@ class ViewStruct(TypedDict):
     bitsize: int | None
     fields: list[Self] | dict[str, Self] | None
     is_pointer: bool
-    is_funcptr: bool
+    is_funcptr: str
     has_sign: bool
     lf: Struct | None
 
@@ -390,7 +390,7 @@ class LoadPdb(Plugin):
 
         return out_struct
 
-    def deref_function_pointer(self, struct: ViewStruct, io_stream: Stream, virtual_base=0) -> ViewStruct | None:
+    def deref_function_pointer(self, struct: ViewStruct, io_stream: Stream, count: int, virtual_base=0) -> ViewStruct | None:
         if not struct["is_funcptr"]:
             raise ValueError("Can only deref a function pointer")
         addr = struct["value"] or _read_value(struct, io_stream)
@@ -399,18 +399,28 @@ class LoadPdb(Plugin):
         name = self._pdb.get_refname_from_offset(addr - virtual_base)
         if name is None:
             return
-        x = struct.copy()
+
         y = struct.copy()
         y["levelname"] = name
+        y["type"] = struct["type"][:-2] if struct["type"].endswith(" *") else ""
         y["is_pointer"] = False
         y["fields"] = None
         y["address"] = addr
-        y["size"] = 0
 
-        x["fields"] = {
-            name: y,
-        }
-        return x
+        if count > 1:
+            out_struct = self._duplicate_as_array("", y, count)
+            for child in out_struct["fields"]:
+                io_stream.seek(child["address"])
+                val = int.from_bytes(io_stream.read(child["size"]), "little")
+                child["value"] = val
+                child["levelname"] = self._pdb.get_refname_from_offset(val - virtual_base) or "NULL"
+            return out_struct
+        else:
+            x = struct.copy()
+            x["fields"] = {
+                name: y,
+            }
+            return x
 
     # for scripting
 
