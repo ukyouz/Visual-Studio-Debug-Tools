@@ -177,11 +177,12 @@ class Memory(QtWidgets.QWidget):
                 self.app.run_cmd("AttachCurrentProcess", callback=self._loadMemory)
                 return
 
-        mem = self.debugger.get_memory_stream()
         addr = self.inputAddress()
+        size = self.inputSize()
+        mem = self.debugger.get_cached_stream(addr, size)
         model = qtmodel.HexTable(mem)
         model.viewAddress = addr
-        model.viewSize = self.inputSize()
+        model.viewSize = size
         model.column = self.itemColumn
         model.itembyte = self.itemSize
         self.ui.tableMemory.setModel(model)

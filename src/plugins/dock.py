@@ -183,7 +183,7 @@ class Dock(Plugin):
         bp = BinParser(self.app)
         bp.viewAddress = addr
         bp.viewSize = size
-        bp.loadFile(self._dbg.get_memory_stream())
+        bp.loadFile(self._dbg.get_cached_stream(addr, size))
         self.docks["binparser"][dockWidget] = bp
         dockWidget.setWidget(bp)
         dockWidget.setWindowTitle("BinParser-%d" % len(self.docks["binparser"]))
