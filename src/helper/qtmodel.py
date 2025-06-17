@@ -332,7 +332,9 @@ class StructTreeModel(AbstractTreeModel):
                     fake_layer["expr"] = ""
                     cnt = min(child_cnt, off + 99) - off + 1
                     fake_layer["levelname"] = "[%d:%d]" % (off, min(child_cnt - 1, off + 99))
-                    fake_layer["size"] = cnt * fake_layer["size"]
+                    fake_layer["type"] += "..."
+                    fake_layer["address"] += off * fake_layer["size"]
+                    fake_layer["size"] *= cnt
                     fake_layer["fields"] = childs[off: off + 100]
                     item["fields"].append(fake_layer)
 
