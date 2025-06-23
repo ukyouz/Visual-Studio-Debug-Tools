@@ -793,7 +793,7 @@ class FileExplorerModel(AbstractTreeModel):
         items = self.folders.get(item, [])
         return len(items)
 
-    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole) -> Any:
+    def data(self, index, role=0) -> Any:
         item = self.itemFromIndex(index)
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             folder_index = self.parent(index)
@@ -813,7 +813,7 @@ class FileExplorerModel(AbstractTreeModel):
             else:
                 return get_icon(str(item))
 
-    def insertRows(self, row: int, count: int, parent: QtCore.QModelIndex):
+    def insertRows(self, row: int, count: int, parent=QtCore.QModelIndex()):
         item = self.itemFromIndex(parent)
 
         folder = self.folders.get(item, None)
@@ -835,6 +835,7 @@ class FileExplorerModel(AbstractTreeModel):
         for f in folder.parents:
             with suppress(KeyError):
                 ffi = self.pathIndexes[f]
+                break
         ff = self.itemFromIndex(ffi)
 
         most_common_path = Path(os.path.commonpath([folder] + self.folders[ff]))
