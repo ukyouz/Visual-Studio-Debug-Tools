@@ -81,6 +81,12 @@ class CStruct:
         if isinstance(self._record["fields"], dict):
             for key, item in self._record["fields"].items():
                 yield key, CStruct(item, self._stream)
+    
+    def __str__(self):
+        if self._record["levelname"]:
+            return self._record["levelname"]
+        else:
+            return repr(self)
 
     def __repr__(self):
         fields = self._record["fields"]
@@ -105,6 +111,30 @@ class CStruct:
         if self._stream is None:
             return -1
         return _read_value(self._record, self._stream)
+
+    @property
+    def is_plist(self):
+        typ = self._record["type"]
+        return typ.lower() == 'plist_struct'
+ 
+    def iter_plist_nodes(self):
+        if not self.is_plist:
+            raise TypeError("only applicable for PLIST_STRUCT, current type is %r" % self._field["type"])
+        if self._stream is None:
+            raise ValueError("Need _stream for this operation.")
+        head = self.head.next
+        size = int(self.size)
+        nodes = []
+        for i in range(size):
+            if i > 0 and hex(int(head)) == int(self.head.next):
+                raise ValueError("shall has %d elements in list: %s, got length = %d!" % (size, repr(nodes), len(nodes)))
+            nodes.append(hex(int(head)))
+            yield head
+            # deref head->next manually here
+            self._stream.seek(int(head))
+            new_node = self._stream.read(self.head._record["size"])
+            head = CStruct(head._record.copy(), self._stream)
+            head._record["value"] = int.from_bytes(new_node[:head._record["size"]], "little")
 
 
 def _shift_addr(s: pdb.StructRecord, shift: int=0):
@@ -424,10 +454,25 @@ class LoadPdb(Plugin):
 
     # for scripting
 
+    def _insert_fptr_name(self, s: ViewStruct, virtual_base: int=0, io_stream=None):
+        if io_stream is None:
+            return
+        if s["is_funcptr"]:
+            val = _read_value(s, io_stream)
+            s["levelname"] = self._pdb.get_refname_from_offset(val - virtual_base) or ""
+        if isinstance(s["fields"], dict):
+            for c in s["fields"].values():
+                self._insert_fptr_name(c, virtual_base)
+        elif isinstance(s["fields"], list):
+            for c in s["fields"]:
+                self._insert_fptr_name(c, virtual_base)
+    
     def query_cstruct(self, expr: str, virtual_base: int=0, io_stream=None) -> CStruct:
         s = self.query_struct(expr, virtual_base, io_stream)
+        self._insert_fptr_name(s, virtual_base, io_stream)
         return CStruct(s, io_stream)
 
-    def deref_cstruct(self, cs: CStruct, count=1):
+    def deref_cstruct(self, cs: CStruct, count=1, virtual_base: int=0):
         s = self.deref_struct(cs._record, cs._stream, count)
+        self._insert_fptr_name(s, virtual_base, cs._stream)
         return CStruct(s, cs._stream)

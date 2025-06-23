@@ -220,11 +220,16 @@ class Script(QtWidgets.QWidget):
             timer.stop()
             sys.stdout = _backup
 
+        if self.ui.plaintextSource.file.path:
+            folder = Path(self.ui.plaintextSource.file.path).parent
+            if str(folder) not in sys.path:
+                sys.path.append(str(folder))
         self.app.exec_async(
             exec,
             script,
             {
                 "__name__": "__main__",
+                "__file__": self.ui.plaintextSource.file.path,
                 "app": self.app,
                 # "print": lambda *a: self.printed.emit(" ".join(pformat(x) for x in a)),
             },

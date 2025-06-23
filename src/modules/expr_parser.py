@@ -251,6 +251,9 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                     lhs["address"] += lhs["size"] * rhs * (-1 if operator == "-" else 1)
                     lhs["levelname"] = "[%d]" % rhs
                     return lhs
+                elif isinstance(lhs, dict) and operator == "&" and isinstance(rhs, dict):
+                    # (LHS)&RHS  -> cast address of RHS to LHS
+                    return ((1 << (8 * lhs["size"])) - 1) & rhs["address"]
                 else:
                     left = _get_value_of(lhs)
                     right = _get_value_of(rhs)
