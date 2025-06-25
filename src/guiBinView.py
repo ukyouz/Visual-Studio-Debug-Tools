@@ -82,11 +82,11 @@ class BinViewer(AppCtrl):
                 self.cmd.register(cmdname, fn)
             p.post_init()
 
-    def plugin(self, plg_cls: Type[ClsType]) -> ClsType:
+    def plugin(self, plugin_cls: Type[ClsType]) -> ClsType:
         try:
-            return self._plugins[plg_cls.__name__]
+            return self._plugins[plugin_cls.__name__]
         except KeyError:
-            raise PluginNotLoaded(plg_cls)
+            raise PluginNotLoaded(plugin_cls)
 
     def _onFileOpened(self, filenames: list[str] | bool =False):
         if not filenames:

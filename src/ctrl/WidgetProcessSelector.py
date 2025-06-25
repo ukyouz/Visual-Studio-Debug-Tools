@@ -26,7 +26,7 @@ class ProcessSelector(QtWidgets.QWidget):
         self.ui.frameDebugger.setVisible(False)
 
         self.app.loadPlugins([
-            debugger.Debugger(self.app),
+            debugger.ExeDebugger(self.app),
         ])
 
         self.app.cmd.register("RefreshProcesses", self.load_ui)
@@ -83,7 +83,7 @@ class ProcessSelector(QtWidgets.QWidget):
 
     def attach_current_selected_process(self, callback=None):
         pname = self.ui.comboProcess.currentText()
-        dbg = self.app.plugin(debugger.Debugger)
+        dbg = self.app.plugin(debugger.ExeDebugger)
         def _cb(error):
             process_attached = error is None
             if not process_attached:
@@ -105,7 +105,7 @@ class ProcessSelector(QtWidgets.QWidget):
         )
 
     def detach_current_selected_process(self, callback=None):
-        dbg = self.app.plugin(debugger.Debugger)
+        dbg = self.app.plugin(debugger.ExeDebugger)
 
         def _cb():
             self.update_ui_states(False)

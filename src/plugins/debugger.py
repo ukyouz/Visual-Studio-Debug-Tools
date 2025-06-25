@@ -1,5 +1,6 @@
 import os
 import io
+from typing import Protocol
 
 from ctrl.qtapp import Plugin
 from modules.winkernel import ProcessDebugger
@@ -69,7 +70,16 @@ class ProcessNotConnected(Exception):
     ...
 
 
-class Debugger(Plugin):
+
+class Debugger(Protocol):
+    def get_virtual_base(self) -> int:
+        return 0
+
+    def get_memory_stream(self) -> DebuggerStream:
+        ...
+
+
+class ExeDebugger(Plugin):
 
     def post_init(self):
         self.pd = None

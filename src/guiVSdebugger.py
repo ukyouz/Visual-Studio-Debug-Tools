@@ -75,7 +75,7 @@ class VisualStudioDebugger(AppCtrl):
         self.cmd.register("ReloadCurrentProcess", _re_attach)
 
         d = self.plugin(dock.Dock)
-        dbg = self.plugin(debugger.Debugger)
+        dbg = self.plugin(debugger.ExeDebugger)
         d.load_plugins(dbg)
         d.init_views()
 
@@ -87,11 +87,11 @@ class VisualStudioDebugger(AppCtrl):
                 self.cmd.register(cmdname, fn)
             p.post_init()
 
-    def plugin(self, plg_cls: Type[ClsType]) -> ClsType:
+    def plugin(self, plugin_cls: Type[ClsType]) -> ClsType:
         try:
-            return self._plugins[plg_cls.__name__]
+            return self._plugins[plugin_cls.__name__]
         except KeyError:
-            raise PluginNotLoaded(plg_cls)
+            raise PluginNotLoaded(plugin_cls)
 
     def log(self, msg):
         self.ui.tabWidget.setCurrentIndex(0)
