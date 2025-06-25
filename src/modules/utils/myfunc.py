@@ -1,6 +1,8 @@
 import math
+import re
 import struct
 from functools import cache
+from pathlib import Path
 
 
 @cache
@@ -77,3 +79,11 @@ def int_from_float(val: float, nbits: int) -> int:
         return struct.unpack("I", struct.pack("f", val))[0]
     else:
         return struct.unpack("Q", struct.pack("d", val))[0]
+
+
+def escape_filename(filename: str):
+    trans = str.maketrans(":", "_")
+    stem = Path(filename).stem.replace("*", "star")
+    stem = stem.translate(trans)
+    stem = re.sub(r"<.+>", "", stem)
+    return Path(filename).with_stem(stem)

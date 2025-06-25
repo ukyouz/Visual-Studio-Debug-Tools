@@ -15,11 +15,12 @@ from ctrl.qtapp import MenuAction
 from ctrl.qtapp import Plugin
 from ctrl.WidgetPicklePdb import PicklePdb
 from helper import qtmodel
-from modules.pdbparser.pdbparser import pdb
-from modules.pdbparser.pdbparser import picklepdb
 from modules.expr_parser import InvalidExpression
 from modules.expr_parser import query_struct_from_expr
+from modules.pdbparser.pdbparser import pdb
+from modules.pdbparser.pdbparser import picklepdb
 from modules.utils.myfunc import BITMASK
+from modules.utils.myfunc import escape_filename
 from modules.utils.typ import Stream
 
 logger = logging.getLogger(__name__)
@@ -40,10 +41,12 @@ class ViewStruct(TypedDict):
     has_sign: bool
     lf: Struct | None
 
-    expr: Optional[str]
+    expr: str
 
 
-def _read_value(item: pdb.StructRecord, stream: Stream) -> int:
+def _read_value(item: ViewStruct, stream: Stream | None) -> int:
+    if stream is None:
+        return -1
     if item["value"] is not None:
         # for literal number, value will be the number
         return item["value"]
@@ -61,7 +64,7 @@ def _read_value(item: pdb.StructRecord, stream: Stream) -> int:
 
 @dataclass
 class CStruct:
-    _record: pdb.StructRecord
+    _record: ViewStruct
     _stream: qtmodel.Stream | None
 
     def __getattr__(self, field: str):
@@ -136,6 +139,49 @@ class CStruct:
             head = CStruct(head._record.copy(), self._stream)
             head._record["value"] = int.from_bytes(new_node[:head._record["size"]], "little")
 
+    def iter_items(self, _record=None):
+        """generator of recursive (expr: str, record: ViewStruct) pairs"""
+        record = self._record if _record is None else _record
+        fields = record["fields"]
+        if fields is None:
+            yield record["expr"], _read_value(record, self._stream)
+        elif len(fields) == 0:
+            yield record["expr"], _read_value(record, self._stream)
+        elif isinstance(fields, list):
+            for x in fields:
+                yield from self.iter_items(x)
+        elif isinstance(fields, dict):
+            for x in fields.values():
+                yield from self.iter_items(x)
+
+    def get_size(self) -> int:
+        return self._record["size"]
+
+    def get_type(self) -> str:
+        return self._record["type"]
+
+    def get_addr(self) -> int:
+        return self._record["address"]
+
+    def get_short_name(self) -> str:
+        return self._record["expr"]
+
+    def dump(self, filename, show_type=False, progress_bar=False):
+        """
+        dump all struct fields to `filename`,
+        @param `show_type`, set to `True` may slow down process
+        @param `progress_bar`, set to `True` to display dots as progress bar
+        """
+        filename = escape_filename(filename)
+        with open(filename, "w") as fs:
+            for expr, val in self.iter_items():
+                # print("expr={}, val={}".format(expr, val))
+                expr_type = " (" + self._record["type"] + ")" if show_type else ""
+                if self._record["is_funcptr"]:
+                    fs.write("{:90} = {}\n".format(expr + expr_type, self._record["levelname"]))
+                else:
+                    fs.write("{:90} = {}\n".format(expr + expr_type, hex(val)))
+
 
 def _shift_addr(s: pdb.StructRecord, shift: int=0):
     s["address"] = s["address"] + shift
@@ -147,7 +193,7 @@ def _shift_addr(s: pdb.StructRecord, shift: int=0):
             _shift_addr(c, shift)
 
 
-def _add_expr(s: ViewStruct, expr: str):
+def _add_expr(s: pdb.StructRecord, expr: str):
     if expr.endswith("->") or expr.endswith("."):
         notation = ""
     else:
@@ -308,6 +354,20 @@ class LoadPdb(Plugin):
                 "PDB Status",
                 "Not loaded",
             )
+
+    def get_global_symbols(self) -> dict[str, int]:
+        symbols = {}
+        for name in self._pdb.glb_stream.symbols.keys():
+            if name.startswith("_") or name.endswith("$"):
+                # exclude built-in special symbols
+                continue
+            try:
+                _, off = self._pdb._get_glb(name)
+            except IndexError:
+                print(name)
+            else:
+                symbols[name] = off
+        return symbols
 
     def _duplicate_as_array(self, expr: str, s: pdb.StructRecord, count: int) -> ViewStruct:
         if count > 1:
