@@ -254,6 +254,8 @@ def _calc_val(fileio: Stream, item: dict) -> int:
     if not item.get("_refresh_requested", False) and item.get("value", None):
         # return cached value unless _refresh_requested set to True
         return item["value"]
+    if item.get("address", None) is None and item.get("value", None) is not None:
+        return item["value"]
 
     base = item["address"]
     size = item["size"]

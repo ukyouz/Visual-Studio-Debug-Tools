@@ -4,10 +4,10 @@ import re
 from typing import Any
 from typing import NoReturn
 
+import tree_sitter_c as tsc
 from tree_sitter import Language
 from tree_sitter import Node
 from tree_sitter import Parser
-import tree_sitter_c as tsc
 
 from modules.pdbparser.pdbparser import pdb
 from modules.utils.myfunc import BITMASK
@@ -145,11 +145,12 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
                 if lf is None:
                     raise InvalidExpression("Bad struct casting: b%r" % structname)
 
-                address = _get_value_of(_walk_syntax_node(childs[3]))
+                right = _walk_syntax_node(childs[3])
+                address = _get_value_of(right)
                 struct = pdb.new_struct(
                     type=structname,
                     value=address,
-                    address=address,
+                    address=None,
                     size=p.tpi_stream.ARCH_PTR_SIZE,
                     is_pointer=True,
                     lf=lf,
@@ -338,6 +339,7 @@ def query_struct_from_expr(p: pdb.PDB7, expr: str, virt_base=0, io_stream=None, 
         # struct result
         if not struct.get("pointer_literal", False) and not struct.get("_do_not_parse_again", False):
             out_struct = p.tpi_stream.form_structs(struct["lf"], addr=struct["address"])
+            out_struct["value"] = struct["value"]
         else:
             out_struct = struct
     elif isinstance(struct, int):
