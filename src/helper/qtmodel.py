@@ -476,7 +476,7 @@ class StructTreeModel(AbstractTreeModel):
                         val = int_from_float(val, bsize)
 
                     self.fileio.seek(base)
-                    old_val = self.fileio.read(size)
+                    old_val = int.from_bytes(self.fileio.read(size), "little")
                     if boff and bsize:
                         val = (val & BITMASK(bsize))
                         new_val = old_val & ~(BITMASK(bsize) << boff)
