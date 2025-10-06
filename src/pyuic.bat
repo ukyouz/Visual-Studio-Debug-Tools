@@ -7,6 +7,7 @@ pyuic6.exe .\view\VSdebugger.ui -o .\view\VSdebugger.py
 pyuic6.exe .\view\WidgetExpression.ui -o .\view\WidgetExpression.py
 pyuic6.exe .\view\WidgetMemory.ui -o .\view\WidgetMemory.py
 pyuic6.exe .\view\WidgetProcessSelector.ui -o .\view\WidgetProcessSelector.py
+pyuic6.exe .\view\WidgetFileSelector.ui -o .\view\WidgetFileSelector.py
 pyuic6.exe .\view\WidgetDockTitleBar.ui -o .\view\WidgetDockTitleBar.py
 pyuic6.exe .\view\WidgetPicklePdb.ui -o .\view\WidgetPicklePdb.py
 pyuic6.exe .\view\WidgetScript.ui -o .\view\WidgetScript.py

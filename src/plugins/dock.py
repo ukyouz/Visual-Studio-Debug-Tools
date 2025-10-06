@@ -44,9 +44,14 @@ class Dock(Plugin):
     def post_init(self):
         self.docks = defaultdict(dict)
         self.app.evt.add_hook("ApplicationClosed", self._onClosed)
+        self._dbg = None
 
-    def load_plugins(self, dbg: debugger.Debugger):
+    def load_debugger(self, dbg: debugger.Debugger):
         self._dbg = dbg
+        for view in self.docks["expression"].values():
+            view.debugger = dbg
+        for view in self.docks["memory"].values():
+            view.debugger = dbg
 
     def init_views(self):
         # initialize dock widgets

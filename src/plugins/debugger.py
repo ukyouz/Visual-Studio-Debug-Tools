@@ -1,13 +1,24 @@
-import os
 import io
+import os
+import re
+from pathlib import Path
 from typing import Protocol
 
 from ctrl.qtapp import Plugin
+from modules.mdump import MdumpFile
 from modules.winkernel import ProcessDebugger
 
 
+class MemoryStream(Protocol):
+    def read_memory(self, vaddr: int, byte_sz: int) -> bytes:
+        raise NotImplementedError("You need to implant this""")
+
+    def write_memory(self, vaddr: int, buf: bytes) -> int:
+        raise NotImplementedError("You need to implant this""")
+
+
 class DebuggerStream:
-    def __init__(self, proc: ProcessDebugger | None) -> None:
+    def __init__(self, proc: MemoryStream | None) -> None:
         self._proc = proc
         self._offset = 0
 
@@ -38,17 +49,20 @@ class DebuggerStream:
 
 
 class CachedStream:
-    def __init__(self, proc: ProcessDebugger | None, buf: io.BytesIO, addr: int) -> None:
+    def __init__(self, proc: MemoryStream | None, buf: io.BytesIO, addr: int) -> None:
         self._proc = proc
         self._buf = buf
         self._addr = addr
 
+    def __len__(self) -> int:
+        return self._buf.getbuffer().nbytes
+
     def seek(self, offset, pos=os.SEEK_SET) -> int:
         if pos == os.SEEK_SET:
-            self._buf.seek(offset - self._addr, pos) 
+            self._buf.seek(offset - self._addr, pos)
         else:
             self._buf.seek(offset, pos)
-        
+
         return self._addr + self._buf.tell()
 
     def read(self, size: int) -> bytes:
@@ -76,6 +90,9 @@ class Debugger(Protocol):
         return 0
 
     def get_memory_stream(self) -> DebuggerStream:
+        ...
+
+    def get_cached_stream(self, addr: int, size: int) -> CachedStream:
         ...
 
 
@@ -120,3 +137,34 @@ class ExeDebugger(Plugin):
             raise ProcessNotConnected("No process is connected.")
         return self.pd.proc.get_main_module().get_base()
 
+
+class MiniDumpDebugger(Plugin):
+    def post_init(self):
+        self.mf = None
+
+    def load_file(self, filename: str):
+        self.mf = MdumpFile.fromfile(filename)
+
+    def get_memory_stream(self) -> DebuggerStream:
+        if self.mf is None:
+            raise ProcessNotConnected("No dump file is loaded.")
+        return DebuggerStream(self.mf)
+
+    def get_cached_stream(self, addr: int, size: int) -> CachedStream:
+        if self.mf:
+            try:
+                bin = self.mf.read_memory(addr, size)
+            except:
+                buf = io.BytesIO(bytes(size))
+            else:
+                buf = io.BytesIO(bin)
+        else:
+            buf = io.BytesIO(bytes(size))
+        return CachedStream(self.mf, buf, addr)
+
+    def get_virtual_base(self) -> int:
+        if self.mf is None:
+            raise ProcessNotConnected("No dump file is loaded.")
+        if self.mf.peb.image_base_address is None:
+            raise RuntimeError("Can not get virtual base address.")
+        return self.mf.peb.image_base_address

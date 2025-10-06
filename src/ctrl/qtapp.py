@@ -74,7 +74,13 @@ class CommandManager:
         self.cmds[cmdname] = fn
 
     def trigger(self, cmdname: str, **kwargs):
-        self.cmds[cmdname](**kwargs)
+        try:
+            self.cmds[cmdname](**kwargs)
+        except KeyError:
+            logger.warning("Unregistered Command {!r}! kwargs={!r}".format(
+                cmdname,
+                kwargs,
+            ))
 
 
 @dataclass
@@ -99,6 +105,16 @@ class UiForm(Protocol):
 
     def retranslateUi(self, MainWindow):
         ...
+
+
+def _get_action_at(menu, pos):
+    if pos is None:
+        return None
+    childs = menu.actions()
+    try:
+        return childs[pos]
+    except IndexError:
+        return None
 
 
 class AppCtrl(QtWidgets.QMainWindow):
@@ -167,15 +183,6 @@ class AppCtrl(QtWidgets.QMainWindow):
 
     def setupMenues(self, parent, menues):
 
-        def _get_action_at(menu, pos):
-            if pos is None:
-                return None
-            childs = menu.actions()
-            try:
-                return childs[pos]
-            except IndexError:
-                return None
-
         def _make_menu(actions: list[MenuAction], menu: QtWidgets.QMenu, ag: QtGui.QActionGroup | None=None):
             prev_pos = None
             for act in actions:
@@ -191,7 +198,15 @@ class AppCtrl(QtWidgets.QMainWindow):
                     submenu = self._addMenu(menu, act["name"])
                     ag = QtGui.QActionGroup(submenu) if act.get("actionGroup", False) else None
                     _make_menu(submenus, submenu, ag)
-                    menu.addMenu(submenu)
+                    prev_menu = None
+                    pos = act.get("position", prev_pos)
+                    if pos is not None:
+                        prev_pos = pos + 1
+                        prev_menu = _get_action_at(menu, pos)
+                    if prev_menu:
+                        menu.insertMenu(prev_menu, submenu)
+                    else:
+                        menu.addMenu(submenu)
                 else:
                     action = self._makeAction(
                         self,
@@ -233,7 +248,7 @@ class AppCtrl(QtWidgets.QMainWindow):
     def _makeAction(self, parent, name, shortcut=None, cmd=None):
         action = QtGui.QAction(parent=parent)
         norm_actname = "action" + normalized(name)
-        assert not hasattr(self.ui, norm_actname), "Duplicated actioins"
+        assert not hasattr(self.ui, norm_actname), "Duplicated actions"
         setattr(self.ui, norm_actname, action)
         action.setObjectName(norm_actname)
         action.setText(self.tr(name))

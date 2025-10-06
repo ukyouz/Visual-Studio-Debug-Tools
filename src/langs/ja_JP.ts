@@ -17,57 +17,57 @@
   <context>
     <name>AutoRefreshTimer</name>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="374" />
+      <location filename="..\ctrl\qtapp.py" line="404" />
       <source>Auto refresh timers are still running, Ok to close?</source>
       <translation>自動再読込のタイマーを消してもOK？そしたら閉じるね。</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="390" />
+      <location filename="..\ctrl\qtapp.py" line="420" />
       <source>Deleting any item stops all the auto refresh timers, is that OK?</source>
       <translation>消す前に自動再読込のタイマーを消してもOK？</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="404" />
+      <location filename="..\ctrl\qtapp.py" line="434" />
       <source>You need to stop all the auto refresh timers to continue, is that OK?</source>
       <translation>自動再読込のタイマーが実行中やけん、消してもOK？</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="413" />
+      <location filename="..\ctrl\qtapp.py" line="443" />
       <source>Refresh Timer</source>
       <translation>自動再読込のタイマー</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="416" />
+      <location filename="..\ctrl\qtapp.py" line="446" />
       <source>0.5 Second</source>
       <translation>0.5 秒</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="417" />
+      <location filename="..\ctrl\qtapp.py" line="447" />
       <source>1 Second</source>
       <translation>1 秒</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="418" />
+      <location filename="..\ctrl\qtapp.py" line="448" />
       <source>2 Seconds</source>
       <translation>2 秒</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="419" />
+      <location filename="..\ctrl\qtapp.py" line="449" />
       <source>5 Seconds</source>
       <translation>5 秒</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="422" />
+      <location filename="..\ctrl\qtapp.py" line="452" />
       <source>Custom Time Interval...</source>
       <translation>自分で決める...</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="438" />
+      <location filename="..\ctrl\qtapp.py" line="468" />
       <source>Stop Selected Timer{p}</source>
       <translation>選択中のタイマーを消す</translation>
     </message>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="447" />
+      <location filename="..\ctrl\qtapp.py" line="477" />
       <source>Set an interval (unit: ms)</source>
       <translation>タイマーの更新周期を入力（ミリ秒単位）</translation>
     </message>
@@ -127,60 +127,60 @@
       <translation>デバッガー</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="169" />
+      <location filename="..\plugins\dock.py" line="174" />
       <location filename="..\plugins\dock.py" line="25" />
       <source>Add Memory View</source>
       <translation>メモリビューを追加</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="146" />
+      <location filename="..\plugins\dock.py" line="151" />
       <location filename="..\plugins\dock.py" line="30" />
       <source>Add Expression View</source>
       <translation>ウォッチビューを追加</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="71" />
+      <location filename="..\plugins\dock.py" line="76" />
       <source>Input a new name for [%s]</source>
       <translation>タブ[%s]の名前を入力してください</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="89" />
+      <location filename="..\plugins\dock.py" line="94" />
       <source>Rename tab</source>
       <translation>タブ名変更</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="123" />
+      <location filename="..\plugins\dock.py" line="128" />
       <source>Editable top expression</source>
       <translation>ウォッチ式が修正可能</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="134" />
+      <location filename="..\plugins\dock.py" line="139" />
       <source>Refresh</source>
       <translation>再読込</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="198" />
-      <location filename="..\plugins\dock.py" line="137" />
+      <location filename="..\plugins\dock.py" line="203" />
+      <location filename="..\plugins\dock.py" line="142" />
       <source>Stop All Auto Refresh Timers</source>
       <translation>すべての読込タイマーを消す</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="142" />
+      <location filename="..\plugins\dock.py" line="147" />
       <source>Clear expressions</source>
       <translation>ウォッチ式をクリア</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="165" />
+      <location filename="..\plugins\dock.py" line="170" />
       <source>Show in BinParser</source>
       <translation>BinParserビューへ転送</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="168" />
+      <location filename="..\plugins\dock.py" line="173" />
       <source>Dump Memory...</source>
       <translation>メモリを保存...</translation>
     </message>
     <message>
-      <location filename="..\plugins\dock.py" line="201" />
+      <location filename="..\plugins\dock.py" line="206" />
       <source>Export Parsing Result...</source>
       <translation>CSVとして保存...</translation>
     </message>
@@ -188,33 +188,49 @@
   <context>
     <name>Expression</name>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="122" />
+      <location filename="..\ctrl\WidgetExpression.py" line="123" />
       <source>View is not empty, Ok to close?</source>
       <translation type="unfinished">今見てるのをやめて閉じてもOK？</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="162" />
+      <location filename="..\ctrl\WidgetExpression.py" line="166" />
       <source>You shall attach to a process before this operation.
 Attach to current selected process and continue?</source>
       <translation>選択中のプロセスをアタッチして、再試行してもいい？</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="311" />
+      <location filename="..\ctrl\WidgetExpression.py" line="223" />
+      <source>{}: {}!
+re-attach to current selected process and try again?</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="..\ctrl\WidgetExpression.py" line="366" />
       <source>Copy Expression</source>
       <translation>ウォッチ式をコピー</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="317" />
+      <location filename="..\ctrl\WidgetExpression.py" line="372" />
       <source>Refresh</source>
       <translation>再読込</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="327" />
+      <location filename="..\ctrl\WidgetExpression.py" line="377" />
+      <source>Reload Address</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="..\ctrl\WidgetExpression.py" line="378" />
+      <source>Refetch address for the selected expression(s).</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="..\ctrl\WidgetExpression.py" line="388" />
       <source>Show in BinParser</source>
       <translation>BinParserビューへ転送</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetExpression.py" line="333" />
+      <location filename="..\ctrl\WidgetExpression.py" line="394" />
       <source>Show Content in BinParser</source>
       <translation type="unfinished">中身をBinParserビューへ転送</translation>
     </message>
@@ -226,6 +242,7 @@ Attach to current selected process and continue?</source>
       <location filename="..\view\WidgetProcessSelector.ui" line="0" />
       <location filename="..\view\WidgetPicklePdb.ui" line="0" />
       <location filename="..\view\WidgetMemory.ui" line="0" />
+      <location filename="..\view\WidgetFileSelector.ui" line="0" />
       <location filename="..\view\WidgetExpression.ui" line="0" />
       <location filename="..\view\WidgetDockTitleBar.ui" line="0" />
       <location filename="..\view\WidgetBinParser.ui" line="0" />
@@ -345,6 +362,28 @@ Attach to current selected process and continue?</source>
       <location filename="..\view\WidgetExpression.ui" line="0" />
       <source>Add</source>
       <translation>追加</translation>
+    </message>
+    <message>
+      <location filename="..\view\WidgetFileSelector.ui" line="0" />
+      <source>Open...</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="..\view\WidgetFileSelector.ui" line="0" />
+      <source>Select a *.dmp core dump file in Minidump format to debug</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="..\view\WidgetProcessSelector.ui" line="0" />
+      <location filename="..\view\WidgetFileSelector.ui" line="0" />
+      <source>Continue</source>
+      <translation>続行</translation>
+    </message>
+    <message>
+      <location filename="..\view\WidgetProcessSelector.ui" line="0" />
+      <location filename="..\view\WidgetFileSelector.ui" line="0" />
+      <source>Stop</source>
+      <translation>デバッグの停止</translation>
     </message>
     <message>
       <location filename="..\view\WidgetMemory.ui" line="0" />
@@ -482,16 +521,6 @@ Attach to current selected process and continue?</source>
       <translation>中断</translation>
     </message>
     <message>
-      <location filename="..\view\WidgetProcessSelector.ui" line="0" />
-      <source>Continue</source>
-      <translation>続行</translation>
-    </message>
-    <message>
-      <location filename="..\view\WidgetProcessSelector.ui" line="0" />
-      <source>Stop</source>
-      <translation>デバッグの停止</translation>
-    </message>
-    <message>
       <location filename="..\view\WidgetScript.ui" line="0" />
       <source>Load Script</source>
       <translation type="unfinished" />
@@ -535,7 +564,7 @@ Attach to current selected process and continue?</source>
   <context>
     <name>HistoryMenu</name>
     <message>
-      <location filename="..\ctrl\qtapp.py" line="318" />
+      <location filename="..\ctrl\qtapp.py" line="334" />
       <source>Clear History</source>
       <translation>履歴を消す</translation>
     </message>
@@ -543,28 +572,28 @@ Attach to current selected process and continue?</source>
   <context>
     <name>LoadPdb</name>
     <message>
-      <location filename="..\plugins\loadpdb.py" line="161" />
+      <location filename="..\plugins\loadpdb.py" line="237" />
       <source>PDB</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="..\plugins\loadpdb.py" line="164" />
+      <location filename="..\plugins\loadpdb.py" line="240" />
       <source>Generate PDB...</source>
       <translation>PDBを生成...</translation>
     </message>
     <message>
-      <location filename="..\plugins\loadpdb.py" line="194" />
-      <location filename="..\plugins\loadpdb.py" line="169" />
+      <location filename="..\plugins\loadpdb.py" line="270" />
+      <location filename="..\plugins\loadpdb.py" line="245" />
       <source>Recently PDBs</source>
       <translation>最近使用したPDB</translation>
     </message>
     <message>
-      <location filename="..\plugins\loadpdb.py" line="174" />
+      <location filename="..\plugins\loadpdb.py" line="250" />
       <source>Show PDB status...</source>
       <translation>使用中のPDB情報...</translation>
     </message>
     <message>
-      <location filename="..\plugins\loadpdb.py" line="354" />
+      <location filename="..\plugins\loadpdb.py" line="444" />
       <source>`virtual_base` is None! Maybe forgot to attach to a live process?</source>
       <translation>バーチャルメモリがアクセスできん！プロセスをアタッチするのを忘れてないか？</translation>
     </message>
@@ -798,22 +827,22 @@ Attach to current selected process and continue?</source>
       <translation>選択中のプロセスをアタッチして、再試行してもいい？</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetMemory.py" line="189" />
+      <location filename="..\ctrl\WidgetMemory.py" line="190" />
       <source>Address: {}</source>
       <translation>アドレス: {}</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetMemory.py" line="198" />
+      <location filename="..\ctrl\WidgetMemory.py" line="199" />
       <source>Not support read memory from current model: %r</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="..\ctrl\WidgetMemory.py" line="215" />
+      <location filename="..\ctrl\WidgetMemory.py" line="216" />
       <source>Save bin as...</source>
       <translation>BINファイルてして保存...</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetMemory.py" line="224" />
+      <location filename="..\ctrl\WidgetMemory.py" line="225" />
       <source>Successfully dump memory to
 %r</source>
       <translation>メモリ保存完了: %r</translation>
@@ -822,18 +851,18 @@ Attach to current selected process and continue?</source>
   <context>
     <name>ProcessSelector</name>
     <message>
-      <location filename="..\ctrl\WidgetProcessSelector.py" line="74" />
-      <location filename="..\ctrl\WidgetProcessSelector.py" line="35" />
+      <location filename="..\ctrl\WidgetProcessSelector.py" line="83" />
+      <location filename="..\ctrl\WidgetProcessSelector.py" line="37" />
       <source>Refresh processes</source>
       <translation>プロセスリストを更新</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetProcessSelector.py" line="59" />
+      <location filename="..\ctrl\WidgetProcessSelector.py" line="68" />
       <source>Processes are reloaded.</source>
       <translation>プロセスリストを更新したよ。</translation>
     </message>
     <message>
-      <location filename="..\ctrl\WidgetProcessSelector.py" line="67" />
+      <location filename="..\ctrl\WidgetProcessSelector.py" line="76" />
       <source>Refreshing processes...</source>
       <translation>プロセスリストを更新中...</translation>
     </message>

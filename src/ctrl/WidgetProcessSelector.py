@@ -1,6 +1,7 @@
 import os
 import sys
 from collections import Counter
+from functools import partial
 
 from PyQt6 import QtWidgets
 
@@ -8,6 +9,7 @@ from ctrl.qtapp import AppCtrl
 from ctrl.qtapp import set_app_title
 from modules.winkernel import ProcessDebugger
 from plugins import debugger
+from plugins import dock
 from view import WidgetProcessSelector
 
 
@@ -40,6 +42,13 @@ class ProcessSelector(QtWidgets.QWidget):
             },
             { "name": "---", },
         ])
+
+        def _re_attach(callback=None):
+            self.detach_current_selected_process(
+                callback=partial(self.app.run_cmd, "AttachCurrentProcess", callback=callback),
+            )
+        self.app.cmd.register("AttachCurrentProcess", self.attach_current_selected_process)
+        self.app.cmd.register("ReloadCurrentProcess", _re_attach)
 
         self.load_ui(False)
 
@@ -84,6 +93,9 @@ class ProcessSelector(QtWidgets.QWidget):
     def attach_current_selected_process(self, callback=None):
         pname = self.ui.comboProcess.currentText()
         dbg = self.app.plugin(debugger.ExeDebugger)
+        d = self.app.plugin(dock.Dock)
+        d.load_debugger(dbg)
+
         def _cb(error):
             process_attached = error is None
             if not process_attached:

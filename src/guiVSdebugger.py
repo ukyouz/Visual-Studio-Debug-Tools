@@ -1,7 +1,7 @@
 import logging
 import sys
-from functools import partial
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Type
 
@@ -13,8 +13,8 @@ from ctrl.qtapp import ClsType
 from ctrl.qtapp import Plugin
 from ctrl.qtapp import PluginNotLoaded
 from ctrl.qtapp import set_app_title
+from ctrl.WidgetFileSelector import FileSelector
 from ctrl.WidgetProcessSelector import ProcessSelector
-from plugins import debugger
 from plugins import dock
 from plugins import help_menu
 from plugins import loadpdb
@@ -61,23 +61,45 @@ class VisualStudioDebugger(AppCtrl):
             help_menu.AboutMe(self),
         ])
 
-        editToolBar = QtWidgets.QToolBar("Process", self)
-        editToolBar.setMovable(False)
-        processSelector = ProcessSelector(self)
-        self.addToolBar(editToolBar)
-        editToolBar.addWidget(processSelector)
-
-        def _re_attach(callback=None):
-            processSelector.detach_current_selected_process(
-                callback=partial(self.run_cmd, "AttachCurrentProcess", callback=callback),
-            )
-        self.cmd.register("AttachCurrentProcess", processSelector.attach_current_selected_process)
-        self.cmd.register("ReloadCurrentProcess", _re_attach)
+        self.setupMenues(
+            self.ui.menubar,
+            [
+                {
+                    "name": self.tr("Source"),
+                    "actionGroup": True,
+                    "position": 1,
+                    "submenus": [
+                        {
+                            "name": "Runtime EXE",
+                            "command": "SetSourceToRuntimeExe",
+                            "checked": True,
+                        },
+                        {
+                            "name": "Minidump File",
+                            "command": "SetSourceToMinidumpFile",
+                        },
+                    ],
+                },
+            ]
+        )
+        self.editToolBar = QtWidgets.QToolBar("toolbarEdit", self)
+        self.editToolBar.setMovable(False)
+        self.toolbarActions = {
+            ProcessSelector.__name__: ProcessSelector(self),
+            FileSelector.__name__: FileSelector(self),
+        }
+        self.addToolBar(self.editToolBar)
+        self.cmd.register("SetSourceToRuntimeExe", partial(self._set_source_to, ProcessSelector))
+        self.cmd.register("SetSourceToMinidumpFile", partial(self._set_source_to, FileSelector))
+        self.run_cmd("SetSourceToRuntimeExe")
 
         d = self.plugin(dock.Dock)
-        dbg = self.plugin(debugger.ExeDebugger)
-        d.load_plugins(dbg)
         d.init_views()
+
+    def _set_source_to(self, target_cls):
+        for name, w in self.toolbarActions.items():
+            action = self.editToolBar.addWidget(w)
+            action.setVisible(target_cls.__name__ == name)
 
     def loadPlugins(self, plugins: list[Plugin]):
         for p in plugins:

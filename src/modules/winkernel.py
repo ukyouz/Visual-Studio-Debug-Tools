@@ -47,13 +47,13 @@ class ProcessDebugger:
         handle = self.proc.get_handle(win32.PROCESS_VM_READ | win32.PROCESS_QUERY_INFORMATION)
         return dbghelp.SymFromName(handle, name.encode())
 
-    def read_memory(self, addr: int, size: int):
-        dat = self.proc.read(addr, size)
+    def read_memory(self, vaddr: int, byte_sz: int) -> bytes:
+        dat = self.proc.read(vaddr, byte_sz)
         return dat
 
-    def write_memory(self, addr: int, buf: bytes) -> int:
+    def write_memory(self, vaddr: int, buf: bytes) -> int:
         try:
-            self.proc.write(addr, buf)
+            self.proc.write(vaddr, buf)
             return len(buf)
         except:
             return 0
